@@ -39,9 +39,10 @@ async function callGeminiWithRetry(
   const modelsToTry = [
     params.preferredModel || "gemini-3.6-flash",
     "gemini-3.6-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
     "gemini-flash-latest",
-    "gemini-3.1-flash-lite",
-    "gemini-3.1-pro-preview"
+    "gemini-3.1-flash-lite"
   ];
   // Filter unique
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
@@ -105,9 +106,10 @@ async function streamGeminiWithRetry(
   const modelsToTry = [
     params.preferredModel || "gemini-3.6-flash",
     "gemini-3.6-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
     "gemini-flash-latest",
-    "gemini-3.1-flash-lite",
-    "gemini-3.1-pro-preview"
+    "gemini-3.1-flash-lite"
   ];
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
   let lastError: any = null;
@@ -198,14 +200,14 @@ PENTING: Pilih HANYA 1 sampai 3 opsi yang paling relevan per kategori (Maksimal 
 Gunakan STRING PERSIS DARI DAFTAR BERIKUT:
 
 1. DPL (Pilih 1 s.d 3 string persis dari 8 Dimensi):
-- "Beriman, Bertakwah kepada Tuhan YME, dan Berakhlak Mulia"
-- "Berkebinekaan Global"
-- "Gotong Royong"
-- "Mandiri"
-- "Bernalar Kritis"
-- "Kreatif"
-- "Komunikatif"
-- "Kesehatan Jasmani & Rohani"
+- "Keimanan dan Ketakwaan"
+- "Kewargaan"
+- "Penalaran Kritis"
+- "Kreativitas"
+- "Kolaborasi"
+- "Kemandirian"
+- "Kesehatan"
+- "Komunikasi"
 
 2. Metode & Model Pembelajaran (Pilih 1 s.d 3 string persis):
 - "Problem Based Learning (PBL)"
@@ -237,12 +239,32 @@ Gunakan STRING PERSIS DARI DAFTAR BERIKUT:
 - "Video Pembelajaran Interaktif (Edpuzzle / YouTube)"
 - "Asisten AI & Tools Generatif Pembelajaran"
 
+5. Lintas Disiplin Ilmu (Pilih 1 s.d 3 string persis):
+- "Bahasa Indonesia"
+- "Matematika & Numerasi"
+- "IPAS / Sains Terapan"
+- "Pendidikan Pancasila & Moral"
+- "Seni Budaya & Desain (SBdP)"
+- "Informatika & Literasi Digital"
+- "PJOK & Kesehatan"
+- "Bahasa Inggris & Daerah"
+
+6. Lingkungan Pembelajaran (Pilih 1 s.d 3 string persis):
+- "Ruang Kelas Interaktif"
+- "Laboratorium & Ruang Sains/Komputer"
+- "Lingkungan Sekolah & Kebun/Halaman"
+- "Lingkungan Masyarakat & Sekitar Sekolah"
+- "Perpustakaan & Pusat Sumber Belajar"
+- "Ruang Digital / Maya (Virtual Class & LMS)"
+
 Keluarkan dalam format JSON valid (maksimal 3 items di setiap array):
 {
-  "recommendedDpl": ["Bernalar Kritis", "Gotong Royong", "Kreatif"],
+  "recommendedDpl": ["Penalaran Kritis", "Kolaborasi", "Kreativitas"],
   "recommendedMethods": ["Problem Based Learning (PBL)", "Technological Pedagogical Content Knowledge (TPACK)"],
   "recommendedPartnerships": ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
   "recommendedDigitalTools": ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
+  "recommendedLintasDisiplin": ["Bahasa Indonesia", "Matematika & Numerasi"],
+  "recommendedLingkunganPembelajaran": ["Ruang Kelas Interaktif", "Laboratorium & Ruang Sains/Komputer"],
   "studentCharacteristics": "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",
   "materialCharacteristics": "Materi bersifat konseptual dan kontekstual, membutuhkan demonstrasi dan simulasi konkret."
 }`;
@@ -275,10 +297,12 @@ Keluarkan dalam format JSON valid (maksimal 3 items di setiap array):
         return res.json({ success: true, data: fallbackCpTp, isFallback: true });
       } else {
         const fallbackRecommendations = {
-          recommendedDpl: ["Bernalar Kritis", "Gotong Royong", "Kreatif"],
+          recommendedDpl: ["Penalaran Kritis", "Kolaborasi", "Kreativitas"],
           recommendedMethods: ["Problem Based Learning (PBL)", "Technological Pedagogical Content Knowledge (TPACK)"],
           recommendedPartnerships: ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
           recommendedDigitalTools: ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
+          recommendedLintasDisiplin: ["Bahasa Indonesia", "Matematika & Numerasi"],
+          recommendedLingkunganPembelajaran: ["Ruang Kelas Interaktif", "Laboratorium & Ruang Sains/Komputer"],
           studentCharacteristics: "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",
           materialCharacteristics: "Materi bersifat konseptual dan kontekstual, membutuhkan demonstrasi dan simulasi konkret."
         };
@@ -302,10 +326,12 @@ Keluarkan dalam format JSON valid (maksimal 3 items di setiap array):
       return res.json({
         success: true,
         data: {
-          recommendedDpl: ["Bernalar Kritis", "Gotong Royong", "Kreatif"],
+          recommendedDpl: ["Penalaran Kritis", "Kolaborasi", "Kreativitas"],
           recommendedMethods: ["Problem Based Learning (PBL)", "Technological Pedagogical Content Knowledge (TPACK)"],
           recommendedPartnerships: ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
           recommendedDigitalTools: ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
+          recommendedLintasDisiplin: ["Bahasa Indonesia", "Matematika & Numerasi"],
+          recommendedLingkunganPembelajaran: ["Ruang Kelas Interaktif", "Laboratorium & Ruang Sains/Komputer"],
           studentCharacteristics: "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",
           materialCharacteristics: "Materi bersifat konseptual dan kontekstual, membutuhkan demonstrasi dan simulasi konkret."
         },

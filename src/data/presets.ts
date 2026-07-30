@@ -90,14 +90,14 @@ export const ALOKASI_WAKTU_OPTIONS = [
 ];
 
 export const DPL_OPTIONS = [
-  { id: 'dpl-1', label: 'Beriman, Bertakwah kepada Tuhan YME, dan Berakhlak Mulia', desc: 'Menghargai sesama, moralitas, dan etika lingkungan' },
-  { id: 'dpl-2', label: 'Berkebinekaan Global', desc: 'Menghargai keanekaragaman, kewargaan lokal & global' },
-  { id: 'dpl-3', label: 'Gotong Royong', desc: 'Kolaborasi, kepedulian, dan berbagi dalam tim' },
-  { id: 'dpl-4', label: 'Mandiri', desc: 'Regulasi diri, pemahaman diri, dan tanggung jawab' },
-  { id: 'dpl-5', label: 'Bernalar Kritis', desc: 'Memproses informasi, menganalisis, merefleksi pemikiran' },
-  { id: 'dpl-6', label: 'Kreatif', desc: 'Gagasan orisinal, karya inovatif, dan fleksibilitas berpikir' },
-  { id: 'dpl-7', label: 'Komunikatif', desc: 'Menyampaikan gagasan secara efektif, aktif mendengarkan & berdialog' },
-  { id: 'dpl-8', label: 'Kesehatan Jasmani & Rohani', desc: 'Menjaga kebugaran fisik, pola hidup sehat, dan kesejahteraan mental' },
+  { id: 'dpl-1', label: 'Keimanan dan Ketakwaan', desc: 'Memiliki akhlak mulia, integritas, serta mengamalkan nilai spiritual dalam kehidupan sehari-hari.' },
+  { id: 'dpl-2', label: 'Kewargaan', desc: 'Memahami tanggung jawab sosial, cinta tanah air, dan peduli terhadap kehidupan berbangsa.' },
+  { id: 'dpl-3', label: 'Penalaran Kritis', desc: 'Mampu memproses informasi, menganalisis masalah, dan tidak mudah percaya pada hal yang tidak jelas.' },
+  { id: 'dpl-4', label: 'Kreativitas', desc: 'Menumbuhkan daya cipta, menghasilkan gagasan baru, serta adaptif dalam memecahkan masalah.' },
+  { id: 'dpl-5', label: 'Kolaborasi', desc: 'Mampu bekerja sama, menghargai peran orang lain, dan mencapai tujuan bersama dalam tim.' },
+  { id: 'dpl-6', label: 'Kemandirian', desc: 'Bertanggung jawab pada proses belajar, disiplin, serta memiliki inisiatif tanpa bergantung pada orang lain.' },
+  { id: 'dpl-7', label: 'Kesehatan', desc: 'Menjaga kesehatan fisik dan keseimbangan mental (well-being) agar tetap bugar.' },
+  { id: 'dpl-8', label: 'Komunikasi', desc: 'Menyampaikan ide atau gagasan secara jelas, efektif, dan percaya diri.' },
 ];
 
 export const METODE_MODEL_OPTIONS = [
@@ -131,6 +131,26 @@ export const DIGITAL_TOOLS_OPTIONS = [
   { id: 'dt-5', label: 'LMS (Google Classroom / Moodle / Whatsapp Group)', category: 'Manajemen Kelas' },
   { id: 'dt-6', label: 'Video Pembelajaran Interaktif (Edpuzzle / YouTube)', category: 'Media Audiovisual' },
   { id: 'dt-7', label: 'Asisten AI & Tools Generatif Pembelajaran', category: 'Teknologi Masa Depan' },
+];
+
+export const LINTAS_DISIPLIN_OPTIONS = [
+  { id: 'ld-1', label: 'Bahasa Indonesia', desc: 'Literasi, kosakata sains/sosial, presentasi lisan, dan penulisan laporan' },
+  { id: 'ld-2', label: 'Matematika & Numerasi', desc: 'Pengukuran, grafik data, estimasi, dan pengolahan angka/tabel' },
+  { id: 'ld-3', label: 'IPAS / Sains Terapan', desc: 'Pengamatan fenomena alam, lingkungan hidup, dan analisis sosial' },
+  { id: 'ld-4', label: 'Pendidikan Pancasila & Moral', desc: 'Nilai etika, gotong royong, tanggung jawab warga, dan norma' },
+  { id: 'ld-5', label: 'Seni Budaya & Desain (SBdP)', desc: 'Ekspresi visual, menggambar poster, infografis, dan estetika karya' },
+  { id: 'ld-6', label: 'Informatika & Literasi Digital', desc: 'Pencarian informasi, pembuatan media digital, dan berpikir komputasional' },
+  { id: 'ld-7', label: 'PJOK & Kesehatan', desc: 'Aktivitas fisik, kebugaran, postur belajar, dan kesehatan motorik' },
+  { id: 'ld-8', label: 'Bahasa Inggris & Daerah', desc: 'Pengenalan istilah global/lokal dan komunikasi lintas budaya' },
+];
+
+export const LINGKUNGAN_PEMBELAJARAN_OPTIONS = [
+  { id: 'lp-1', label: 'Ruang Kelas Interaktif', desc: 'Diskusi kelompok, kerja meja, presentasi, dan simulasi tatap muka' },
+  { id: 'lp-2', label: 'Laboratorium & Ruang Sains/Komputer', desc: 'Eksperimen langsung, uji coba, praktikum, dan eksplorasi digital' },
+  { id: 'lp-3', label: 'Lingkungan Sekolah & Kebun/Halaman', desc: 'Observasi alam terbuka, pengukuran lapangan, dan outdoor learning' },
+  { id: 'lp-4', label: 'Lingkungan Masyarakat & Sekitar Sekolah', desc: 'Wawancara narasumber, studi lingkungan lokal, dan keterlibatan komunitas' },
+  { id: 'lp-5', label: 'Perpustakaan & Pusat Sumber Belajar', desc: 'Riset mandiri, studi literatur, pencarian referensi, dan sudut baca' },
+  { id: 'lp-6', label: 'Ruang Digital / Maya (Virtual Class & LMS)', desc: 'Akses kuis online, video interaktif, LMS, dan papan kolaborasi virtual' },
 ];
 
 export const KARAKTERISTIK_MURID_PRESETS = [
@@ -167,9 +187,9 @@ export const DEMO_PRESETS: { title: string; subtitle: string; formData: LessonFo
       karakteristikMurid: 'Sebagian besar murid bergaya belajar visual dan kinestetik. Murid menyukai kegiatan eksperimen kelompok dan penggunaan media gambar/interaktif.',
       karakteristikMateri: 'Materi bersifat konkret namun memerlukan demonstrasi langsung agar murid paham perubahan antar zat yang tidak kasat mata secara makro.',
       dpl: [
-        'Bernalar Kritis',
-        'Gotong Royong',
-        'Kreatif',
+        'Penalaran Kritis',
+        'Kolaborasi',
+        'Kreativitas',
       ],
       metodeModel: [
         'Problem Based Learning (PBL)',
@@ -184,6 +204,16 @@ export const DEMO_PRESETS: { title: string; subtitle: string; formData: LessonFo
         'Papan Interaktif Digital (Jamboard / Padlet / Miro)',
         'Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)',
         'Simulator & Visualisasi Interaktif (PhET / GeoGebra / Canva)',
+      ],
+      lintasDisiplin: [
+        'Bahasa Indonesia',
+        'Matematika & Numerasi',
+        'Seni Budaya & Desain (SBdP)',
+      ],
+      lingkunganPembelajaran: [
+        'Ruang Kelas Interaktif',
+        'Laboratorium & Ruang Sains/Komputer',
+        'Lingkungan Sekolah & Kebun/Halaman',
       ],
     },
   },
@@ -208,9 +238,9 @@ export const DEMO_PRESETS: { title: string; subtitle: string; formData: LessonFo
       karakteristikMurid: 'Murid memiliki kemampuan awal variatif. Sebagian murid memerlukan visualisasi konsep geometric sebelum rumus simbolis.',
       karakteristikMateri: 'Materi berhubungan dengan spasial dan logika matematika terapan yang relevan dengan arsitektur dan navigasi.',
       dpl: [
-        'Bernalar Kritis',
-        'Mandiri',
-        'Kreatif',
+        'Penalaran Kritis',
+        'Kemandirian',
+        'Kreativitas',
       ],
       metodeModel: [
         'Problem Based Learning (PBL)',
@@ -223,6 +253,14 @@ export const DEMO_PRESETS: { title: string; subtitle: string; formData: LessonFo
       pemanfaatanDigital: [
         'Simulator & Visualisasi Interaktif (PhET / GeoGebra / Canva)',
         'Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)',
+      ],
+      lintasDisiplin: [
+        'Informatika & Literasi Digital',
+        'Seni Budaya & Desain (SBdP)',
+      ],
+      lingkunganPembelajaran: [
+        'Ruang Kelas Interaktif',
+        'Ruang Digital / Maya (Virtual Class & LMS)',
       ],
     },
   },

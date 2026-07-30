@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
-import { Award, Cpu, Users, Monitor, Sparkles, Check, Loader2, Plus, X } from 'lucide-react';
+import { Award, Cpu, Users, Monitor, BookOpen, Compass, Sparkles, Check, Loader2, Plus, X } from 'lucide-react';
 import { LessonFormData } from '../types';
 import {
   DPL_OPTIONS,
   METODE_MODEL_OPTIONS,
   KEMITRAAN_OPTIONS,
   DIGITAL_TOOLS_OPTIONS,
+  LINTAS_DISIPLIN_OPTIONS,
+  LINGKUNGAN_PEMBELAJARAN_OPTIONS,
 } from '../data/presets';
 
 interface DeepLearningDesignSectionProps {
   formData: LessonFormData;
-  onToggleCheckbox: (category: 'dpl' | 'metodeModel' | 'kemitraan' | 'pemanfaatanDigital', itemLabel: string) => void;
+  onToggleCheckbox: (
+    category: 'dpl' | 'metodeModel' | 'kemitraan' | 'pemanfaatanDigital' | 'lintasDisiplin' | 'lingkunganPembelajaran',
+    itemLabel: string
+  ) => void;
   onRequestAllRecommendations: () => void;
   isAiRecommendingAll: boolean;
 }
@@ -122,7 +127,7 @@ export const DeepLearningDesignSection: React.FC<DeepLearningDesignSectionProps>
           id="btn-ai-all-recommendations"
           type="button"
           onClick={onRequestAllRecommendations}
-          disabled={isAiRecommendingAll || !formData.mataPelajaran}
+          disabled={isAiRecommendingAll}
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
         >
           {isAiRecommendingAll ? (
@@ -377,6 +382,126 @@ export const DeepLearningDesignSection: React.FC<DeepLearningDesignSectionProps>
             bgColorClass="bg-indigo-50"
             borderColorClass="border-indigo-300"
             textColorClass="text-indigo-900"
+          />
+        </div>
+
+        {/* 5. Lintas Disiplin Ilmu */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <BookOpen className="w-4 h-4 text-amber-600" />
+              Lintas Disiplin Ilmu (Integrasi Antar Mata Pelajaran) <span className="text-rose-500">*</span>
+            </label>
+            <span className="text-[11px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
+              Terpilih: {(formData.lintasDisiplin || []).length} opsi
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {LINTAS_DISIPLIN_OPTIONS.map((item) => {
+              const isChecked = (formData.lintasDisiplin || []).includes(item.label);
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => onToggleCheckbox('lintasDisiplin', item.label)}
+                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start gap-2.5 ${
+                    isChecked
+                      ? 'bg-amber-50/70 border-amber-500 shadow-xs'
+                      : 'bg-slate-50/50 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center transition-all shrink-0 ${
+                      isChecked ? 'bg-amber-600 text-white' : 'border border-slate-300 bg-white'
+                    }`}
+                  >
+                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-800 block leading-tight">
+                      {item.label}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5 leading-snug">
+                      {item.desc}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <CustomOptionInput
+            placeholder="+ Tambah Mata Pelajaran Lintas Disiplin (Mengisi Sendiri)..."
+            onAdd={(text) => onToggleCheckbox('lintasDisiplin', text)}
+            buttonBgClass="bg-amber-600 hover:bg-amber-700"
+          />
+          <CustomOptionsBadges
+            selectedList={formData.lintasDisiplin || []}
+            presetOptions={LINTAS_DISIPLIN_OPTIONS}
+            onRemove={(item) => onToggleCheckbox('lintasDisiplin', item)}
+            bgColorClass="bg-amber-50"
+            borderColorClass="border-amber-300"
+            textColorClass="text-amber-900"
+          />
+        </div>
+
+        {/* 6. Lingkungan Pembelajaran */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Compass className="w-4 h-4 text-purple-600" />
+              Lingkungan Pembelajaran (Setting & Tempat Belajar) <span className="text-rose-500">*</span>
+            </label>
+            <span className="text-[11px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full font-medium">
+              Terpilih: {(formData.lingkunganPembelajaran || []).length} opsi
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+            {LINGKUNGAN_PEMBELAJARAN_OPTIONS.map((item) => {
+              const isChecked = (formData.lingkunganPembelajaran || []).includes(item.label);
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => onToggleCheckbox('lingkunganPembelajaran', item.label)}
+                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start gap-2.5 ${
+                    isChecked
+                      ? 'bg-purple-50/70 border-purple-500 shadow-xs'
+                      : 'bg-slate-50/50 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center transition-all shrink-0 ${
+                      isChecked ? 'bg-purple-600 text-white' : 'border border-slate-300 bg-white'
+                    }`}
+                  >
+                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-800 block leading-tight">
+                      {item.label}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5 leading-snug">
+                      {item.desc}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <CustomOptionInput
+            placeholder="+ Tambah Lingkungan Pembelajaran Lainnya (Mengisi Sendiri)..."
+            onAdd={(text) => onToggleCheckbox('lingkunganPembelajaran', text)}
+            buttonBgClass="bg-purple-600 hover:bg-purple-700"
+          />
+          <CustomOptionsBadges
+            selectedList={formData.lingkunganPembelajaran || []}
+            presetOptions={LINGKUNGAN_PEMBELAJARAN_OPTIONS}
+            onRemove={(item) => onToggleCheckbox('lingkunganPembelajaran', item)}
+            bgColorClass="bg-purple-50"
+            borderColorClass="border-purple-300"
+            textColorClass="text-purple-900"
           />
         </div>
       </div>

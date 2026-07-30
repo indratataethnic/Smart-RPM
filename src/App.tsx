@@ -10,7 +10,7 @@ import { SavedPlansModal } from './components/SavedPlansModal';
 import { GuideModal } from './components/GuideModal';
 import { GeneratingProgressModal } from './components/GeneratingProgressModal';
 import { LessonFormData, LessonPlanOutput, SavedLessonPlan } from './types';
-import { DEMO_PRESETS, getKelasOptions, DPL_OPTIONS, METODE_MODEL_OPTIONS, KEMITRAAN_OPTIONS, DIGITAL_TOOLS_OPTIONS } from './data/presets';
+import { DEMO_PRESETS, getKelasOptions, DPL_OPTIONS, METODE_MODEL_OPTIONS, KEMITRAAN_OPTIONS, DIGITAL_TOOLS_OPTIONS, LINTAS_DISIPLIN_OPTIONS, LINGKUNGAN_PEMBELAJARAN_OPTIONS } from './data/presets';
 import { Sparkles, Loader2, ArrowRight, RotateCcw, AlertCircle, Trash2 } from 'lucide-react';
 
 const matchOptionLabels = (recommended: string[] | undefined, options: { label: string }[], fallbackCount = 2, maxCount = 3): string[] => {
@@ -61,6 +61,8 @@ const INITIAL_FORM_DATA: LessonFormData = {
   metodeModel: [],
   kemitraan: [],
   pemanfaatanDigital: [],
+  lintasDisiplin: [],
+  lingkunganPembelajaran: [],
 };
 
 export default function App() {
@@ -129,7 +131,7 @@ export default function App() {
   };
 
   const handleToggleCheckbox = (
-    category: 'dpl' | 'metodeModel' | 'kemitraan' | 'pemanfaatanDigital',
+    category: 'dpl' | 'metodeModel' | 'kemitraan' | 'pemanfaatanDigital' | 'lintasDisiplin' | 'lingkunganPembelajaran',
     itemLabel: string
   ) => {
     setFormData((prev) => {
@@ -162,11 +164,8 @@ export default function App() {
 
   // AI Assistant for CP & TP
   const handleRequestCpTpAi = async () => {
-    let targetSubject = formData.mataPelajaran;
-    if (!targetSubject) {
-      targetSubject = 'IPAS';
-      setFormData((prev) => ({ ...prev, mataPelajaran: 'IPAS' }));
-    }
+    let targetSubject = formData.mataPelajaran || 'IPAS';
+    let targetMateri = formData.lingkupMateri || targetSubject;
 
     setIsAiLoadingCpTp(true);
     setErrorMessage(null);
@@ -179,25 +178,36 @@ export default function App() {
           fieldType: 'cp_tp',
           mataPelajaran: targetSubject,
           faseKelas: formData.faseKelas,
-          lingkupMateri: formData.lingkupMateri,
+          lingkupMateri: targetMateri,
         }),
       });
 
       const json = await res.json();
       if (json.success && json.data) {
+        const generatedCp = json.data.cp || json.data.capaianPembelajaran || `Peserta didik mampu memahami dan menganalisis konsep ${targetMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`;
+        const generatedTp = json.data.tp || json.data.tujuanPembelajaran || `1. Peserta didik dapat menjelaskan konsep dasar ${targetMateri} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${targetMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${targetMateri} secara kritis dan kolaboratif.`;
+        const generatedMateri = json.data.lingkupMateri || json.data.materi || json.data.lingkup_materi || targetMateri;
+
         setFormData((prev) => ({
           ...prev,
           mataPelajaran: targetSubject,
-          capaianPembelajaran: json.data.cp || prev.capaianPembelajaran,
-          tujuanPembelajaran: json.data.tp || prev.tujuanPembelajaran,
-          lingkupMateri: json.data.lingkupMateri || json.data.materi || prev.lingkupMateri,
+          capaianPembelajaran: generatedCp,
+          tujuanPembelajaran: generatedTp,
+          lingkupMateri: generatedMateri,
         }));
       } else {
         throw new Error(json.error || 'Gagal mengambil saran CP/TP');
       }
     } catch (err: any) {
       console.error('Error in CP/TP AI:', err);
-      setErrorMessage(err.message || 'Gagal mengambil saran CP/TP dari AI.');
+      const defaultMateri = targetMateri;
+      setFormData((prev) => ({
+        ...prev,
+        mataPelajaran: targetSubject,
+        capaianPembelajaran: `Peserta didik mampu memahami dan menganalisis konsep ${defaultMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`,
+        tujuanPembelajaran: `1. Peserta didik dapat menjelaskan konsep dasar ${defaultMateri} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${defaultMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${defaultMateri} secara kritis dan kolaboratif.`,
+        lingkupMateri: defaultMateri,
+      }));
     } finally {
       setIsAiLoadingCpTp(false);
     }
@@ -205,11 +215,7 @@ export default function App() {
 
   // AI Assistant for All Recommendations (DPL, Methods, Kemitraan, Digital)
   const handleRequestAllRecommendations = async () => {
-    let targetSubject = formData.mataPelajaran;
-    if (!targetSubject) {
-      targetSubject = 'IPAS';
-      setFormData((prev) => ({ ...prev, mataPelajaran: 'IPAS' }));
-    }
+    let targetSubject = formData.mataPelajaran || 'IPAS';
 
     setIsAiRecommendingAll(true);
     setErrorMessage(null);
@@ -220,9 +226,9 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fieldType: 'recommendations_all',
-          mataPelajaran: formData.mataPelajaran,
+          mataPelajaran: targetSubject,
           faseKelas: formData.faseKelas,
-          lingkupMateri: formData.lingkupMateri,
+          lingkupMateri: formData.lingkupMateri || targetSubject,
         }),
       });
 
@@ -236,19 +242,34 @@ export default function App() {
 
         setFormData((prev) => ({
           ...prev,
+          mataPelajaran: targetSubject,
           dpl: newDpl,
           metodeModel: newMethods,
           kemitraan: newPartnerships,
           pemanfaatanDigital: newDigital,
-          karakteristikMurid: d.studentCharacteristics || prev.karakteristikMurid,
-          karakteristikMateri: d.materialCharacteristics || prev.karakteristikMateri,
+          karakteristikMurid: d.studentCharacteristics || prev.karakteristikMurid || "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",
+          karakteristikMateri: d.materialCharacteristics || prev.karakteristikMateri || "Materi bersifat konseptual dan kontekstual, membutuhkan demonstrasi dan simulasi konkret.",
         }));
       } else {
         throw new Error(json.error || 'Gagal mengambil rekomendasi');
       }
     } catch (err: any) {
       console.error('Error in All Recommendations AI:', err);
-      setErrorMessage(err.message || 'Gagal mengambil rekomendasi otomatis dari AI.');
+      const newDpl = matchOptionLabels(undefined, DPL_OPTIONS, 2, 3);
+      const newMethods = matchOptionLabels(undefined, METODE_MODEL_OPTIONS, 2, 3);
+      const newPartnerships = matchOptionLabels(undefined, KEMITRAAN_OPTIONS, 2, 3);
+      const newDigital = matchOptionLabels(undefined, DIGITAL_TOOLS_OPTIONS, 2, 3);
+
+      setFormData((prev) => ({
+        ...prev,
+        mataPelajaran: targetSubject,
+        dpl: newDpl,
+        metodeModel: newMethods,
+        kemitraan: newPartnerships,
+        pemanfaatanDigital: newDigital,
+        karakteristikMurid: prev.karakteristikMurid || "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",
+        karakteristikMateri: prev.karakteristikMateri || "Materi bersifat konseptual dan kontekstual, membutuhkan demonstrasi dan simulasi konkret.",
+      }));
     } finally {
       setIsAiRecommendingAll(false);
     }
@@ -258,10 +279,26 @@ export default function App() {
   const handleGeneratePlan = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.mataPelajaran || !formData.capaianPembelajaran || !formData.tujuanPembelajaran) {
-      alert('Mohon lengkapi Mata Pelajaran, Capaian Pembelajaran, dan Tujuan Pembelajaran.');
-      return;
+    let updatedData = { ...formData };
+    if (!updatedData.mataPelajaran) updatedData.mataPelajaran = 'IPAS';
+    const targetMateri = updatedData.lingkupMateri || updatedData.mataPelajaran;
+    if (!updatedData.capaianPembelajaran) {
+      updatedData.capaianPembelajaran = `Peserta didik mampu memahami dan menganalisis konsep ${targetMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`;
     }
+    if (!updatedData.tujuanPembelajaran) {
+      updatedData.tujuanPembelajaran = `1. Peserta didik dapat menjelaskan konsep dasar ${targetMateri} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${targetMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${targetMateri} secara kritis dan kolaboratif.`;
+    }
+    if (!updatedData.lingkupMateri) updatedData.lingkupMateri = targetMateri;
+    if (updatedData.dpl.length === 0) {
+      updatedData.dpl = matchOptionLabels(undefined, DPL_OPTIONS, 2, 3);
+    }
+    if (updatedData.metodeModel.length === 0) {
+      updatedData.metodeModel = matchOptionLabels(undefined, METODE_MODEL_OPTIONS, 2, 3);
+    }
+    if (updatedData.pemanfaatanDigital.length === 0) {
+      updatedData.pemanfaatanDigital = matchOptionLabels(undefined, DIGITAL_TOOLS_OPTIONS, 2, 3);
+    }
+    setFormData(updatedData);
 
     setIsGenerating(true);
     setGeneratingStatusMessage('Menganalisis data CP, TP, dan Identitas Pembelajaran Guru...');
@@ -273,7 +310,7 @@ export default function App() {
       const res = await fetch('/api/generate-lesson-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(updatedData),
       });
 
       if (!res.ok) {

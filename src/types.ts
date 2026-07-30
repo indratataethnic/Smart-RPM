@@ -26,6 +26,8 @@ export interface LessonFormData {
   metodeModel: string[]; // Metode & Model
   kemitraan: string[]; // Kemitraan Pembelajaran
   pemanfaatanDigital: string[]; // Pemanfaatan Digital
+  lintasDisiplin: string[]; // Lintas Disiplin Ilmu
+  lingkunganPembelajaran: string[]; // Lingkungan Pembelajaran
 }
 
 export interface DeepLearningStage {
@@ -146,6 +148,8 @@ export interface LessonPlanOutput {
     modelDanMetode: string[];
     kemitraanPembelajaran: string[];
     pemanfaatanDigital: string[];
+    lintasDisiplin?: string[];
+    lingkunganPembelajaran?: string[];
     saranaPrasarana: string;
   };
   kegiatanPembelajaran: {
