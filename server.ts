@@ -170,24 +170,26 @@ app.get("/api/health", (req, res) => {
 // API Quick AI Suggestions for CP, TP, DPL, Metode, Digital Tools
 app.post("/api/recommend-fields", async (req, res) => {
   try {
-    const { mataPelajaran, faseKelas, lingkupMateri, fieldType } = req.body;
+    const { mataPelajaran, faseKelas, lingkupMateri, fieldType, capaianPembelajaran } = req.body;
     const ai = getGeminiClient();
 
     let prompt = "";
     if (fieldType === "cp_tp") {
       prompt = `Kamu adalah pakar Kurikulum Merdeka dan Pembelajaran Mendalam (Deep Learning) di Indonesia.
-Berikan rekomendasi Capaian Pembelajaran (CP) sesuai Keputusan BSKAP Kemendikbudristek No. 032/H/KR/2024 (terbaru), Tujuan Pembelajaran (TP), dan Lingkup Materi yang relevan untuk:
-- Mata Pelajaran: ${mataPelajaran || 'Umum'}
-- Kelas/Fase: ${faseKelas || 'Fase A'}
-- Lingkup Materi Input Guru (jika ada): ${lingkupMateri || 'Belum diisi'}
+Berdasarkan Capaian Pembelajaran (CP) berikut yang telah diisikan oleh guru:
+"${capaianPembelajaran || ''}"
 
-Syarat CP: Sesuaikan dengan Keputusan Kepala BSKAP Kurikulum Merdeka Standar Terbaru, yang memuat kompetensi utama, pemahaman bermakna, dan lingkup materi secara lengkap namun sistematis.
+Rancanglah:
+1. Tujuan Pembelajaran (TP) yang diturunkan langsung dari CP tersebut secara logis, komprehensif, dan runtut (minimal memuat alur Memahami, Mengaplikasi, dan Merefleksi sesuai kerangka Pembelajaran Mendalam / Deep Learning).
+2. Lingkup Materi yang menjadi fokus pembahasan utama dalam CP tersebut (berikan minimal 1 saran lingkup materi atau topik utama yang konkret, ringkas, dan jelas).
 
-Keluarkan dalam format JSON valid:
+- Mata Pelajaran: ${mataPelajaran || 'Mata Pelajaran'}
+- Kelas/Fase: ${faseKelas || 'Fase B'}
+
+Keluarkan hasil rancangan dalam format JSON valid sebagai berikut:
 {
-  "cp": "Teks Capaian Pembelajaran resmi BSKAP terbaru yang lugas dan komprehensif...",
   "tp": "1. Tujuan pembelajaran 1 (Memahami)...\n2. Tujuan pembelajaran 2 (Mengaplikasi)...\n3. Tujuan pembelajaran 3 (Merefleksi)...",
-  "lingkupMateri": "Ringkasan topik atau lingkup materi pembelajaran yang spesifik dan jelas"
+  "lingkupMateri": "Nama topik atau lingkup materi utama yang diekstrak dari CP tersebut"
 }`;
     } else if (fieldType === "recommendations_all") {
       prompt = `Kamu adalah pakar metodologi Pembelajaran Mendalam (Deep Learning).

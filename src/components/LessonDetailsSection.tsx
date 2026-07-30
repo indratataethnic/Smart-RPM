@@ -45,12 +45,12 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
           {isAiLoadingCpTp ? (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Membuat CP, TP & Materi...</span>
+              <span>Membuat TP & Materi...</span>
             </>
           ) : (
             <>
               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-              <span>Saran CP, TP & Materi dari AI</span>
+              <span>Saran TP & Materi dari AI</span>
             </>
           )}
         </button>
@@ -108,7 +108,7 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
             rows={3}
             value={formData.capaianPembelajaran}
             onChange={onChange}
-            placeholder="Isikan Capaian Pembelajaran (CP) resmi atau klik 'Saran CP & TP dari AI' untuk mengisi otomatis..."
+            placeholder="Ketik/isikan Capaian Pembelajaran (CP) Kurikulum Merdeka di sini terlebih dahulu, lalu klik tombol 'Saran TP & Materi dari AI' di atas untuk merumuskan Tujuan Pembelajaran & Lingkup Materi secara otomatis..."
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
             required
           />

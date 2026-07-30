@@ -37,6 +37,211 @@ const matchOptionLabels = (recommended: string[] | undefined, options: { label: 
   return matched.slice(0, maxCount);
 };
 
+const generateLocalCpTpFallback = (cpText: string, subject: string): { tp: string; lingkupMateri: string } => {
+  if (!cpText || !cpText.trim()) {
+    return {
+      tp: `1. Peserta didik dapat mengidentifikasi konsep dasar ${subject || 'pembelajaran'}.\n2. Peserta didik dapat menerapkan konsep ${subject || 'pembelajaran'} dalam memecahkan masalah kontekstual.\n3. Peserta didik merefleksikan proses pembelajaran ${subject || 'pembelajaran'}.`,
+      lingkupMateri: subject || "Topik Utama"
+    };
+  }
+
+  const cleanText = cpText.replace(/[\n\r]/g, " ").replace(/\s+/g, " ").trim();
+  
+  let extractedMateri = "";
+  const patterns = [
+    /(?:tentang|materi|konsep|topik|memahami|menganalisis)\s+([A-Za-z0-9\s]{4,35})(?:\s+dan\s+([A-Za-z0-9\s]{4,35}))?(?:\.|\,|$|\s+sesuai|\s+pada)/i,
+    /([A-Za-z0-9\s]{4,30})\s+(?:melalui|dengan|dalam|pada|untuk)/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = cleanText.match(pattern);
+    if (match && match[1]) {
+      let candidate = match[1].trim();
+      if (candidate.toLowerCase().length > 3 && !["peserta", "didik", "siswa", "yang", "pada"].includes(candidate.toLowerCase())) {
+        extractedMateri = candidate;
+        break;
+      }
+    }
+  }
+
+  if (!extractedMateri) {
+    const words = cleanText.split(" ").filter(w => w.length > 3);
+    if (words.length > 2) {
+      extractedMateri = words.slice(0, 3).join(" ");
+    } else {
+      extractedMateri = subject || "Materi Inti";
+    }
+  }
+
+  extractedMateri = extractedMateri
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
+    .trim();
+
+  const tp = `1. Peserta didik dapat memahami dan menjelaskan konsep utama tentang ${extractedMateri} secara kritis.
+2. Peserta didik dapat mengaplikasikan pemahaman ${extractedMateri} untuk menyelesaikan masalah kontekstual secara kolaboratif.
+3. Peserta didik mampu merefleksikan serta mengevaluasi pemahaman mereka mengenai ${extractedMateri} sebagai bagian dari feedback metakognitif.`;
+
+  return { tp, lingkupMateri: extractedMateri };
+};
+
+const createFallbackLessonPlanClient = (data: any): LessonPlanOutput => {
+  const mp = data.mataPelajaran || 'Mata Pelajaran';
+  const lm = data.lingkupMateri || 'Materi Utama Pembelajaran';
+  const cp = data.capaianPembelajaran || `Peserta didik dapat memahami dan menerapkan konsep ${lm}.`;
+  const tp = data.tujuanPembelajaran || `1. Peserta didik dapat menjelaskan ${lm}.\n2. Peserta didik dapat mengaplikasikan ${lm} dalam masalah nyata.\n3. Peserta didik merefleksikan pemahaman materi ${lm}.`;
+
+  return {
+    identitas: {
+      namaGuru: data.namaGuru || "Guru Mata Pelajaran",
+      nipGuru: data.nipGuru || "-",
+      namaKepsek: data.namaKepsek || "Kepala Sekolah",
+      nipKepsek: data.nipKepsek || "-",
+      namaSekolah: data.namaSekolah || "Sekolah Dasar Negeri",
+      mataPelajaran: mp,
+      fase: data.fase || "Fase B",
+      kelas: data.kelas || "Kelas 4",
+      faseKelas: data.faseKelas || `${data.fase || 'Fase B'} - ${data.kelas || 'Kelas 4'}`,
+      semesterTahun: data.semesterTahun || "Semester 1 / 2026-2027",
+      alokasiWaktu: data.alokasiWaktu || "3 x 35 Menit (3 JP - SD)"
+    },
+    analisisAwal: {
+      karakteristikMurid: data.karakteristikMurid || "Murid memiliki gaya belajar beragam (visual, auditori, kinestetik) dan antusias mengikuti kegiatan kelompok.",
+      karakteristikMateri: data.karakteristikMateri || "Materi bersifat kontekstual dan dekat dengan kehidupan sehari-hari siswa."
+    },
+    tujuanDanDpl: {
+      capaianPembelajaran: cp,
+      lingkupMateri: lm,
+      tujuanPembelajaran: tp,
+      indikatorKetercapaian: [
+        `Menjelaskan konsep dasar ${lm} secara tepat.`,
+        `Mengaplikasikan konsep ${lm} dalam menyelesaikan masalah kontekstual.`,
+        `Refleksi dan pemaknaan atas proses pembelajaran ${lm}.`
+      ],
+      dimensiProfilLulusan: Array.isArray(data.dpl) && data.dpl.length > 0 ? data.dpl : ["Bernalar Kritis", "Gotong Royong", "Kreatif"]
+    },
+    desainPembelajaran: {
+      modelDanMetode: Array.isArray(data.metodeModel) && data.metodeModel.length > 0 ? data.metodeModel : ["Problem Based Learning (PBL)", "Pembelajaran Berdiferensiasi (Konten/Proses/Produk)"],
+      kemitraanPembelajaran: Array.isArray(data.kemitraan) && data.kemitraan.length > 0 ? data.kemitraan : ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
+      pemanfaatanDigital: Array.isArray(data.pemanfaatanDigital) && data.pemanfaatanDigital.length > 0 ? data.pemanfaatanDigital : ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
+      lintasDisiplin: Array.isArray(data.lintasDisiplin) ? data.lintasDisiplin : [],
+      lingkunganPembelajaran: Array.isArray(data.lingkunganPembelajaran) ? data.lingkunganPembelajaran : [],
+      saranaPrasarana: "Laptop, Proyektor, Papan Tulis, LKPD Cetak, Media Interaktif Digital."
+    },
+    kegiatanPembelajaran: {
+      pendahuluan: {
+        alokasiWaktu: "15 Menit",
+        aktivitas: [
+          "Guru membuka pembelajaran dengan salam hangat, doa bersama, dan memeriksa kehadiran siswa.",
+          "Guru memberikan pertanyaan pemantik secara interaktif untuk merangsang rasa ingin tahu siswa.",
+          "Guru menyampaikan tujuan pembelajaran hari ini dan menjelaskan alur aktivitas kelompok yang akan dilakukan."
+        ]
+      },
+      kegiatanInti: [
+        {
+          tahapLabel: "MEMAHAMI",
+          subJudul: "Memahami Konsep & Eksplorasi Makna (Understanding)",
+          prinsipMendalamLabel: "Berpusat pada Murid & Meaningful Learning",
+          alokasiWaktu: "25 Menit",
+          aktivitasGuru: [
+            "Guru memberikan pertanyaan pemantik dan menayangkan media visual/digital terkait " + lm + ".",
+            "Guru memfasilitasi diskusi eksplorasi awal dan mengamati tingkat pemahaman awal murid.",
+            "Guru memberikan penguatan materi dasar serta klarifikasi konsep."
+          ],
+          aktivitasMurid: [
+            "Murid mengamati tayangan/media dan merespons pertanyaan pemantik secara aktif.",
+            "Murid berdiskusi dalam kelompok kecil untuk mengeksplorasi konsep dasar " + lm + ".",
+            "Murid merumuskan ringkasan pemahaman awal."
+          ],
+          poinUtama: ["Eksplorasi konsep " + lm, "Diskusi tanya jawab interaktif"]
+        },
+        {
+          tahapLabel: "MENGAPLIKASI",
+          subJudul: "Mengaplikasikan Konsep pada Konteks Nyata (Application)",
+          prinsipMendalamLabel: "Autentik, Kolaboratif & Problem Solving",
+          alokasiWaktu: "35 Menit",
+          aktivitasGuru: [
+            "Guru membagikan Lembar Kerja Peserta Didik (LKPD) berbasis studi kasus/masalah nyata.",
+            "Guru memandu proses kerja kelompok dan memberikan arahan scaffolding.",
+            "Guru mengobservasi kolaborasi dan sikap bernalar kritis antar siswa."
+          ],
+          aktivitasMurid: [
+            "Murid bekerja sama menyelesaikan tugas atau masalah dalam LKPD.",
+            "Murid menerapkan konsep " + lm + " untuk menghasilkan produk / solusi.",
+            "Murid menyusun hasil diskusi kelompok untuk dipresentasikan."
+          ],
+          poinUtama: ["Pengerjaan LKPD kolaboratif", "Penyelesaian masalah nyata"]
+        },
+        {
+          tahapLabel: "MEREFLEKSI",
+          subJudul: "Merefleksikan Pembelajaran & Evaluasi Diri (Reflection)",
+          prinsipMendalamLabel: "Metakognisi, Feedback Loop & Self Assessment",
+          alokasiWaktu: "15 Menit",
+          aktivitasGuru: [
+            "Guru memimpin sesi presentasi kelompok dan memberikan umpan balik konstruktif.",
+            "Guru memandu refleksi diri murid mengenai proses dan manfaat pembelajaran.",
+            "Guru bersama murid menyimpulkan pembelajaran."
+          ],
+          aktivitasMurid: [
+            "Masing-masing kelompok mempresentasikan hasil karya / jawaban LKPD.",
+            "Murid melakukan refleksi metakognitif (apa yang sudah dipahami dan kesulitan yang dihadapi).",
+            "Murid memberikan apresiasi kepada sesama teman kelompok."
+          ],
+          poinUtama: ["Presentasi & Umpan Balik", "Refleksi metakognitif mandiri"]
+        }
+      ],
+      penutup: {
+        alokasiWaktu: "10 Menit",
+        aktivitas: [
+          "Guru membimbing murid menyimpulkan seluruh rangkaian aktivitas " + lm + ".",
+          "Guru memberikan umpan balik apresiatif dan penugasan tindak lanjut.",
+          "Pembelajaran ditutup dengan doa bersama dan salam penutup."
+        ]
+      }
+    },
+    asesmen: {
+      diagnostik: "Tanya jawab pemantik di awal pembelajaran untuk pemetaan kemampuan awal murid.",
+      formatif: "Observasi diskusi kelompok, lembar penilaian kinerja LKPD, dan kuis singkat interaktif.",
+      sumatif: "Tes tertulis / penilaian produk akhir proyek sesuai kriteria ketuntasan."
+    },
+    remedialDanPengayaan: {
+      remedial: "Bimbingan individu/kelompok kecil bagi murid yang memerlukan pendampingan materi dasar.",
+      pengayaan: "Pemberian tugas pengayaan HOTS (High Order Thinking Skills) untuk memperdalam pemahaman."
+    },
+    lampiran: {
+      lkpd: "Ringkasan LKPD: Diskusikan bersama kelompokmu konsep " + lm + " dan jawablah pertanyaan analisis dalam lembar kerja.",
+      bahanAjar: "Bahan Ajar Ringkas: Rangkuman materi " + mp + " topik " + lm + " dilengkapi contoh gambar/diagram.",
+      rubrikPenilaian: "Rubrik Penilaian Kinerja & Produk (Skor 1-4: Perlu Bimbingan, Cukup, Layak, Mahir).",
+      kktp: {
+        pendekatan: "Rubrik Kriteria Ketuntasan Tujuan Pembelajaran (Interval Nilai)",
+        deskripsi: "Pedoman penetapan kriteria ketuntasan belajar murid.",
+        kriteria: [
+          {
+            aspekPenilaian: "Pemahaman Konsep " + lm,
+            perluBimbingan: "Belum menunjukkan pemahaman (0 - 60%)",
+            cukup: "Menunjukkan pemahaman dengan bimbingan (61 - 70%)",
+            layak: "Menunjukkan pemahaman mandiri (71 - 80%)",
+            mahir: "Pemahaman sangat mendalam & analisis luas (81 - 100%)"
+          },
+          {
+            aspekPenilaian: "Aplikasi & Solusi Masalah",
+            perluBimbingan: "Belum mampu menyelesaikan tugas (0 - 60%)",
+            cukup: "Menyelesaikan sebagian tugas (61 - 70%)",
+            layak: "Menyelesaikan tugas secara mandiri (71 - 80%)",
+            mahir: "Mampu mengaplikasikan pada konteks baru (81 - 100%)"
+          }
+        ],
+        tindakLanjut: {
+          perluBimbingan: "Intervensi khusus guru dan penyederhanaan instruksi",
+          cukup: "Bimbingan tambahan pada bagian yang masih lemah",
+          layak: "Diberikan penguatan materi dan latihan mandiri",
+          mahir: "Diberikan pengayaan / soal tantangan HOTS"
+        }
+      }
+    }
+  };
+};
+
 const INITIAL_FORM_DATA: LessonFormData = {
   namaGuru: '',
   nipGuru: '',
@@ -162,10 +367,20 @@ export default function App() {
     }));
   };
 
-  // AI Assistant for CP & TP
+  // AI Assistant for CP & TP (Now repurposed to suggest TP & Lingkup Materi based on CP)
   const handleRequestCpTpAi = async () => {
     let targetSubject = formData.mataPelajaran || 'IPAS';
     let targetMateri = formData.lingkupMateri || targetSubject;
+
+    if (!formData.capaianPembelajaran || !formData.capaianPembelajaran.trim()) {
+      setErrorMessage('Silakan isi kolom "Capaian Pembelajaran (CP)" terlebih dahulu agar AI dapat menyarankan Tujuan Pembelajaran (TP) dan Lingkup Materi yang sesuai.');
+      const element = document.getElementById('textarea-capaianPembelajaran');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.focus();
+      }
+      return;
+    }
 
     setIsAiLoadingCpTp(true);
     setErrorMessage(null);
@@ -179,41 +394,43 @@ export default function App() {
           mataPelajaran: targetSubject,
           faseKelas: formData.faseKelas,
           lingkupMateri: targetMateri,
+          capaianPembelajaran: formData.capaianPembelajaran,
         }),
       });
 
+      if (!res.ok) {
+        throw new Error(`Server offline (Status ${res.status})`);
+      }
+
       const json = await res.json();
       if (json.success && json.data) {
-        const generatedCp = json.data.cp || json.data.capaianPembelajaran || `Peserta didik mampu memahami dan menganalisis konsep ${targetMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`;
-        const generatedTp = json.data.tp || json.data.tujuanPembelajaran || `1. Peserta didik dapat menjelaskan konsep dasar ${targetMateri} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${targetMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${targetMateri} secara kritis dan kolaboratif.`;
+        const generatedTp = json.data.tp || `1. Peserta didik dapat menjelaskan konsep dasar materi secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman materi dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran secara kritis dan kolaboratif.`;
         const generatedMateri = json.data.lingkupMateri || json.data.materi || json.data.lingkup_materi || targetMateri;
 
         setFormData((prev) => ({
           ...prev,
           mataPelajaran: targetSubject,
-          capaianPembelajaran: generatedCp,
           tujuanPembelajaran: generatedTp,
           lingkupMateri: generatedMateri,
         }));
       } else {
-        throw new Error(json.error || 'Gagal mengambil saran CP/TP');
+        throw new Error(json.error || 'Gagal mengambil saran');
       }
     } catch (err: any) {
-      console.error('Error in CP/TP AI:', err);
-      const defaultMateri = targetMateri;
+      console.warn('Error in CP/TP AI, running local smart fallback analyzer:', err);
+      const fallbackData = generateLocalCpTpFallback(formData.capaianPembelajaran, targetSubject);
       setFormData((prev) => ({
         ...prev,
         mataPelajaran: targetSubject,
-        capaianPembelajaran: `Peserta didik mampu memahami dan menganalisis konsep ${defaultMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`,
-        tujuanPembelajaran: `1. Peserta didik dapat menjelaskan konsep dasar ${defaultMateri} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${defaultMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${defaultMateri} secara kritis dan kolaboratif.`,
-        lingkupMateri: defaultMateri,
+        tujuanPembelajaran: fallbackData.tp,
+        lingkupMateri: fallbackData.lingkupMateri,
       }));
     } finally {
       setIsAiLoadingCpTp(false);
     }
   };
 
-  // AI Assistant for All Recommendations (DPL, Methods, Kemitraan, Digital)
+  // AI Assistant for All Recommendations (DPL, Methods, Kemitraan, Digital, Lintas Disiplin, Lingkungan)
   const handleRequestAllRecommendations = async () => {
     let targetSubject = formData.mataPelajaran || 'IPAS';
 
@@ -239,6 +456,8 @@ export default function App() {
         const newMethods = matchOptionLabels(d.recommendedMethods, METODE_MODEL_OPTIONS, 2, 3);
         const newPartnerships = matchOptionLabels(d.recommendedPartnerships, KEMITRAAN_OPTIONS, 2, 3);
         const newDigital = matchOptionLabels(d.recommendedDigitalTools, DIGITAL_TOOLS_OPTIONS, 2, 3);
+        const newCrossDiscipline = matchOptionLabels(d.recommendedLintasDisiplin || d.recommendedCrossDiscipline, LINTAS_DISIPLIN_OPTIONS, 1, 3);
+        const newEnvironments = matchOptionLabels(d.recommendedLingkunganPembelajaran || d.recommendedEnvironments, LINGKUNGAN_PEMBELAJARAN_OPTIONS, 2, 3);
 
         setFormData((prev) => ({
           ...prev,
@@ -247,6 +466,8 @@ export default function App() {
           metodeModel: newMethods,
           kemitraan: newPartnerships,
           pemanfaatanDigital: newDigital,
+          lintasDisiplin: newCrossDiscipline,
+          lingkunganPembelajaran: newEnvironments,
           karakteristikMurid: d.studentCharacteristics || prev.karakteristikMurid || "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",
           karakteristikMateri: d.materialCharacteristics || prev.karakteristikMateri || "Materi bersifat konseptual dan kontekstual, membutuhkan demonstrasi dan simulasi konkret.",
         }));
@@ -254,11 +475,13 @@ export default function App() {
         throw new Error(json.error || 'Gagal mengambil rekomendasi');
       }
     } catch (err: any) {
-      console.error('Error in All Recommendations AI:', err);
+      console.error('Error in All Recommendations AI, using fallback options:', err);
       const newDpl = matchOptionLabels(undefined, DPL_OPTIONS, 2, 3);
       const newMethods = matchOptionLabels(undefined, METODE_MODEL_OPTIONS, 2, 3);
       const newPartnerships = matchOptionLabels(undefined, KEMITRAAN_OPTIONS, 2, 3);
       const newDigital = matchOptionLabels(undefined, DIGITAL_TOOLS_OPTIONS, 2, 3);
+      const newCrossDiscipline = matchOptionLabels(undefined, LINTAS_DISIPLIN_OPTIONS, 1, 3);
+      const newEnvironments = matchOptionLabels(undefined, LINGKUNGAN_PEMBELAJARAN_OPTIONS, 2, 3);
 
       setFormData((prev) => ({
         ...prev,
@@ -267,6 +490,8 @@ export default function App() {
         metodeModel: newMethods,
         kemitraan: newPartnerships,
         pemanfaatanDigital: newDigital,
+        lintasDisiplin: newCrossDiscipline,
+        lingkunganPembelajaran: newEnvironments,
         karakteristikMurid: prev.karakteristikMurid || "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",
         karakteristikMateri: prev.karakteristikMateri || "Materi bersifat konseptual dan kontekstual, membutuhkan demonstrasi dan simulasi konkret.",
       }));

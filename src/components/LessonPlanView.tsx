@@ -115,6 +115,118 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
     setEditedPlan(plan);
   }, [plan]);
 
+  const createLocalLkpdFallback = (p: LessonPlanOutput): LKPDData => {
+    const mp = p.identitas?.mataPelajaran || 'Mata Pelajaran';
+    const lm = p.tujuanDanDpl?.lingkupMateri || 'Materi Utama';
+
+    return {
+      judulLKPD: `LEMBAR KERJA PESERTA DIDIK (LKPD) - ${lm.toUpperCase()}`,
+      subJudul: `Aktivitas Pembelajaran Mendalam (Deep Learning) - ${mp}`,
+      petunjukUmum: [
+        "Berdoalah sebelum memulai mengerjakan lembar kerja ini.",
+        "Baca dan pahami setiap instruksi aktivitas dengan saksama bersama kelompokmu.",
+        "Gunakan alat/bahan dan media digital yang direkomendasikan dengan bijak.",
+        "Tanyakan kepada guru apabila terdapat langkah kerja yang kurang dimengerti."
+      ],
+      lembarPenugasan: {
+        judulTugas: `Aktivitas Kolaboratif: Eksplorasi Konseptual ${lm}`,
+        tujuanAktivitas: `Menganalisis dan merumuskan pemahaman bermakna mengenai konsep dasar ${lm} secara berkelompok.`,
+        alatDanBahan: [
+          "Buku Catatan / Kertas Karton",
+          "Alat Tulis & Spidol Warna",
+          "Perangkat Digital (Smartphone/Chromebook) untuk akses literasi digital/simulator"
+        ],
+        instruksiKerja: [
+          "Berkumpullah bersama anggota kelompok yang telah ditentukan oleh guru.",
+          `Diskusikan bersama kelompok mengenai konsep ${lm} berdasarkan stimulus yang ditayangkan guru.`,
+          "Petakan ide-ide pokok hasil diskusi kelompok ke dalam bentuk mind-mapping/diagram kreatif pada karton atau aplikasi digital.",
+          "Persiapkan perwakilan kelompok untuk mempresentasikan hasil mind-mapping di depan kelas secara bergantian."
+        ]
+      },
+      panduanPraktikum: {
+        judulEksplorasi: `Eksplorasi Konteks Nyata & Eksperimen Mandiri: Penerapan ${lm}`,
+        tujuanPraktikum: `Membuktikan dan mengamati secara langsung prinsip kerja serta implikasi ${lm} dalam kehidupan sehari-hari.`,
+        langkahKerja: [
+          "Siapkan alat dan bahan praktikum sesuai dengan petunjuk guru.",
+          "Lakukan eksperimen / observasi secara bertahap sesuai petunjuk kerja kelompok.",
+          "Catat setiap fenomena, data kuantitatif, atau data kualitatif yang teramati ke dalam tabel pengamatan.",
+          "Diskusikan hasil temuan kelompok dan rumuskan kesimpulan awal secara bernalar kritis."
+        ],
+        tabelPengamatan: {
+          judulTabel: `Tabel Hasil Pengamatan & Eksperimen ${lm}`,
+          headers: ["No", "Aktivitas / Perlakuan", "Hasil Pengamatan", "Keterangan / Analisis"],
+          rows: [
+            ["1", "Percobaan / Pengamatan 1", "...........................................", "Sesuai teori dasar"],
+            ["2", "Percobaan / Pengamatan 2", "...........................................", "Terjadi perubahan signifikan"],
+            ["3", "Percobaan / Pengamatan 3", "...........................................", "Memerlukan analisis lanjut"]
+          ],
+          petunjukPengisian: "Isikan data hasil pengukuran/pengamatan secara teliti."
+        },
+        pertanyaanAnalisis: [
+          `Berdasarkan data hasil eksperimen, jelaskan hubungan sebab-akibat yang terjadi pada fenomena ${lm}!`,
+          "Apa kendala terbesar yang kelompokmu temukan saat melakukan praktikum, dan bagaimana kalian menyelesaikannya?",
+          `Tuliskan kesimpulan akhir kelompok mengenai cara kerja serta manfaat ${lm} dalam konteks kehidupan nyata sehari-hari!`
+        ]
+      },
+      latihanSoal: {
+        petunjukPengerjaan: "Jawablah soal-soal latihan di bawah ini secara mandiri dan jujur untuk menguji pemahaman mendalammu.",
+        pilihanGanda: [
+          {
+            no: 1,
+            pertanyaan: `Manakah di antara pernyataan berikut yang paling tepat menggambarkan esensi utama dari konsep ${lm}?`,
+            pilihan: [
+              `A. Sebuah fenomena statis yang tidak berhubungan dengan mata pelajaran ${mp}.`,
+              `B. Konsep dinamis tentang ${lm} yang berperan penting dalam memecahkan masalah praktis sehari-hari.`,
+              `C. Teori hafalan semata yang hanya diujikan pada akhir semester sekolah.`,
+              `D. Aktivitas praktikum tanpa landasan teori atau rancangan instruksional.`
+            ],
+            kunciJawaban: "B",
+            pembahasan: `Esensi utama dari ${lm} adalah penerapan konsep secara kontekstual dan dinamis untuk menyelesaikan masalah nyata dalam kehidupan sehari-hari.`
+          },
+          {
+            no: 2,
+            pertanyaan: `Dalam pembelajaran mendalam, setelah kita "Memahami" suatu materi ${lm}, langkah selanjutnya yang paling krusial untuk melatih nalar kritis adalah...`,
+            pilihan: [
+              "A. Menghafal seluruh definisi istilah yang ada di buku teks secara berulang.",
+              "B. Mengaplikasikannya dalam konteks nyata / pemecahan masalah (Application).",
+              "C. Mengabaikan umpan balik dari guru dan langsung berpindah ke bab materi berikutnya.",
+              "D. Mencribel atau menulis ulang materi tanpa melakukan refleksi atau diskusi kelompok."
+            ],
+            kunciJawaban: "B",
+            pembahasan: 'Tahap Mengaplikasi (Application) adalah jembatan penting untuk menguji apakah pemahaman konsep murid sudah mendalam dan fungsional.'
+          }
+        ],
+        soalUraian: [
+          {
+            no: 1,
+            pertanyaan: `Uraikanlah bagaimana pemahaman tentang ${lm} dapat membantumu menjelaskan salah satu kejadian nyata yang sering kamu jumpai di lingkungan sekitarmu!`,
+            kunciJawaban: "Kunci Jawaban bervariasi tergantung argumentasi siswa. Jawaban dinilai mahir apabila siswa mampu menghubungkan minimal 2 elemen konsep dasar dengan contoh nyata secara logis.",
+            pembahasan: "Mengukur kemampuan kognitif tingkat tinggi (HOTS) siswa dalam mensintesis teori dengan aplikasi kontekstual sehari-hari."
+          },
+          {
+            no: 2,
+            pertanyaan: `Lakukan refleksi diri: bagian manakah dari materi ${lm} ini yang menurutmu paling menarik untuk dieksplorasi lebih jauh? Berikan alasan pendukungmu!`,
+            kunciJawaban: "Kunci Jawaban terbuka (open-ended). Kriteria ketuntasan dinilai dari kedalaman refleksi metakognitif dan kemandirian berpikir siswa.",
+            pembahasan: "Mengukur aspek metakognisi, self-assessment, dan minat belajar siswa terhadap topik yang diajarkan."
+          }
+        ]
+      },
+      refleksiSiswa: {
+        pertanyaanRefleksi: [
+          "Apa hal terpenting yang baru saja kamu pahami setelah menyelesaikan seluruh aktivitas lembar kerja ini?",
+          "Apakah kamu merasa kerja sama kelompokmu berjalan dengan baik dan saling mendukung? Jelaskan bagian mana yang perlu ditingkatkan!",
+          "Bagaimana perasaanmu selama mengikuti pembelajaran mendalam hari ini? Lingkari/pilih emoji yang menggambarkan perasaanmu!"
+        ],
+        checkListDiri: [
+          `Saya telah memahami konsep dasar mengenai ${lm} dengan baik.`,
+          "Saya dapat bekerja sama secara kolaboratif dalam kelompok diskusi.",
+          "Saya mampu menganalisis hasil eksperimen dan mengisi tabel pengamatan.",
+          "Saya dapat merefleksikan proses belajar saya secara jujur dan mandiri."
+        ]
+      }
+    };
+  };
+
   const handleGenerateLKPD = async (customInstruction?: string) => {
     try {
       setIsGeneratingLkpd(true);
@@ -126,6 +238,10 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
           customInstruction,
         }),
       });
+
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
 
       const data = await res.json();
       if (data.success && data.lkpd) {
@@ -143,11 +259,24 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
           onUpdatePlan(updated);
         }
       } else {
-        alert(data.error || 'Gagal membuat LKPD');
+        throw new Error(data.error || 'Gagal membuat LKPD');
       }
     } catch (err: any) {
-      console.error('Error generating LKPD:', err);
-      alert('Terjadi kesalahan saat membuat LKPD dengan AI.');
+      console.warn('Error generating LKPD, running local smart fallback compiler:', err);
+      const localLkpd = createLocalLkpdFallback(isEditing ? editedPlan : plan);
+      const updated = {
+        ...(isEditing ? editedPlan : plan),
+        lampiran: {
+          ...(isEditing ? editedPlan : plan).lampiran,
+          lkpdStructured: localLkpd,
+        },
+      };
+      if (isEditing) {
+        setEditedPlan(updated);
+      }
+      if (onUpdatePlan) {
+        onUpdatePlan(updated);
+      }
     } finally {
       setIsGeneratingLkpd(false);
     }
