@@ -164,6 +164,7 @@ export default function App() {
           ...prev,
           capaianPembelajaran: json.data.cp || prev.capaianPembelajaran,
           tujuanPembelajaran: json.data.tp || prev.tujuanPembelajaran,
+          lingkupMateri: json.data.lingkupMateri || json.data.materi || prev.lingkupMateri,
         }));
       } else {
         throw new Error(json.error || 'Gagal mengambil saran CP/TP');

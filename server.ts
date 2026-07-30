@@ -135,15 +135,16 @@ app.post("/api/recommend-fields", async (req, res) => {
     let prompt = "";
     if (fieldType === "cp_tp") {
       prompt = `Kamu adalah pakar Kurikulum Merdeka dan Pembelajaran Mendalam (Deep Learning) di Indonesia.
-Berikan rekomendasi Capaian Pembelajaran (CP) dan Tujuan Pembelajaran (TP) yang sesuai untuk:
+Berikan rekomendasi Capaian Pembelajaran (CP), Tujuan Pembelajaran (TP), dan Lingkup Materi/Topik Pembelajaran yang relevan untuk:
 - Mata Pelajaran: ${mataPelajaran || 'Umum'}
 - Kelas/Fase: ${faseKelas || 'Fase A'}
-- Lingkup Materi: ${lingkupMateri || 'Topik Utama'}
+- Lingkup Materi Input Guru (jika ada): ${lingkupMateri || 'Belum diisi'}
 
 Keluarkan dalam format JSON valid:
 {
   "cp": "Teks Capaian Pembelajaran resmi dan ringkas...",
-  "tp": "1. Tujuan pembelajaran 1...\n2. Tujuan pembelajaran 2...\n3. Tujuan pembelajaran 3..."
+  "tp": "1. Tujuan pembelajaran 1...\n2. Tujuan pembelajaran 2...\n3. Tujuan pembelajaran 3...",
+  "lingkupMateri": "Ringkasan topik atau lingkup materi pembelajaran yang spesifik dan jelas"
 }`;
     } else if (fieldType === "recommendations_all") {
       prompt = `Kamu adalah pakar metodologi Pembelajaran Mendalam (Deep Learning).

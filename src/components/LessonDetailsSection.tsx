@@ -45,12 +45,12 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
           {isAiLoadingCpTp ? (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Membuat CP/TP AI...</span>
+              <span>Membuat CP, TP & Materi...</span>
             </>
           ) : (
             <>
               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-              <span>Saran CP & TP dari AI</span>
+              <span>Saran CP, TP & Materi dari AI</span>
             </>
           )}
         </button>
@@ -94,24 +94,6 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
           </div>
         </div>
 
-        {/* Lingkup Materi */}
-        <div>
-          <label htmlFor="textarea-lingkupMateri" className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-            <FileCode className="w-3.5 h-3.5 text-teal-600" />
-            Lingkup Materi / Topik Pembelajaran <span className="text-rose-500">*</span>
-          </label>
-          <textarea
-            id="textarea-lingkupMateri"
-            name="lingkupMateri"
-            rows={2}
-            value={formData.lingkupMateri}
-            onChange={onChange}
-            placeholder="Isikan lingkup materi / topik pembelajaran (contoh: Wujud Zat dan Perubahannya / Teks Eksposisi)..."
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
-            required
-          />
-        </div>
-
         {/* Capaian Pembelajaran (CP) */}
         <div>
           <label htmlFor="textarea-capaianPembelajaran" className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
@@ -145,6 +127,24 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
             value={formData.tujuanPembelajaran}
             onChange={onChange}
             placeholder="Isikan Tujuan Pembelajaran (TP) (contoh: 1. Peserta didik dapat mengidentifikasi...\n2. Peserta didik mampu menganalisis...)"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
+            required
+          />
+        </div>
+
+        {/* Lingkup Materi / Topik Pembelajaran */}
+        <div>
+          <label htmlFor="textarea-lingkupMateri" className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+            <FileCode className="w-3.5 h-3.5 text-teal-600" />
+            Lingkup Materi / Topik Pembelajaran <span className="text-rose-500">*</span>
+          </label>
+          <textarea
+            id="textarea-lingkupMateri"
+            name="lingkupMateri"
+            rows={2}
+            value={formData.lingkupMateri}
+            onChange={onChange}
+            placeholder="Isikan lingkup materi / topik pembelajaran (contoh: Wujud Zat dan Perubahannya / Teks Eksposisi)..."
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
             required
           />
