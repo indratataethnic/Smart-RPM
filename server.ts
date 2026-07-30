@@ -36,11 +36,17 @@ async function callGeminiWithRetry(
     preferredModel?: string;
   }
 ) {
-  const modelsToTry = [params.preferredModel || "gemini-3.6-flash", "gemini-1.5-flash"];
+  const modelsToTry = [
+    params.preferredModel || "gemini-2.5-flash",
+    "gemini-3.6-flash",
+    "gemini-1.5-flash"
+  ];
+  // Filter unique
+  const uniqueModels = Array.from(new Set(modelsToTry));
   let lastError: any = null;
 
-  for (const model of modelsToTry) {
-    for (let attempt = 1; attempt <= 5; attempt++) {
+  for (const model of uniqueModels) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const response = await ai.models.generateContent({
           model,
@@ -50,20 +56,30 @@ async function callGeminiWithRetry(
         return response;
       } catch (err: any) {
         lastError = err;
-        const errStr = String(err?.message || err || "");
+        const errStr = String(err?.message || err || "").toLowerCase();
         console.warn(`Gemini API call attempt ${attempt} on model ${model} failed:`, errStr);
 
-        const isTransient =
-          errStr.includes("503") ||
-          errStr.includes("UNAVAILABLE") ||
+        const isQuotaExceeded =
           errStr.includes("429") ||
           errStr.includes("resource_exhausted") ||
-          errStr.includes("Service Unavailable") ||
+          errStr.includes("quota exceeded") ||
+          errStr.includes("rate_limit");
+
+        const isTransient =
+          isQuotaExceeded ||
+          errStr.includes("503") ||
+          errStr.includes("unavailable") ||
+          errStr.includes("service unavailable") ||
           errStr.includes("high demand") ||
           errStr.includes("overloaded");
 
-        if (isTransient && attempt < 5) {
-          await new Promise((res) => setTimeout(res, attempt * 2500));
+        // If quota exceeded, don't waste 3 attempts on the same exhausted model
+        if (isQuotaExceeded && attempt >= 2) {
+          break; // Switch to next fallback model immediately
+        }
+
+        if (isTransient && attempt < 3) {
+          await new Promise((res) => setTimeout(res, attempt * 1000));
         } else if (!isTransient) {
           break;
         }
@@ -71,7 +87,7 @@ async function callGeminiWithRetry(
     }
   }
 
-  throw lastError || new Error("Layanan AI sedang sibuk. Silakan coba beberapa saat lagi.");
+  throw lastError || new Error("Layanan AI sedang sibuk atau batas kuota tercapai. Silakan coba beberapa saat lagi.");
 }
 
 // Helper for Gemini API streaming calls with exponential backoff & model fallback
@@ -83,11 +99,16 @@ async function streamGeminiWithRetry(
     preferredModel?: string;
   }
 ) {
-  const modelsToTry = [params.preferredModel || "gemini-3.6-flash", "gemini-1.5-flash"];
+  const modelsToTry = [
+    params.preferredModel || "gemini-2.5-flash",
+    "gemini-3.6-flash",
+    "gemini-1.5-flash"
+  ];
+  const uniqueModels = Array.from(new Set(modelsToTry));
   let lastError: any = null;
 
-  for (const model of modelsToTry) {
-    for (let attempt = 1; attempt <= 5; attempt++) {
+  for (const model of uniqueModels) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const responseStream = await ai.models.generateContentStream({
           model,
@@ -97,20 +118,29 @@ async function streamGeminiWithRetry(
         return responseStream;
       } catch (err: any) {
         lastError = err;
-        const errStr = String(err?.message || err || "");
+        const errStr = String(err?.message || err || "").toLowerCase();
         console.warn(`Gemini API stream attempt ${attempt} on model ${model} failed:`, errStr);
 
-        const isTransient =
-          errStr.includes("503") ||
-          errStr.includes("UNAVAILABLE") ||
+        const isQuotaExceeded =
           errStr.includes("429") ||
           errStr.includes("resource_exhausted") ||
-          errStr.includes("Service Unavailable") ||
+          errStr.includes("quota exceeded") ||
+          errStr.includes("rate_limit");
+
+        const isTransient =
+          isQuotaExceeded ||
+          errStr.includes("503") ||
+          errStr.includes("unavailable") ||
+          errStr.includes("service unavailable") ||
           errStr.includes("high demand") ||
           errStr.includes("overloaded");
 
-        if (isTransient && attempt < 5) {
-          await new Promise((res) => setTimeout(res, attempt * 2500));
+        if (isQuotaExceeded && attempt >= 2) {
+          break; // Switch model immediately if quota exhausted
+        }
+
+        if (isTransient && attempt < 3) {
+          await new Promise((res) => setTimeout(res, attempt * 1000));
         } else if (!isTransient) {
           break;
         }
@@ -118,7 +148,7 @@ async function streamGeminiWithRetry(
     }
   }
 
-  throw lastError || new Error("Layanan AI sedang sibuk. Silakan coba beberapa saat lagi.");
+  throw lastError || new Error("Layanan AI sedang sibuk atau batas kuota tercapai. Silakan coba beberapa saat lagi.");
 }
 
 // API Health Check
@@ -153,21 +183,54 @@ Berdasarkan data berikut:
 - Fase/Kelas: ${faseKelas || 'Fase A'}
 - Materi: ${lingkupMateri || 'Umum'}
 
-Berikan rekomendasi spesifik yang berorientasi pada Pembelajaran Mendalam (Memahami, Mengaplikasi, Merefleksi):
-1. Dimensi Profil Lulusan / DPL (pilih 2-4 yang paling relevan)
-2. Metode & Model Pembelajaran (pilih 2-3 misal PBL, PjBL, Inquiry, Diferensiasi)
-3. Kemitraan Pembelajaran (misal Orang Tua, Komunitas, Peer Learning)
-4. Pemanfaatan Digital (misal Papan Interaktif, Kahoot, PhET, Canva)
-5. Karakteristik Murid & Materi yang relevan.
+Berikan rekomendasi spesifik yang berorientasi pada Pembelajaran Mendalam (Memahami, Mengaplikasi, Merefleksi).
+Gunakan STRING PERSIS BOLD DARI DAFTAR BERIKUT:
+
+1. DPL (Pilih 2-4 string persis):
+- "Beriman, Bertakwa kepada Tuhan YME, dan Berakhlak Mulia"
+- "Berkebinekaan Global"
+- "Gotong Royong"
+- "Mandiri"
+- "Bernalar Kritis"
+- "Kreatif"
+
+2. Metode & Model Pembelajaran (Pilih 2-3 string persis):
+- "Problem Based Learning (PBL)"
+- "Project Based Learning (PjBL)"
+- "Discovery Learning"
+- "Inquiry Based Learning"
+- "Pembelajaran Berdiferensiasi (Konten/Proses/Produk)"
+- "Cooperative Learning (Jigsaw/STAD)"
+- "Demonstrasi Interaktif & Eksperimen"
+- "Diskusi Kelompok & Debat Positif"
+- "Studi Kasus & Role Playing"
+- "Simulasi & Stasiun Pembelajaran (Station Rotation)"
+
+3. Kemitraan Pembelajaran (Pilih 2-3 string persis):
+- "Orang Tua / Wali Murid"
+- "Kolaborasi Antar Siswa (Peer Learning)"
+- "Komunitas Lokal & Tokoh Masyarakat"
+- "Narasumber / Ahli Profesi Outside"
+- "Guru Antar Mata Pelajaran (Team Teaching)"
+- "Perpustakaan & Instansi Daerah"
+
+4. Pemanfaatan Digital (Pilih 2-3 string persis):
+- "Papan Interaktif Digital (Jamboard / Padlet / Miro)"
+- "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"
+- "Perpustakaan Digital / E-Book / Portal Rumah Belajar"
+- "Simulator & Visualisasi Interaktif (PhET / GeoGebra / Canva)"
+- "LMS (Google Classroom / Moodle / Whatsapp Group)"
+- "Video Pembelajaran Interaktif (Edpuzzle / YouTube)"
+- "Asisten AI & Tools Generatif Pembelajaran"
 
 Keluarkan dalam format JSON valid:
 {
   "recommendedDpl": ["Bernalar Kritis", "Gotong Royong", "Kreatif"],
-  "recommendedMethods": ["Problem Based Learning (PBL)", "Pembelajaran Berdiferensiasi"],
+  "recommendedMethods": ["Problem Based Learning (PBL)", "Pembelajaran Berdiferensiasi (Konten/Proses/Produk)"],
   "recommendedPartnerships": ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
-  "recommendedDigitalTools": ["Papan Interaktif Digital", "Platform Kuis Interaktif (Kahoot/Quizizz)"],
-  "studentCharacteristics": "Sebagian besar murid memiliki gaya belajar visual-kinestetik, antusias pada aktivitas kelompok, dan memerlukan contoh konkret dalam kehidupan sehari-hari.",
-  "materialCharacteristics": "Materi bersifat konseptual dan kontekstual, dapat dikaitkan dengan masalah nyata di sekitar lingkungan siswa."
+  "recommendedDigitalTools": ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
+  "studentCharacteristics": "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",
+  "materialCharacteristics": "Materi bersifat konseptual dan kontekstual, membutuhkan demonstrasi dan simulasi konkret."
 }`;
     } else {
       return res.status(400).json({ error: "fieldType tidak valid" });

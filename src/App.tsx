@@ -10,8 +10,32 @@ import { SavedPlansModal } from './components/SavedPlansModal';
 import { GuideModal } from './components/GuideModal';
 import { GeneratingProgressModal } from './components/GeneratingProgressModal';
 import { LessonFormData, LessonPlanOutput, SavedLessonPlan } from './types';
-import { DEMO_PRESETS, getKelasOptions } from './data/presets';
+import { DEMO_PRESETS, getKelasOptions, DPL_OPTIONS, METODE_MODEL_OPTIONS, KEMITRAAN_OPTIONS, DIGITAL_TOOLS_OPTIONS } from './data/presets';
 import { Sparkles, Loader2, ArrowRight, RotateCcw, AlertCircle, Trash2 } from 'lucide-react';
+
+const matchOptionLabels = (recommended: string[] | undefined, options: { label: string }[], fallbackCount = 2): string[] => {
+  if (!recommended || !Array.isArray(recommended) || recommended.length === 0) {
+    return options.slice(0, fallbackCount).map(o => o.label);
+  }
+
+  const matched = options.filter(opt => {
+    const optLabelLower = opt.label.toLowerCase();
+    return recommended.some(rec => {
+      if (!rec || typeof rec !== 'string') return false;
+      const recLower = rec.toLowerCase().trim();
+      if (optLabelLower === recLower) return true;
+      if (optLabelLower.includes(recLower) || recLower.includes(optLabelLower)) return true;
+      const recWords = recLower.split(/[\s()/,-]+/).filter(w => w.length >= 3);
+      return recWords.some(w => optLabelLower.includes(w));
+    });
+  }).map(opt => opt.label);
+
+  if (matched.length === 0) {
+    return options.slice(0, fallbackCount).map(o => o.label);
+  }
+
+  return matched;
+};
 
 const INITIAL_FORM_DATA: LessonFormData = {
   namaGuru: '',
@@ -202,12 +226,17 @@ export default function App() {
       const json = await res.json();
       if (json.success && json.data) {
         const d = json.data;
+        const newDpl = matchOptionLabels(d.recommendedDpl, DPL_OPTIONS, 3);
+        const newMethods = matchOptionLabels(d.recommendedMethods, METODE_MODEL_OPTIONS, 2);
+        const newPartnerships = matchOptionLabels(d.recommendedPartnerships, KEMITRAAN_OPTIONS, 2);
+        const newDigital = matchOptionLabels(d.recommendedDigitalTools, DIGITAL_TOOLS_OPTIONS, 2);
+
         setFormData((prev) => ({
           ...prev,
-          dpl: Array.from(new Set([...prev.dpl, ...(d.recommendedDpl || [])])),
-          metodeModel: Array.from(new Set([...prev.metodeModel, ...(d.recommendedMethods || [])])),
-          kemitraan: Array.from(new Set([...prev.kemitraan, ...(d.recommendedPartnerships || [])])),
-          pemanfaatanDigital: Array.from(new Set([...prev.pemanfaatanDigital, ...(d.recommendedDigitalTools || [])])),
+          dpl: Array.from(new Set([...prev.dpl, ...newDpl])),
+          metodeModel: Array.from(new Set([...prev.metodeModel, ...newMethods])),
+          kemitraan: Array.from(new Set([...prev.kemitraan, ...newPartnerships])),
+          pemanfaatanDigital: Array.from(new Set([...prev.pemanfaatanDigital, ...newDigital])),
           karakteristikMurid: d.studentCharacteristics || prev.karakteristikMurid,
           karakteristikMateri: d.materialCharacteristics || prev.karakteristikMateri,
         }));
