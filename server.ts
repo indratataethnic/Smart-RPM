@@ -37,11 +37,11 @@ async function callGeminiWithRetry(
   }
 ) {
   const modelsToTry = [
-    params.preferredModel || "gemini-2.5-flash",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-2.5-pro"
+    params.preferredModel || "gemini-3.6-flash",
+    "gemini-3.6-flash",
+    "gemini-flash-latest",
+    "gemini-3.1-flash-lite",
+    "gemini-3.1-pro-preview"
   ];
   // Filter unique
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
@@ -103,11 +103,11 @@ async function streamGeminiWithRetry(
   }
 ) {
   const modelsToTry = [
-    params.preferredModel || "gemini-2.5-flash",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-2.5-pro"
+    params.preferredModel || "gemini-3.6-flash",
+    "gemini-3.6-flash",
+    "gemini-flash-latest",
+    "gemini-3.1-flash-lite",
+    "gemini-3.1-pro-preview"
   ];
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
   let lastError: any = null;
@@ -810,6 +810,10 @@ Keluarkan hasil akhir HANYA dalam JSON valid dengan struktur persis sama dengan 
     res.json({ success: true, lessonPlan: updatedPlan });
   } catch (error: any) {
     console.error("Error in /api/refine-lesson-plan:", error);
+    const currentPlan = req.body?.currentPlan;
+    if (currentPlan) {
+      return res.json({ success: true, lessonPlan: currentPlan, isFallback: true });
+    }
     res.status(500).json({ success: false, error: error.message || "Gagal merevisi rencana pembelajaran" });
   }
 });
@@ -972,7 +976,124 @@ Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
     res.json({ success: true, lkpd: lkpdData });
   } catch (error: any) {
     console.error("Error in /api/generate-lkpd:", error);
-    res.status(500).json({ success: false, error: error.message || "Gagal membuat LKPD dengan AI" });
+    const planData = req.body?.planData || {};
+    const topik = planData?.tujuanDanDpl?.lingkupMateri || planData?.identitas?.mataPelajaran || "Materi Pembelajaran";
+    const fallbackLKPD = {
+      judulLKPD: `LEMBAR KERJA PESERTA DIDIK (LKPD) - ${topik.toUpperCase()}`,
+      subJudul: "Aktivitas Pembelajaran Mendalam (Deep Learning)",
+      petunjukUmum: [
+        "Tuliskan nama anggota kelompok / nama siswa pada kolom identitas yang disediakan.",
+        "Bacalah setiap petunjuk kerja dengan cermat sebelum melakukan aktivitas.",
+        "Gunakan nalar kritis dan kolaborasi yang baik dalam menyelesaikan setiap tahapan."
+      ],
+      lembarPenugasan: {
+        judulTugas: "Lembar Penugasan & Diskusi Kelompok",
+        tujuanAktivitas: `Peserta didik dapat memahami konsep ${topik} melalui diskusi dan pemecahan masalah kontekstual.`,
+        alatDanBahan: ["Buku Siswa / Modul Ajar", "Alat Tulis Lengkap", "Lembar Kerja Siswa", "Media / Alat Peraga"],
+        instruksiKerja: [
+          "Bentuklah kelompok diskusi yang terdiri dari 4-5 siswa.",
+          "Cermati studi kasus atau wacana masalah yang diberikan oleh guru.",
+          "Diskusikan pertanyaan dengan anggota kelompok dan catat hasil kesepakatan kelompok."
+        ]
+      },
+      panduanPraktikum: {
+        judulEksplorasi: "Panduan Aktivitas Praktikum & Eksplorasi Siswa",
+        tujuanPraktikum: `Peserta didik dapat membuktikan dan menganalisis fenomena ${topik} melalui eksperimen/praktikum langsung.`,
+        langkahKerja: [
+          "Siapkan alat dan bahan praktikum secara rapi di atas meja kerja.",
+          "Lakukan percobaan sesuai dengan tahapan kerja yang diinstruksikan.",
+          "Catat setiap data hasil pengamatan ke dalam tabel pengamatan di bawah ini secara cermat."
+        ],
+        tabelPengamatan: {
+          judulTabel: "Tabel Lembar Pengamatan & Data Hasil Praktikum",
+          headers: ["No", "Variabel / Objek Pengamatan", "Hasil Pengamatan (Siswa)", "Analisis Singkat"],
+          rows: [
+            ["1", "Pengamatan Kondisi Awal", "", ""],
+            ["2", "Pengamatan Setelah Perlakuan / Percobaan", "", ""],
+            ["3", "Pengamatan Akhir & Hasil Percobaan", "", ""]
+          ],
+          petunjukPengisian: "Isilah tabel di atas berdasarkan hasil pengamatan langsung atau percobaan kelompok kalian."
+        },
+        pertanyaanAnalisis: [
+          `Berdasarkan data tabel pengamatan, pola atau perubahan apa yang dapat kalian amati?`,
+          `Mengapa hal tersebut dapat terjadi? Jelaskan keterkaitannya dengan konsep materi ${topik}!`,
+          `Apa kesimpulan utama yang dapat diambil dari kegiatan praktikum ini?`
+        ]
+      },
+      latihanSoal: {
+        petunjukPengerjaan: "Jawablah pertanyaan-pertanyaan berikut dengan teliti, kritis, dan jujur!",
+        pilihanGanda: [
+          {
+            no: 1,
+            pertanyaan: `Manakah pernyataan yang paling tepat terkait konsep utama ${topik}?`,
+            pilihan: [`A. ${topik} merupakan proses ilmiah penting dalam pembelajaran.`, "B. Tidak mempengaruhi hasil pembelajaran.", "C. Hanya digunakan saat ujian akhir.", "D. Tidak relevan dengan kehidupan sehari-hari."],
+            kunciJawaban: `A. ${topik} merupakan proses ilmiah penting dalam pembelajaran.`,
+            pembahasan: `Pernyataan A menjelaskan hakikat penting dari ${topik} secara tepat.`
+          },
+          {
+            no: 2,
+            pertanyaan: `Langkah awal yang paling baik dalam menganalisis ${topik} adalah...`,
+            pilihan: ["A. Melakukan observasi dan pengumpulan data.", "B. Menyimpulkan tanpa bukti.", "C. Menghindari diskusi kelompok.", "D. Mengabaikan petunjuk kerja."],
+            kunciJawaban: "A. Melakukan observasi dan pengumpulan data.",
+            pembahasan: "Metode ilmiah diawali dengan observasi dan pengumpulan data."
+          },
+          {
+            no: 3,
+            pertanyaan: `Sikap bernalar kritis murid ditunjukkan dengan...`,
+            pilihan: ["A. Mengajukan pertanyaan reflektif dan menguji kebenaran informasi.", "B. Menerima jawaban tanpa bertanya.", "C. Mengabaikan umpan balik.", "D. Bekerja sendiri tanpa berkolaborasi."],
+            kunciJawaban: "A. Mengajukan pertanyaan reflektif dan menguji kebenaran informasi.",
+            pembahasan: "Bernalar kritis melibatkan pertanyaan metakognitif dan pengujian informasi."
+          },
+          {
+            no: 4,
+            pertanyaan: `Tujuan dari kegiatan refleksi pada akhir pembelajaran adalah...`,
+            pilihan: ["A. Memahami sejauh mana ketercapaian tujuan belajar dan area perbaikan.", "B. Menambah beban tugas siswa.", "C. Menggantikan nilai ujian.", "D. Memperlama waktu jam pelajaran."],
+            kunciJawaban: "A. Memahami sejauh mana ketercapaian tujuan belajar dan area perbaikan.",
+            pembahasan: "Refleksi berfungsi mengevaluasi proses dan pemahaman belajar siswa."
+          },
+          {
+            no: 5,
+            pertanyaan: `Manfaat utama penerapan Pembelajaran Mendalam (Deep Learning) adalah...`,
+            pilihan: ["A. Siswa tidak hanya menghafal, tetapi memahami dan mengaplikasikan konsep.", "B. Siswa hanya menghafal rumus.", "C. Mengurangi aktivitas interaktif.", "D. Membatasi kreativitas siswa."],
+            kunciJawaban: "A. Siswa tidak hanya menghafal, tetapi memahami dan mengaplikasikan konsep.",
+            pembahasan: "Pembelajaran mendalam berfokus pada pemahaman bermakna dan aplikasi kontekstual."
+          }
+        ],
+        soalUraian: [
+          {
+            no: 1,
+            pertanyaan: `Jelaskan bagaimana konsep ${topik} dapat diterapkan dalam menyelesaikan masalah di kehidupan sehari-hari!`,
+            kunciJawaban: `Siswa menjelaskan minimal 2 contoh aplikasi konkret ${topik} dalam kehidupan nyata.`,
+            pembahasan: `Penilaian berfokus pada kemampuan menghubungkan teori dengan realitas kontekstual.`
+          },
+          {
+            no: 2,
+            pertanyaan: `Sebutkan dan jelaskan 3 langkah utama yang kalian lakukan saat praktikum/diskusi kelompok hari ini!`,
+            kunciJawaban: "1. Persiapan alat & bahan. 2. Pelaksanaan eksperimen/diskusi. 3. Pengolahan data & penyimpulan.",
+            pembahasan: "Mengukur pemahaman alur kerja dan metodologi siswa."
+          },
+          {
+            no: 3,
+            pertanyaan: `Mengapa kolaborasi dan gotong royong sangat penting dalam menyelesaikan Lembar Kerja ini?`,
+            kunciJawaban: "Siswa menjelaskan bahwa kolaborasi mempermudah pembagian tugas, saling melengkapi gagasan, dan melatih komunikasi.",
+            pembahasan: "Menilai pemaknaan Dimensi Profil Lulusan Gotong Royong."
+          }
+        ]
+      },
+      refleksiSiswa: {
+        pertanyaanRefleksi: [
+          "Apa hal paling menarik yang aku pelajari hari ini?",
+          "Hambatan apa yang aku temui saat praktikum/diskusi dan bagaimana cara mengatasinya?",
+          "Bagaimana aku dapat menerapkan pengetahuan ini dalam kehidupan sehari-hari?"
+        ],
+        checkListDiri: [
+          "Saya memahami konsep dasar materi pembelajaran hari ini",
+          "Saya aktif berdiskusi dan bekerjasama dalam kelompok",
+          "Saya dapat menyelesaikan praktikum dan latihan soal dengan jujur"
+        ]
+      }
+    };
+    return res.json({ success: true, lkpd: fallbackLKPD, isFallback: true });
   }
 });
 

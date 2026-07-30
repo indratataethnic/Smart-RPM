@@ -162,9 +162,10 @@ export default function App() {
 
   // AI Assistant for CP & TP
   const handleRequestCpTpAi = async () => {
-    if (!formData.mataPelajaran) {
-      alert('Silakan pilih atau ketik Nama Mata Pelajaran terlebih dahulu.');
-      return;
+    let targetSubject = formData.mataPelajaran;
+    if (!targetSubject) {
+      targetSubject = 'IPAS';
+      setFormData((prev) => ({ ...prev, mataPelajaran: 'IPAS' }));
     }
 
     setIsAiLoadingCpTp(true);
@@ -176,7 +177,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fieldType: 'cp_tp',
-          mataPelajaran: formData.mataPelajaran,
+          mataPelajaran: targetSubject,
           faseKelas: formData.faseKelas,
           lingkupMateri: formData.lingkupMateri,
         }),
@@ -186,6 +187,7 @@ export default function App() {
       if (json.success && json.data) {
         setFormData((prev) => ({
           ...prev,
+          mataPelajaran: targetSubject,
           capaianPembelajaran: json.data.cp || prev.capaianPembelajaran,
           tujuanPembelajaran: json.data.tp || prev.tujuanPembelajaran,
           lingkupMateri: json.data.lingkupMateri || json.data.materi || prev.lingkupMateri,
@@ -203,9 +205,10 @@ export default function App() {
 
   // AI Assistant for All Recommendations (DPL, Methods, Kemitraan, Digital)
   const handleRequestAllRecommendations = async () => {
-    if (!formData.mataPelajaran) {
-      alert('Silakan isi Mata Pelajaran terlebih dahulu.');
-      return;
+    let targetSubject = formData.mataPelajaran;
+    if (!targetSubject) {
+      targetSubject = 'IPAS';
+      setFormData((prev) => ({ ...prev, mataPelajaran: 'IPAS' }));
     }
 
     setIsAiRecommendingAll(true);

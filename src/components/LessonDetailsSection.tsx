@@ -39,7 +39,7 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
           id="btn-ai-cp-tp"
           type="button"
           onClick={onRequestCpTpAi}
-          disabled={isAiLoadingCpTp || !formData.mataPelajaran}
+          disabled={isAiLoadingCpTp}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white transition-all shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer"
         >
           {isAiLoadingCpTp ? (
