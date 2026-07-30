@@ -38,11 +38,12 @@ async function callGeminiWithRetry(
 ) {
   const modelsToTry = [
     params.preferredModel || "gemini-2.5-flash",
-    "gemini-3.6-flash",
-    "gemini-1.5-flash"
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash"
   ];
   // Filter unique
-  const uniqueModels = Array.from(new Set(modelsToTry));
+  const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
   let lastError: any = null;
 
   for (const model of uniqueModels) {
@@ -59,28 +60,29 @@ async function callGeminiWithRetry(
         const errStr = String(err?.message || err || "").toLowerCase();
         console.warn(`Gemini API call attempt ${attempt} on model ${model} failed:`, errStr);
 
-        const isQuotaExceeded =
+        const isQuotaOrNotFound =
           errStr.includes("429") ||
           errStr.includes("resource_exhausted") ||
           errStr.includes("quota exceeded") ||
-          errStr.includes("rate_limit");
+          errStr.includes("rate_limit") ||
+          errStr.includes("404") ||
+          errStr.includes("not_found");
+
+        if (isQuotaOrNotFound) {
+          // Immediately try next model in fallback list
+          break;
+        }
 
         const isTransient =
-          isQuotaExceeded ||
           errStr.includes("503") ||
           errStr.includes("unavailable") ||
           errStr.includes("service unavailable") ||
           errStr.includes("high demand") ||
           errStr.includes("overloaded");
 
-        // If quota exceeded, don't waste 3 attempts on the same exhausted model
-        if (isQuotaExceeded && attempt >= 2) {
-          break; // Switch to next fallback model immediately
-        }
-
         if (isTransient && attempt < 3) {
           await new Promise((res) => setTimeout(res, attempt * 1000));
-        } else if (!isTransient) {
+        } else {
           break;
         }
       }
@@ -101,10 +103,11 @@ async function streamGeminiWithRetry(
 ) {
   const modelsToTry = [
     params.preferredModel || "gemini-2.5-flash",
-    "gemini-3.6-flash",
-    "gemini-1.5-flash"
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash"
   ];
-  const uniqueModels = Array.from(new Set(modelsToTry));
+  const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
   let lastError: any = null;
 
   for (const model of uniqueModels) {
@@ -121,27 +124,29 @@ async function streamGeminiWithRetry(
         const errStr = String(err?.message || err || "").toLowerCase();
         console.warn(`Gemini API stream attempt ${attempt} on model ${model} failed:`, errStr);
 
-        const isQuotaExceeded =
+        const isQuotaOrNotFound =
           errStr.includes("429") ||
           errStr.includes("resource_exhausted") ||
           errStr.includes("quota exceeded") ||
-          errStr.includes("rate_limit");
+          errStr.includes("rate_limit") ||
+          errStr.includes("404") ||
+          errStr.includes("not_found");
+
+        if (isQuotaOrNotFound) {
+          // Immediately try next model in fallback list
+          break;
+        }
 
         const isTransient =
-          isQuotaExceeded ||
           errStr.includes("503") ||
           errStr.includes("unavailable") ||
           errStr.includes("service unavailable") ||
           errStr.includes("high demand") ||
           errStr.includes("overloaded");
 
-        if (isQuotaExceeded && attempt >= 2) {
-          break; // Switch model immediately if quota exhausted
-        }
-
         if (isTransient && attempt < 3) {
           await new Promise((res) => setTimeout(res, attempt * 1000));
-        } else if (!isTransient) {
+        } else {
           break;
         }
       }
