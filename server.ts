@@ -381,6 +381,8 @@ function createFallbackLessonPlan(formData: any) {
       modelDanMetode: Array.isArray(formData.metodeModel) && formData.metodeModel.length > 0 ? formData.metodeModel : ["Problem Based Learning (PBL)", "Pembelajaran Berdiferensiasi (Konten/Proses/Produk)"],
       kemitraanPembelajaran: Array.isArray(formData.kemitraan) && formData.kemitraan.length > 0 ? formData.kemitraan : ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
       pemanfaatanDigital: Array.isArray(formData.pemanfaatanDigital) && formData.pemanfaatanDigital.length > 0 ? formData.pemanfaatanDigital : ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
+      lintasDisiplin: Array.isArray(formData.lintasDisiplin) ? formData.lintasDisiplin : [],
+      lingkunganPembelajaran: Array.isArray(formData.lingkunganPembelajaran) ? formData.lingkunganPembelajaran : [],
       saranaPrasarana: "Laptop, Proyektor, Papan Tulis, LKPD Cetak, Media Interaktif Digital."
     },
     kegiatanPembelajaran: {
@@ -540,6 +542,8 @@ DATAPEMBELAJARAN:
 - Metode & Model Pembelajaran: ${Array.isArray(formData.metodeModel) ? formData.metodeModel.join(", ") : formData.metodeModel}
 - Kemitraan Pembelajaran: ${Array.isArray(formData.kemitraan) ? formData.kemitraan.join(", ") : formData.kemitraan}
 - Pemanfaatan Digital: ${Array.isArray(formData.pemanfaatanDigital) ? formData.pemanfaatanDigital.join(", ") : formData.pemanfaatanDigital}
+- Lintas Disiplin Ilmu: ${Array.isArray(formData.lintasDisiplin) ? formData.lintasDisiplin.join(", ") : formData.lintasDisiplin || ''}
+- Lingkungan Pembelajaran: ${Array.isArray(formData.lingkunganPembelajaran) ? formData.lingkunganPembelajaran.join(", ") : formData.lingkunganPembelajaran || ''}
 
 PERSYARATAN WAJIB DOKUMEN RENCANA PEMBELAJARAN MENDALAM:
 1. PADA KEGIATAN INTI PEMBELAJARAN, KAMU WAJIB MEMBAGI KEGIATAN MENJADI 3 TAHAPAN EKSPLISIT PEMBELAJARAN MENDALAM:
@@ -591,6 +595,8 @@ Keluarkan dalam format JSON struktur persis berikut:
     "modelDanMetode": ${JSON.stringify(formData.metodeModel || [])},
     "kemitraanPembelajaran": ${JSON.stringify(formData.kemitraan || [])},
     "pemanfaatanDigital": ${JSON.stringify(formData.pemanfaatanDigital || [])},
+    "lintasDisiplin": ${JSON.stringify(formData.lintasDisiplin || [])},
+    "lingkunganPembelajaran": ${JSON.stringify(formData.lingkunganPembelajaran || [])},
     "saranaPrasarana": "Daftar alat dan media pembelajaran yang digunakan..."
   },
   "kegiatanPembelajaran": {

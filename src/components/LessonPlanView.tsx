@@ -669,9 +669,11 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
       <div class="section-header">III. DESAIN PEMBELAJARAN MENDALAM & KEMITRAAN DIGITAL</div>
       <table class="grid-table">
         <tr>
-          <td class="bg-label" width="33%">Model & Metode Pembelajaran</td>
-          <td class="bg-label" width="33%">Kemitraan Pembelajaran</td>
-          <td class="bg-label" width="34%">Pemanfaatan Digital & Alat</td>
+          <td class="bg-label" width="20%">Model & Metode Pembelajaran</td>
+          <td class="bg-label" width="20%">Kemitraan Pembelajaran</td>
+          <td class="bg-label" width="20%">Pemanfaatan Digital & Alat</td>
+          <td class="bg-label" width="20%">Lintas Disiplin Ilmu</td>
+          <td class="bg-label" width="20%">Lingkungan Pembelajaran</td>
         </tr>
         <tr>
           <td>
@@ -687,6 +689,20 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
           <td>
             <ul style="margin: 0; padding-left: 18px;">
               ${(desainPembelajaran.pemanfaatanDigital || []).map((d) => `<li>${d}</li>`).join('')}
+            </ul>
+          </td>
+          <td>
+            <ul style="margin: 0; padding-left: 18px;">
+              ${(desainPembelajaran.lintasDisiplin || []).length > 0
+                ? (desainPembelajaran.lintasDisiplin || []).map((ld) => `<li>${ld}</li>`).join('')
+                : '<li>(Tidak ada)</li>'}
+            </ul>
+          </td>
+          <td>
+            <ul style="margin: 0; padding-left: 18px;">
+              ${(desainPembelajaran.lingkunganPembelajaran || []).length > 0
+                ? (desainPembelajaran.lingkunganPembelajaran || []).map((lp) => `<li>${lp}</li>`).join('')
+                : '<li>(Tidak ada)</li>'}
             </ul>
           </td>
         </tr>
@@ -1571,9 +1587,9 @@ ${formatActivityText(k.aktivitasMurid)}
             III. DESAIN PEMBELAJARAN MENDALAM & KEMITRAAN DIGITAL
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs sm:text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs sm:text-sm">
             <div className="border border-slate-200 p-3 rounded-xl bg-slate-50">
-              <span className="font-bold text-slate-800 block mb-1 text-xs uppercase text-teal-800">
+              <span className="font-bold text-slate-800 block mb-1.5 text-xs uppercase text-teal-800">
                 Model & Metode Pembelajaran
               </span>
               {isEditing ? (
@@ -1597,7 +1613,7 @@ ${formatActivityText(k.aktivitasMurid)}
             </div>
 
             <div className="border border-slate-200 p-3 rounded-xl bg-slate-50">
-              <span className="font-bold text-slate-800 block mb-1 text-xs uppercase text-teal-800">
+              <span className="font-bold text-slate-800 block mb-1.5 text-xs uppercase text-teal-800">
                 Kemitraan Pembelajaran
               </span>
               {isEditing ? (
@@ -1621,7 +1637,7 @@ ${formatActivityText(k.aktivitasMurid)}
             </div>
 
             <div className="border border-slate-200 p-3 rounded-xl bg-slate-50">
-              <span className="font-bold text-slate-800 block mb-1 text-xs uppercase text-teal-800">
+              <span className="font-bold text-slate-800 block mb-1.5 text-xs uppercase text-teal-800">
                 Pemanfaatan Digital & Alat
               </span>
               {isEditing ? (
@@ -1640,6 +1656,62 @@ ${formatActivityText(k.aktivitasMurid)}
                       {d}
                     </li>
                   ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="border border-slate-200 p-3 rounded-xl bg-slate-50">
+              <span className="font-bold text-slate-800 block mb-1.5 text-xs uppercase text-teal-800">
+                Lintas Disiplin Ilmu
+              </span>
+              {isEditing ? (
+                <textarea
+                  rows={3}
+                  className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs"
+                  placeholder="Isi satu per baris..."
+                  value={(editedPlan.desainPembelajaran.lintasDisiplin || []).join('\n')}
+                  onChange={(e) => updateDesain('lintasDisiplin', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))}
+                />
+              ) : (
+                <ul className="space-y-1">
+                  {(activePlan.desainPembelajaran.lintasDisiplin || []).length > 0 ? (
+                    (activePlan.desainPembelajaran.lintasDisiplin || []).map((ld, idx) => (
+                      <li key={idx} className="flex items-center gap-1.5 text-slate-700 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+                        {ld}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-slate-400 italic">Tidak dipilih</li>
+                  )}
+                </ul>
+              )}
+            </div>
+
+            <div className="border border-slate-200 p-3 rounded-xl bg-slate-50">
+              <span className="font-bold text-slate-800 block mb-1.5 text-xs uppercase text-teal-800">
+                Lingkungan Pembelajaran
+              </span>
+              {isEditing ? (
+                <textarea
+                  rows={3}
+                  className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs"
+                  placeholder="Isi satu per baris..."
+                  value={(editedPlan.desainPembelajaran.lingkunganPembelajaran || []).join('\n')}
+                  onChange={(e) => updateDesain('lingkunganPembelajaran', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))}
+                />
+              ) : (
+                <ul className="space-y-1">
+                  {(activePlan.desainPembelajaran.lingkunganPembelajaran || []).length > 0 ? (
+                    (activePlan.desainPembelajaran.lingkunganPembelajaran || []).map((lp, idx) => (
+                      <li key={idx} className="flex items-center gap-1.5 text-slate-700 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0" />
+                        {lp}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-slate-400 italic">Tidak dipilih</li>
+                  )}
                 </ul>
               )}
             </div>
