@@ -505,22 +505,35 @@ export default function App() {
     e.preventDefault();
 
     let updatedData = { ...formData };
-    if (!updatedData.mataPelajaran) updatedData.mataPelajaran = 'IPAS';
+    
+    // Auto-fill required fields if they are left empty to ensure the generation process always starts instantly
+    if (!updatedData.namaSekolah || !updatedData.namaSekolah.trim()) {
+      updatedData.namaSekolah = 'SD Negeri Nusantara';
+    }
+    if (!updatedData.namaGuru || !updatedData.namaGuru.trim()) {
+      updatedData.namaGuru = 'Guru Pengampu';
+    }
+    if (!updatedData.mataPelajaran || !updatedData.mataPelajaran.trim()) {
+      updatedData.mataPelajaran = 'IPAS';
+    }
+    
     const targetMateri = updatedData.lingkupMateri || updatedData.mataPelajaran;
-    if (!updatedData.capaianPembelajaran) {
+    if (!updatedData.capaianPembelajaran || !updatedData.capaianPembelajaran.trim()) {
       updatedData.capaianPembelajaran = `Peserta didik mampu memahami dan menganalisis konsep ${targetMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`;
     }
-    if (!updatedData.tujuanPembelajaran) {
+    if (!updatedData.tujuanPembelajaran || !updatedData.tujuanPembelajaran.trim()) {
       updatedData.tujuanPembelajaran = `1. Peserta didik dapat menjelaskan konsep dasar ${targetMateri} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${targetMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${targetMateri} secara kritis dan kolaboratif.`;
     }
-    if (!updatedData.lingkupMateri) updatedData.lingkupMateri = targetMateri;
-    if (updatedData.dpl.length === 0) {
+    if (!updatedData.lingkupMateri || !updatedData.lingkupMateri.trim()) {
+      updatedData.lingkupMateri = targetMateri;
+    }
+    if (!updatedData.dpl || updatedData.dpl.length === 0) {
       updatedData.dpl = matchOptionLabels(undefined, DPL_OPTIONS, 2, 3);
     }
-    if (updatedData.metodeModel.length === 0) {
+    if (!updatedData.metodeModel || updatedData.metodeModel.length === 0) {
       updatedData.metodeModel = matchOptionLabels(undefined, METODE_MODEL_OPTIONS, 2, 3);
     }
-    if (updatedData.pemanfaatanDigital.length === 0) {
+    if (!updatedData.pemanfaatanDigital || updatedData.pemanfaatanDigital.length === 0) {
       updatedData.pemanfaatanDigital = matchOptionLabels(undefined, DIGITAL_TOOLS_OPTIONS, 2, 3);
     }
     setFormData(updatedData);
@@ -530,6 +543,24 @@ export default function App() {
     setGeneratingCharCount(0);
     setGeneratingStep(1);
     setErrorMessage(null);
+
+    // Dynamic Simulated Progress Timer (ensures the progress modal always animates active progress to the user immediately)
+    let simulatedStep = 1;
+    const progressInterval = setInterval(() => {
+      if (simulatedStep < 5) {
+        simulatedStep += 1;
+        setGeneratingStep(simulatedStep);
+        setGeneratingCharCount(prev => prev + Math.floor(Math.random() * 400) + 200);
+
+        const progressMessages: { [key: number]: string } = {
+          2: 'Sedang merancang alur Deep Learning (Memahami, Mengaplikasi, Merefleksi)...',
+          3: 'Menyusun rincian Aktivitas Guru & Murid serta Prinsip Pembelajaran Mendalam...',
+          4: 'Membuat instrumen Asesmen Diagnostik, Formatif, Sumatif, & KKTP...',
+          5: 'Finishing touch... Memformat dokumen Rencana Pembelajaran Mendalam...'
+        };
+        setGeneratingStatusMessage(progressMessages[simulatedStep] || 'Memproses...');
+      }
+    }, 2000);
 
     try {
       const res = await fetch('/api/generate-lesson-plan', {
@@ -563,10 +594,17 @@ export default function App() {
             try {
               const data = JSON.parse(jsonStr);
               if (data.type === 'status') {
-                if (data.message) setGeneratingStatusMessage(data.message);
-                if (data.step) setGeneratingStep(data.step);
+                if (data.message) {
+                  setGeneratingStatusMessage(data.message);
+                }
+                if (data.step) {
+                  setGeneratingStep(data.step);
+                  simulatedStep = Math.max(simulatedStep, data.step);
+                }
               } else if (data.type === 'chunk') {
-                if (typeof data.length === 'number') setGeneratingCharCount(data.length);
+                if (typeof data.length === 'number') {
+                  setGeneratingCharCount(data.length);
+                }
               } else if (data.type === 'done') {
                 if (data.lessonPlan) {
                   finalPlan = data.lessonPlan;
@@ -582,6 +620,29 @@ export default function App() {
         }
 
         if (finalPlan) {
+          // Clears the simulated interval immediately so it doesn't conflict with our manual transition
+          clearInterval(progressInterval);
+
+          // Gracefully transition through any remaining steps so the teacher can see the progress of all 5 stages
+          while (simulatedStep < 5) {
+            simulatedStep += 1;
+            setGeneratingStep(simulatedStep);
+            
+            const progressMessages: { [key: number]: string } = {
+              2: 'Sedang merancang alur Deep Learning (Memahami, Mengaplikasi, Merefleksi)...',
+              3: 'Menyusun rincian Aktivitas Guru & Murid serta Prinsip Pembelajaran Mendalam...',
+              4: 'Membuat instrumen Asesmen Diagnostik, Formatif, Sumatif, & KKTP...',
+              5: 'Finishing touch... Memformat dokumen Rencana Pembelajaran Mendalam...'
+            };
+            setGeneratingStatusMessage(progressMessages[simulatedStep] || 'Memproses...');
+            setGeneratingCharCount(prev => prev + Math.floor(Math.random() * 400) + 300);
+            await new Promise((resolve) => setTimeout(resolve, 850));
+          }
+
+          // Small final pause to let the teacher see the 100% completion of Step 5
+          setGeneratingStatusMessage('Dokumen Rencana Pembelajaran Mendalam (RPM) Berhasil Disusun!');
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
           setGeneratedPlan(finalPlan);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
@@ -590,6 +651,27 @@ export default function App() {
       } else {
         const json = await res.json();
         if (json.success && json.lessonPlan) {
+          // Clears the simulated interval immediately
+          clearInterval(progressInterval);
+
+          while (simulatedStep < 5) {
+            simulatedStep += 1;
+            setGeneratingStep(simulatedStep);
+            
+            const progressMessages: { [key: number]: string } = {
+              2: 'Sedang merancang alur Deep Learning (Memahami, Mengaplikasi, Merefleksi)...',
+              3: 'Menyusun rincian Aktivitas Guru & Murid serta Prinsip Pembelajaran Mendalam...',
+              4: 'Membuat instrumen Asesmen Diagnostik, Formatif, Sumatif, & KKTP...',
+              5: 'Finishing touch... Memformat dokumen Rencana Pembelajaran Mendalam...'
+            };
+            setGeneratingStatusMessage(progressMessages[simulatedStep] || 'Memproses...');
+            setGeneratingCharCount(prev => prev + Math.floor(Math.random() * 400) + 300);
+            await new Promise((resolve) => setTimeout(resolve, 850));
+          }
+
+          setGeneratingStatusMessage('Dokumen Rencana Pembelajaran Mendalam (RPM) Berhasil Disusun!');
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
           setGeneratedPlan(json.lessonPlan);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
@@ -600,7 +682,7 @@ export default function App() {
       console.warn('Error generating RPM via server, executing smart local fallback compilation:', err);
       try {
         setGeneratingStep(2);
-        setGeneratingStatusMessage('Mendeteksi server AI tidak terjangkau (Status 404). Mengaktifkan Algoritma Penyusunan Cerdas Lokal...');
+        setGeneratingStatusMessage('Mendeteksi gangguan server AI atau kuota terlampaui. Mengaktifkan Penyusunan Cerdas Lokal...');
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         setGeneratingStep(3);
@@ -623,6 +705,7 @@ export default function App() {
         setErrorMessage(err.message || 'Terjadi kesalahan saat menyusun Rencana Pembelajaran Mendalam.');
       }
     } finally {
+      clearInterval(progressInterval);
       setIsGenerating(false);
     }
   };
@@ -754,7 +837,7 @@ export default function App() {
           />
         ) : (
           /* VIEW 2: FORM INPUT FOR TEACHERS */
-          <form onSubmit={handleGeneratePlan} className="space-y-6">
+          <form onSubmit={handleGeneratePlan} noValidate className="space-y-6">
             {/* Form Top Banner */}
             <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="space-y-2 max-w-2xl">
