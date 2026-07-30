@@ -37,11 +37,11 @@ async function callGeminiWithRetry(
   }
 ) {
   const modelsToTry = [
-    params.preferredModel || "gemini-3.6-flash",
-    "gemini-3.6-flash",
-    "gemini-flash-latest",
-    "gemini-3.1-pro-preview",
-    "gemini-3.1-flash-lite"
+    params.preferredModel || "gemini-2.5-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-2.5-pro"
   ];
   // Filter unique
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
@@ -103,11 +103,11 @@ async function streamGeminiWithRetry(
   }
 ) {
   const modelsToTry = [
-    params.preferredModel || "gemini-3.6-flash",
-    "gemini-3.6-flash",
-    "gemini-flash-latest",
-    "gemini-3.1-pro-preview",
-    "gemini-3.1-flash-lite"
+    params.preferredModel || "gemini-2.5-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-2.5-pro"
   ];
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
   let lastError: any = null;
@@ -252,7 +252,7 @@ Keluarkan dalam format JSON valid (maksimal 3 items di setiap array):
 
     try {
       const response = await callGeminiWithRetry(ai, {
-        preferredModel: "gemini-3.6-flash",
+        preferredModel: "gemini-2.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -287,7 +287,31 @@ Keluarkan dalam format JSON valid (maksimal 3 items di setiap array):
     }
   } catch (error: any) {
     console.error("Error in /api/recommend-fields:", error);
-    res.status(500).json({ success: false, error: error.message || "Gagal mendapatkan rekomendasi AI" });
+    const defaultMateri = req.body?.lingkupMateri || `${req.body?.mataPelajaran || 'Topik Pembelajaran'}`;
+    if (req.body?.fieldType === "cp_tp") {
+      return res.json({
+        success: true,
+        data: {
+          cp: `Peserta didik mampu memahami dan menganalisis konsep ${defaultMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`,
+          tp: `1. Peserta didik dapat menjelaskan konsep dasar ${defaultMateri} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${defaultMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${defaultMateri} secara kritis dan kolaboratif.`,
+          lingkupMateri: defaultMateri
+        },
+        isFallback: true
+      });
+    } else {
+      return res.json({
+        success: true,
+        data: {
+          recommendedDpl: ["Bernalar Kritis", "Gotong Royong", "Kreatif"],
+          recommendedMethods: ["Problem Based Learning (PBL)", "Technological Pedagogical Content Knowledge (TPACK)"],
+          recommendedPartnerships: ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
+          recommendedDigitalTools: ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
+          studentCharacteristics: "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",
+          materialCharacteristics: "Materi bersifat konseptual dan kontekstual, membutuhkan demonstrasi dan simulasi konkret."
+        },
+        isFallback: true
+      });
+    }
   }
 });
 
@@ -691,7 +715,7 @@ Keluarkan dalam format JSON struktur persis berikut:
 
     try {
       const responseStream = await streamGeminiWithRetry(ai, {
-        preferredModel: "gemini-3.6-flash",
+        preferredModel: "gemini-2.5-flash",
         contents: systemPrompt,
         config: {
           responseMimeType: "application/json",
