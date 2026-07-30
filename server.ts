@@ -252,7 +252,7 @@ Keluarkan dalam format JSON valid (maksimal 3 items di setiap array):
 
     try {
       const response = await callGeminiWithRetry(ai, {
-        preferredModel: "gemini-2.5-flash",
+        preferredModel: "gemini-3.6-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -715,7 +715,7 @@ Keluarkan dalam format JSON struktur persis berikut:
 
     try {
       const responseStream = await streamGeminiWithRetry(ai, {
-        preferredModel: "gemini-2.5-flash",
+        preferredModel: "gemini-3.6-flash",
         contents: systemPrompt,
         config: {
           responseMimeType: "application/json",
