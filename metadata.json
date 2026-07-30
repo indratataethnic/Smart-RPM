@@ -1,0 +1,6 @@
+{
+  "name": "Generator Rencana Pembelajaran Mendalam",
+  "description": "Aplikasi penyusun Rencana Pembelajaran Mendalam (RPM) / Modul Ajar otomatis untuk Guru dengan kerangka Memahami, Mengaplikasi, dan Merefleksi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
