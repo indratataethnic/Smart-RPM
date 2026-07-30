@@ -121,25 +121,8 @@ async function* streamGeminiWithRetry(
           config: params.config,
         });
 
-        // Test the stream by attempting to read the first chunk.
-        // If it fails (e.g. 429 quota/404), it throws an error here, which gets caught.
-        const iterator = responseStream[Symbol.asyncIterator]();
-        const firstResult = await iterator.next();
-
-        if (firstResult.done) {
-          return;
-        }
-
-        // Successfully received the first chunk. Yield it and continue.
-        yield firstResult.value;
-
-        let done = false;
-        while (!done) {
-          const nextResult = await iterator.next();
-          done = nextResult.done;
-          if (!done) {
-            yield nextResult.value;
-          }
+        for await (const chunk of responseStream) {
+          yield chunk;
         }
         return; // Stream finished successfully
       } catch (err: any) {
@@ -362,28 +345,29 @@ Keluarkan dalam format JSON valid (maksimal 3 items di setiap array):
 
 // Helper to create a complete fallback RPM structure if AI service is unavailable
 function createFallbackLessonPlan(formData: any) {
-  const mp = formData.mataPelajaran || 'Mata Pelajaran';
-  const lm = formData.lingkupMateri || 'Materi Utama Pembelajaran';
-  const cp = formData.capaianPembelajaran || `Peserta didik dapat memahami dan menerapkan konsep ${lm}.`;
-  const tp = formData.tujuanPembelajaran || `1. Peserta didik dapat menjelaskan ${lm}.\n2. Peserta didik dapat mengaplikasikan ${lm} dalam masalah nyata.\n3. Peserta didik merefleksikan pemahaman materi ${lm}.`;
+  const data = formData || {};
+  const mp = data.mataPelajaran || 'Mata Pelajaran';
+  const lm = data.lingkupMateri || 'Materi Utama Pembelajaran';
+  const cp = data.capaianPembelajaran || `Peserta didik dapat memahami dan menerapkan konsep ${lm}.`;
+  const tp = data.tujuanPembelajaran || `1. Peserta didik dapat menjelaskan ${lm}.\n2. Peserta didik dapat mengaplikasikan ${lm} dalam masalah nyata.\n3. Peserta didik merefleksikan pemahaman materi ${lm}.`;
 
   return {
     identitas: {
-      namaGuru: formData.namaGuru || "Guru Mata Pelajaran",
-      nipGuru: formData.nipGuru || "-",
-      namaKepsek: formData.namaKepsek || "Kepala Sekolah",
-      nipKepsek: formData.nipKepsek || "-",
-      namaSekolah: formData.namaSekolah || "Sekolah Dasar Negeri",
+      namaGuru: data.namaGuru || "Guru Mata Pelajaran",
+      nipGuru: data.nipGuru || "-",
+      namaKepsek: data.namaKepsek || "Kepala Sekolah",
+      nipKepsek: data.nipKepsek || "-",
+      namaSekolah: data.namaSekolah || "Sekolah Dasar Negeri",
       mataPelajaran: mp,
-      fase: formData.fase || "Fase A",
-      kelas: formData.kelas || "Kelas 1",
-      faseKelas: formData.faseKelas || `${formData.fase || 'Fase A'} - ${formData.kelas || 'Kelas 1'}`,
-      semesterTahun: formData.semesterTahun || "Semester 1 / 2026-2027",
-      alokasiWaktu: formData.alokasiWaktu || "2 x 35 Menit (1 Pertemuan)"
+      fase: data.fase || "Fase A",
+      kelas: data.kelas || "Kelas 1",
+      faseKelas: data.faseKelas || `${data.fase || 'Fase A'} - ${data.kelas || 'Kelas 1'}`,
+      semesterTahun: data.semesterTahun || "Semester 1 / 2026-2027",
+      alokasiWaktu: data.alokasiWaktu || "2 x 35 Menit (1 Pertemuan)"
     },
     analisisAwal: {
-      karakteristikMurid: formData.karakteristikMurid || "Murid memiliki gaya belajar beragam (visual, auditori, kinestetik) dan antusias mengikuti kegiatan kelompok.",
-      karakteristikMateri: formData.karakteristikMateri || "Materi bersifat kontekstual dan dekat dengan kehidupan sehari-hari siswa."
+      karakteristikMurid: data.karakteristikMurid || "Murid memiliki gaya belajar beragam (visual, auditori, kinestetik) dan antusias mengikuti kegiatan kelompok.",
+      karakteristikMateri: data.karakteristikMateri || "Materi bersifat kontekstual dan dekat dengan kehidupan sehari-hari siswa."
     },
     tujuanDanDpl: {
       capaianPembelajaran: cp,
@@ -394,14 +378,14 @@ function createFallbackLessonPlan(formData: any) {
         `Mengaplikasikan konsep ${lm} dalam menyelesaikan masalah kontekstual.`,
         `Refleksi dan pemaknaan atas proses pembelajaran ${lm}.`
       ],
-      dimensiProfilLulusan: Array.isArray(formData.dpl) && formData.dpl.length > 0 ? formData.dpl : ["Bernalar Kritis", "Gotong Royong", "Kreatif"]
+      dimensiProfilLulusan: Array.isArray(data.dpl) && data.dpl.length > 0 ? data.dpl : ["Bernalar Kritis", "Gotong Royong", "Kreatif"]
     },
     desainPembelajaran: {
-      modelDanMetode: Array.isArray(formData.metodeModel) && formData.metodeModel.length > 0 ? formData.metodeModel : ["Problem Based Learning (PBL)", "Pembelajaran Berdiferensiasi (Konten/Proses/Produk)"],
-      kemitraanPembelajaran: Array.isArray(formData.kemitraan) && formData.kemitraan.length > 0 ? formData.kemitraan : ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
-      pemanfaatanDigital: Array.isArray(formData.pemanfaatanDigital) && formData.pemanfaatanDigital.length > 0 ? formData.pemanfaatanDigital : ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
-      lintasDisiplin: Array.isArray(formData.lintasDisiplin) ? formData.lintasDisiplin : [],
-      lingkunganPembelajaran: Array.isArray(formData.lingkunganPembelajaran) ? formData.lingkunganPembelajaran : [],
+      modelDanMetode: Array.isArray(data.metodeModel) && data.metodeModel.length > 0 ? data.metodeModel : ["Problem Based Learning (PBL)", "Pembelajaran Berdiferensiasi (Konten/Proses/Produk)"],
+      kemitraanPembelajaran: Array.isArray(data.kemitraan) && data.kemitraan.length > 0 ? data.kemitraan : ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
+      pemanfaatanDigital: Array.isArray(data.pemanfaatanDigital) && data.pemanfaatanDigital.length > 0 ? data.pemanfaatanDigital : ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
+      lintasDisiplin: Array.isArray(data.lintasDisiplin) ? data.lintasDisiplin : [],
+      lingkunganPembelajaran: Array.isArray(data.lingkunganPembelajaran) ? data.lingkunganPembelajaran : [],
       saranaPrasarana: "Laptop, Proyektor, Papan Tulis, LKPD Cetak, Media Interaktif Digital."
     },
     kegiatanPembelajaran: {
