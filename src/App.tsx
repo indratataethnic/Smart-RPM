@@ -13,9 +13,9 @@ import { LessonFormData, LessonPlanOutput, SavedLessonPlan } from './types';
 import { DEMO_PRESETS, getKelasOptions, DPL_OPTIONS, METODE_MODEL_OPTIONS, KEMITRAAN_OPTIONS, DIGITAL_TOOLS_OPTIONS } from './data/presets';
 import { Sparkles, Loader2, ArrowRight, RotateCcw, AlertCircle, Trash2 } from 'lucide-react';
 
-const matchOptionLabels = (recommended: string[] | undefined, options: { label: string }[], fallbackCount = 2): string[] => {
+const matchOptionLabels = (recommended: string[] | undefined, options: { label: string }[], fallbackCount = 2, maxCount = 3): string[] => {
   if (!recommended || !Array.isArray(recommended) || recommended.length === 0) {
-    return options.slice(0, fallbackCount).map(o => o.label);
+    return options.slice(0, Math.min(fallbackCount, maxCount)).map(o => o.label);
   }
 
   const matched = options.filter(opt => {
@@ -31,10 +31,10 @@ const matchOptionLabels = (recommended: string[] | undefined, options: { label: 
   }).map(opt => opt.label);
 
   if (matched.length === 0) {
-    return options.slice(0, fallbackCount).map(o => o.label);
+    return options.slice(0, Math.min(fallbackCount, maxCount)).map(o => o.label);
   }
 
-  return matched;
+  return matched.slice(0, maxCount);
 };
 
 const INITIAL_FORM_DATA: LessonFormData = {
@@ -226,17 +226,17 @@ export default function App() {
       const json = await res.json();
       if (json.success && json.data) {
         const d = json.data;
-        const newDpl = matchOptionLabels(d.recommendedDpl, DPL_OPTIONS, 3);
-        const newMethods = matchOptionLabels(d.recommendedMethods, METODE_MODEL_OPTIONS, 2);
-        const newPartnerships = matchOptionLabels(d.recommendedPartnerships, KEMITRAAN_OPTIONS, 2);
-        const newDigital = matchOptionLabels(d.recommendedDigitalTools, DIGITAL_TOOLS_OPTIONS, 2);
+        const newDpl = matchOptionLabels(d.recommendedDpl, DPL_OPTIONS, 2, 3);
+        const newMethods = matchOptionLabels(d.recommendedMethods, METODE_MODEL_OPTIONS, 2, 3);
+        const newPartnerships = matchOptionLabels(d.recommendedPartnerships, KEMITRAAN_OPTIONS, 2, 3);
+        const newDigital = matchOptionLabels(d.recommendedDigitalTools, DIGITAL_TOOLS_OPTIONS, 2, 3);
 
         setFormData((prev) => ({
           ...prev,
-          dpl: Array.from(new Set([...prev.dpl, ...newDpl])),
-          metodeModel: Array.from(new Set([...prev.metodeModel, ...newMethods])),
-          kemitraan: Array.from(new Set([...prev.kemitraan, ...newPartnerships])),
-          pemanfaatanDigital: Array.from(new Set([...prev.pemanfaatanDigital, ...newDigital])),
+          dpl: newDpl,
+          metodeModel: newMethods,
+          kemitraan: newPartnerships,
+          pemanfaatanDigital: newDigital,
           karakteristikMurid: d.studentCharacteristics || prev.karakteristikMurid,
           karakteristikMateri: d.materialCharacteristics || prev.karakteristikMateri,
         }));

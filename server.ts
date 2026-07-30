@@ -172,15 +172,17 @@ app.post("/api/recommend-fields", async (req, res) => {
     let prompt = "";
     if (fieldType === "cp_tp") {
       prompt = `Kamu adalah pakar Kurikulum Merdeka dan Pembelajaran Mendalam (Deep Learning) di Indonesia.
-Berikan rekomendasi Capaian Pembelajaran (CP), Tujuan Pembelajaran (TP), dan Lingkup Materi/Topik Pembelajaran yang relevan untuk:
+Berikan rekomendasi Capaian Pembelajaran (CP) sesuai Keputusan BSKAP Kemendikbudristek No. 032/H/KR/2024 (terbaru), Tujuan Pembelajaran (TP), dan Lingkup Materi yang relevan untuk:
 - Mata Pelajaran: ${mataPelajaran || 'Umum'}
 - Kelas/Fase: ${faseKelas || 'Fase A'}
 - Lingkup Materi Input Guru (jika ada): ${lingkupMateri || 'Belum diisi'}
 
+Syarat CP: Sesuaikan dengan Keputusan Kepala BSKAP Kurikulum Merdeka Standar Terbaru, yang memuat kompetensi utama, pemahaman bermakna, dan lingkup materi secara lengkap namun sistematis.
+
 Keluarkan dalam format JSON valid:
 {
-  "cp": "Teks Capaian Pembelajaran resmi dan ringkas...",
-  "tp": "1. Tujuan pembelajaran 1...\n2. Tujuan pembelajaran 2...\n3. Tujuan pembelajaran 3...",
+  "cp": "Teks Capaian Pembelajaran resmi BSKAP terbaru yang lugas dan komprehensif...",
+  "tp": "1. Tujuan pembelajaran 1 (Memahami)...\n2. Tujuan pembelajaran 2 (Mengaplikasi)...\n3. Tujuan pembelajaran 3 (Merefleksi)...",
   "lingkupMateri": "Ringkasan topik atau lingkup materi pembelajaran yang spesifik dan jelas"
 }`;
     } else if (fieldType === "recommendations_all") {
@@ -190,18 +192,22 @@ Berdasarkan data berikut:
 - Fase/Kelas: ${faseKelas || 'Fase A'}
 - Materi: ${lingkupMateri || 'Umum'}
 
-Berikan rekomendasi spesifik yang berorientasi pada Pembelajaran Mendalam (Memahami, Mengaplikasi, Merefleksi).
-Gunakan STRING PERSIS BOLD DARI DAFTAR BERIKUT:
+Berikan rekomendasi yang paling cocok dan efisien.
+PENTING: Pilih HANYA 1 sampai 3 opsi yang paling relevan per kategori (Maksimal 3 opsi).
 
-1. DPL (Pilih 2-4 string persis):
-- "Beriman, Bertakwa kepada Tuhan YME, dan Berakhlak Mulia"
+Gunakan STRING PERSIS DARI DAFTAR BERIKUT:
+
+1. DPL (Pilih 1 s.d 3 string persis dari 8 Dimensi):
+- "Beriman, Bertakwah kepada Tuhan YME, dan Berakhlak Mulia"
 - "Berkebinekaan Global"
 - "Gotong Royong"
 - "Mandiri"
 - "Bernalar Kritis"
 - "Kreatif"
+- "Komunikatif"
+- "Kesehatan Jasmani & Rohani"
 
-2. Metode & Model Pembelajaran (Pilih 2-3 string persis):
+2. Metode & Model Pembelajaran (Pilih 1 s.d 3 string persis):
 - "Problem Based Learning (PBL)"
 - "Project Based Learning (PjBL)"
 - "Discovery Learning"
@@ -212,8 +218,9 @@ Gunakan STRING PERSIS BOLD DARI DAFTAR BERIKUT:
 - "Diskusi Kelompok & Debat Positif"
 - "Studi Kasus & Role Playing"
 - "Simulasi & Stasiun Pembelajaran (Station Rotation)"
+- "Technological Pedagogical Content Knowledge (TPACK)"
 
-3. Kemitraan Pembelajaran (Pilih 2-3 string persis):
+3. Kemitraan Pembelajaran (Pilih 1 s.d 3 string persis):
 - "Orang Tua / Wali Murid"
 - "Kolaborasi Antar Siswa (Peer Learning)"
 - "Komunitas Lokal & Tokoh Masyarakat"
@@ -221,7 +228,7 @@ Gunakan STRING PERSIS BOLD DARI DAFTAR BERIKUT:
 - "Guru Antar Mata Pelajaran (Team Teaching)"
 - "Perpustakaan & Instansi Daerah"
 
-4. Pemanfaatan Digital (Pilih 2-3 string persis):
+4. Pemanfaatan Digital (Pilih 1 s.d 3 string persis):
 - "Papan Interaktif Digital (Jamboard / Padlet / Miro)"
 - "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"
 - "Perpustakaan Digital / E-Book / Portal Rumah Belajar"
@@ -230,10 +237,10 @@ Gunakan STRING PERSIS BOLD DARI DAFTAR BERIKUT:
 - "Video Pembelajaran Interaktif (Edpuzzle / YouTube)"
 - "Asisten AI & Tools Generatif Pembelajaran"
 
-Keluarkan dalam format JSON valid:
+Keluarkan dalam format JSON valid (maksimal 3 items di setiap array):
 {
   "recommendedDpl": ["Bernalar Kritis", "Gotong Royong", "Kreatif"],
-  "recommendedMethods": ["Problem Based Learning (PBL)", "Pembelajaran Berdiferensiasi (Konten/Proses/Produk)"],
+  "recommendedMethods": ["Problem Based Learning (PBL)", "Technological Pedagogical Content Knowledge (TPACK)"],
   "recommendedPartnerships": ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
   "recommendedDigitalTools": ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
   "studentCharacteristics": "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",
@@ -261,15 +268,15 @@ Keluarkan dalam format JSON valid:
       if (fieldType === "cp_tp") {
         const defaultMateri = lingkupMateri || `${mataPelajaran || 'Topik Pembelajaran'}`;
         const fallbackCpTp = {
-          cp: `Peserta didik mampu memahami konsep dasar ${defaultMateri}, menganalisis hubungan antar komponen, serta mengaplikasikan pengetahuan dalam menyelesaikan masalah nyata secara kritis, kreatif, dan mandiri.`,
-          tp: `1. Peserta didik dapat menjelaskan konsep dasar ${defaultMateri} secara rinci dan tepat.\n2. Peserta didik dapat menganalisis dan mengaplikasikan ${defaultMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan hasil pembelajaran ${defaultMateri} secara mandiri dan bergotong royong.`,
+          cp: `Peserta didik mampu memahami dan menganalisis konsep ${defaultMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`,
+          tp: `1. Peserta didik dapat menjelaskan konsep dasar ${defaultMateri} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${defaultMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${defaultMateri} secara kritis dan kolaboratif.`,
           lingkupMateri: defaultMateri
         };
         return res.json({ success: true, data: fallbackCpTp, isFallback: true });
       } else {
         const fallbackRecommendations = {
           recommendedDpl: ["Bernalar Kritis", "Gotong Royong", "Kreatif"],
-          recommendedMethods: ["Problem Based Learning (PBL)", "Pembelajaran Berdiferensiasi (Konten/Proses/Produk)"],
+          recommendedMethods: ["Problem Based Learning (PBL)", "Technological Pedagogical Content Knowledge (TPACK)"],
           recommendedPartnerships: ["Kolaborasi Antar Siswa (Peer Learning)", "Orang Tua / Wali Murid"],
           recommendedDigitalTools: ["Papan Interaktif Digital (Jamboard / Padlet / Miro)", "Platform Kuis Interaktif (Kahoot! / Quizizz / Wordwall)"],
           studentCharacteristics: "Sebagian besar murid memiliki gaya belajar visual dan kinestetik, antusias pada aktivitas kelompok.",

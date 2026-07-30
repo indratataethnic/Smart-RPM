@@ -90,12 +90,14 @@ export const ALOKASI_WAKTU_OPTIONS = [
 ];
 
 export const DPL_OPTIONS = [
-  { id: 'dpl-1', label: 'Beriman, Bertakwa kepada Tuhan YME, dan Berakhlak Mulia', desc: 'Menghargai sesama, moralitas, dan etika lingkungan' },
+  { id: 'dpl-1', label: 'Beriman, Bertakwah kepada Tuhan YME, dan Berakhlak Mulia', desc: 'Menghargai sesama, moralitas, dan etika lingkungan' },
   { id: 'dpl-2', label: 'Berkebinekaan Global', desc: 'Menghargai keanekaragaman, kewargaan lokal & global' },
   { id: 'dpl-3', label: 'Gotong Royong', desc: 'Kolaborasi, kepedulian, dan berbagi dalam tim' },
   { id: 'dpl-4', label: 'Mandiri', desc: 'Regulasi diri, pemahaman diri, dan tanggung jawab' },
   { id: 'dpl-5', label: 'Bernalar Kritis', desc: 'Memproses informasi, menganalisis, merefleksi pemikiran' },
   { id: 'dpl-6', label: 'Kreatif', desc: 'Gagasan orisinal, karya inovatif, dan fleksibilitas berpikir' },
+  { id: 'dpl-7', label: 'Komunikatif', desc: 'Menyampaikan gagasan secara efektif, aktif mendengarkan & berdialog' },
+  { id: 'dpl-8', label: 'Kesehatan Jasmani & Rohani', desc: 'Menjaga kebugaran fisik, pola hidup sehat, dan kesejahteraan mental' },
 ];
 
 export const METODE_MODEL_OPTIONS = [
@@ -109,6 +111,7 @@ export const METODE_MODEL_OPTIONS = [
   { id: 'm-8', label: 'Diskusi Kelompok & Debat Positif', tag: 'Metode' },
   { id: 'm-9', label: 'Studi Kasus & Role Playing', tag: 'Metode' },
   { id: 'm-10', label: 'Simulasi & Stasiun Pembelajaran (Station Rotation)', tag: 'Metode' },
+  { id: 'm-11', label: 'Technological Pedagogical Content Knowledge (TPACK)', tag: 'Pendekatan' },
 ];
 
 export const KEMITRAAN_OPTIONS = [
