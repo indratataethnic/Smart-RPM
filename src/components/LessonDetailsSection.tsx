@@ -69,7 +69,7 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
             name="mataPelajaran"
             value={formData.mataPelajaran}
             onChange={onChange}
-            placeholder="Pilih dari rekomendasi di bawah atau ketik nama mata pelajaran..."
+            placeholder="Isikan mata pelajaran (pilih dari rekomendasi di bawah atau ketik nama mata pelajaran)..."
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none mb-2"
             required
           />
@@ -106,7 +106,7 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
             rows={2}
             value={formData.lingkupMateri}
             onChange={onChange}
-            placeholder="Contoh: Wujud Zat dan Perubahannya / Teorema Pythagoras / Teks Eksposisi"
+            placeholder="Isikan lingkup materi / topik pembelajaran (contoh: Wujud Zat dan Perubahannya / Teks Eksposisi)..."
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
             required
           />
@@ -126,7 +126,7 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
             rows={3}
             value={formData.capaianPembelajaran}
             onChange={onChange}
-            placeholder="Ketikkan teks CP resmi dari Keputusan BSKAP atau klik 'Saran CP & TP dari AI' di atas untuk mengisi otomatis..."
+            placeholder="Isikan Capaian Pembelajaran (CP) resmi atau klik 'Saran CP & TP dari AI' untuk mengisi otomatis..."
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
             required
           />
@@ -144,7 +144,7 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
             rows={3}
             value={formData.tujuanPembelajaran}
             onChange={onChange}
-            placeholder="1. Peserta didik dapat mengidentifikasi...\n2. Peserta didik mampu menganalisis...\n3. Peserta didik mampu merefleksikan..."
+            placeholder="Isikan Tujuan Pembelajaran (TP) (contoh: 1. Peserta didik dapat mengidentifikasi...\n2. Peserta didik mampu menganalisis...)"
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
             required
           />

@@ -489,8 +489,9 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
               {isEditing ? (
                 <input
                   type="text"
-                  value={currentJurnal.judul || 'Jurnal Harian Pelaksanaan Pembelajaran'}
+                  value={currentJurnal.judul || ''}
                   onChange={(e) => setEditableJurnal({ ...currentJurnal, judul: e.target.value })}
+                  placeholder="Isikan judul jurnal harian..."
                   className="w-full text-center font-bold text-sm sm:text-base bg-amber-50 border border-amber-300 rounded p-1.5 text-teal-900"
                 />
               ) : (
@@ -531,6 +532,7 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
                   rows={2}
                   value={currentJurnal.catatanRefleksiUmum}
                   onChange={(e) => setEditableJurnal({ ...currentJurnal, catatanRefleksiUmum: e.target.value })}
+                  placeholder="Isikan catatan refleksi keterlaksanaan pembelajaran..."
                   className="w-full bg-amber-50 border border-amber-300 rounded p-2 text-xs"
                 />
               ) : (
@@ -566,6 +568,7 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
                             type="text"
                             value={entry.hariTanggal}
                             onChange={(e) => updateEntryField(idx, 'hariTanggal', e.target.value)}
+                            placeholder="Isikan hari & tanggal..."
                             className="w-full bg-amber-50 border border-amber-300 rounded p-1 text-xs"
                           />
                         ) : (
@@ -578,6 +581,7 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
                             type="text"
                             value={entry.pertemuanJam}
                             onChange={(e) => updateEntryField(idx, 'pertemuanJam', e.target.value)}
+                            placeholder="Isikan pertemuan & jam ke-..."
                             className="w-full bg-amber-50 border border-amber-300 rounded p-1 text-xs"
                           />
                         ) : (
@@ -590,6 +594,7 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
                             type="text"
                             value={entry.mataPelajaran}
                             onChange={(e) => updateEntryField(idx, 'mataPelajaran', e.target.value)}
+                            placeholder="Isikan mata pelajaran..."
                             className="w-full bg-amber-50 border border-amber-300 rounded p-1 text-xs"
                           />
                         ) : (
@@ -602,6 +607,7 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
                             rows={2}
                             value={entry.atp}
                             onChange={(e) => updateEntryField(idx, 'atp', e.target.value)}
+                            placeholder="Isikan Alur Tujuan Pembelajaran (ATP)..."
                             className="w-full bg-amber-50 border border-amber-300 rounded p-1 text-xs"
                           />
                         ) : (
@@ -614,6 +620,7 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
                             rows={2}
                             value={entry.materiAktivitas}
                             onChange={(e) => updateEntryField(idx, 'materiAktivitas', e.target.value)}
+                            placeholder="Isikan materi & aktivitas..."
                             className="w-full bg-amber-50 border border-amber-300 rounded p-1 text-xs"
                           />
                         ) : (
@@ -626,6 +633,7 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
                             rows={2}
                             value={entry.penilaian}
                             onChange={(e) => updateEntryField(idx, 'penilaian', e.target.value)}
+                            placeholder="Isikan bentuk penilaian..."
                             className="w-full bg-amber-50 border border-amber-300 rounded p-1 text-xs"
                           />
                         ) : (
@@ -640,6 +648,7 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
                             rows={2}
                             value={entry.catatanKendala}
                             onChange={(e) => updateEntryField(idx, 'catatanKendala', e.target.value)}
+                            placeholder="Isikan catatan dan kendala..."
                             className="w-full bg-amber-50 border border-amber-300 rounded p-1 text-xs"
                           />
                         ) : (

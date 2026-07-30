@@ -45,7 +45,7 @@ export const CharacteristicsSection: React.FC<CharacteristicsSectionProps> = ({
             rows={4}
             value={formData.karakteristikMurid}
             onChange={onChange}
-            placeholder="Kebutuhan belajar, minat, latar belakang, kesiapan belajar, gaya belajar (Visual/Auditori/Kinestetik)..."
+            placeholder="Isikan analisis karakteristik murid (kebutuhan belajar, minat, latar belakang, kesiapan belajar, gaya belajar Visual/Auditori/Kinestetik)..."
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none mb-2"
           />
 
@@ -80,7 +80,7 @@ export const CharacteristicsSection: React.FC<CharacteristicsSectionProps> = ({
             rows={4}
             value={formData.karakteristikMateri}
             onChange={onChange}
-            placeholder="Tingkat kesulitan, konseptual/prosedural, konkret/abstrak, relevansi dunia nyata..."
+            placeholder="Isikan analisis karakteristik materi (tingkat kesulitan, konseptual/prosedural, konkret/abstrak, relevansi dunia nyata)..."
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none mb-2"
           />
 

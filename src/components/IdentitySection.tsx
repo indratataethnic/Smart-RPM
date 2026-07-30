@@ -39,7 +39,7 @@ export const IdentitySection: React.FC<IdentitySectionProps> = ({ formData, onCh
             name="namaSekolah"
             value={formData.namaSekolah}
             onChange={onChange}
-            placeholder="Contoh: SD Negeri 1 Nusantara / SMP Negeri 2 Kota"
+            placeholder="Isikan nama sekolah / instansi pendidikan..."
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
             required
           />
@@ -57,7 +57,7 @@ export const IdentitySection: React.FC<IdentitySectionProps> = ({ formData, onCh
             name="namaGuru"
             value={formData.namaGuru}
             onChange={onChange}
-            placeholder="Nama lengkap beserta gelar"
+            placeholder="Isikan nama guru pengampu beserta gelar..."
             className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
             required
           />
@@ -75,7 +75,7 @@ export const IdentitySection: React.FC<IdentitySectionProps> = ({ formData, onCh
             name="nipGuru"
             value={formData.nipGuru}
             onChange={onChange}
-            placeholder="Contoh: 19900515 201801 1 002 (Opsional / -)"
+            placeholder="Isikan NIP guru pengampu (contoh: 19900515 201801 1 002 / -)..."
             className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
           />
         </div>
@@ -92,7 +92,7 @@ export const IdentitySection: React.FC<IdentitySectionProps> = ({ formData, onCh
             name="namaKepsek"
             value={formData.namaKepsek}
             onChange={onChange}
-            placeholder="Nama Kepala Sekolah beserta gelar"
+            placeholder="Isikan nama kepala sekolah beserta gelar..."
             className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
           />
         </div>
@@ -109,7 +109,7 @@ export const IdentitySection: React.FC<IdentitySectionProps> = ({ formData, onCh
             name="nipKepsek"
             value={formData.nipKepsek}
             onChange={onChange}
-            placeholder="Contoh: 19680312 199303 1 005"
+            placeholder="Isikan NIP kepala sekolah (contoh: 19680312 199303 1 005 / -)..."
             className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
           />
         </div>
@@ -170,7 +170,7 @@ export const IdentitySection: React.FC<IdentitySectionProps> = ({ formData, onCh
             name="semesterTahun"
             value={formData.semesterTahun}
             onChange={onChange}
-            placeholder="Contoh: Semester 1 / TA 2025/2026"
+            placeholder="Isikan semester dan tahun ajaran (contoh: Semester 1 / TA 2025/2026)..."
             className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
           />
         </div>
