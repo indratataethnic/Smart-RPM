@@ -39,10 +39,9 @@ async function callGeminiWithRetry(
   const modelsToTry = [
     params.preferredModel || "gemini-3.6-flash",
     "gemini-3.6-flash",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-flash-latest",
-    "gemini-3.1-flash-lite"
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest"
   ];
   // Filter unique
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
@@ -95,7 +94,7 @@ async function callGeminiWithRetry(
 }
 
 // Helper for Gemini API streaming calls with exponential backoff & model fallback
-async function streamGeminiWithRetry(
+async function* streamGeminiWithRetry(
   ai: GoogleGenAI,
   params: {
     contents: any;
@@ -106,10 +105,9 @@ async function streamGeminiWithRetry(
   const modelsToTry = [
     params.preferredModel || "gemini-3.6-flash",
     "gemini-3.6-flash",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-flash-latest",
-    "gemini-3.1-flash-lite"
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest"
   ];
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
   let lastError: any = null;
@@ -122,7 +120,28 @@ async function streamGeminiWithRetry(
           contents: params.contents,
           config: params.config,
         });
-        return responseStream;
+
+        // Test the stream by attempting to read the first chunk.
+        // If it fails (e.g. 429 quota/404), it throws an error here, which gets caught.
+        const iterator = responseStream[Symbol.asyncIterator]();
+        const firstResult = await iterator.next();
+
+        if (firstResult.done) {
+          return;
+        }
+
+        // Successfully received the first chunk. Yield it and continue.
+        yield firstResult.value;
+
+        let done = false;
+        while (!done) {
+          const nextResult = await iterator.next();
+          done = nextResult.done;
+          if (!done) {
+            yield nextResult.value;
+          }
+        }
+        return; // Stream finished successfully
       } catch (err: any) {
         lastError = err;
         const errStr = String(err?.message || err || "").toLowerCase();
