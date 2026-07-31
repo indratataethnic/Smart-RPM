@@ -12,6 +12,7 @@ import { GeneratingProgressModal } from './components/GeneratingProgressModal';
 import { LessonFormData, LessonPlanOutput, SavedLessonPlan } from './types';
 import { DEMO_PRESETS, getKelasOptions, DPL_OPTIONS, METODE_MODEL_OPTIONS, KEMITRAAN_OPTIONS, DIGITAL_TOOLS_OPTIONS, LINTAS_DISIPLIN_OPTIONS, LINGKUNGAN_PEMBELAJARAN_OPTIONS } from './data/presets';
 import { Sparkles, Loader2, ArrowRight, RotateCcw, AlertCircle, Trash2 } from 'lucide-react';
+import { TrialExhaustedModal, EnterAccessCodeModal, AdminPanelModal, getOrGenerateFingerprint, TrialConfirmationModal } from './components/LicensingModals';
 
 const matchOptionLabels = (recommended: string[] | undefined, options: { label: string }[], fallbackCount = 2, maxCount = 3): string[] => {
   if (!recommended || !Array.isArray(recommended) || recommended.length === 0) {
@@ -200,9 +201,27 @@ const createFallbackLessonPlanClient = (data: any): LessonPlanOutput => {
       }
     },
     asesmen: {
-      diagnostik: "Tanya jawab pemantik di awal pembelajaran untuk pemetaan kemampuan awal murid.",
-      formatif: "Observasi diskusi kelompok, lembar penilaian kinerja LKPD, dan kuis singkat interaktif.",
-      sumatif: "Tes tertulis / penilaian produk akhir proyek sesuai kriteria ketuntasan."
+      assessmentAsLearning: [
+        {
+          bentukPenilaian: "Formatif (Refleksi Diri & Antarteman)",
+          teknikPenilaian: "Self & Peer Assessment",
+          instrumenPenilaian: "Lembar Refleksi Metakognitif Mandiri & Rubrik Penilaian Antarteman tentang " + lm + "."
+        }
+      ],
+      assessmentForLearning: [
+        {
+          bentukPenilaian: "Formatif (Proses Pembelajaran)",
+          teknikPenilaian: "Observasi Diskusi & Penugasan LKPD",
+          instrumenPenilaian: "Lembar Observasi Sikap/Kinerja & Rubrik Unjuk Kerja Kelompok " + mp + "."
+        }
+      ],
+      assessmentOfLearning: [
+        {
+          bentukPenilaian: "Sumatif (Akhir Pembelajaran)",
+          teknikPenilaian: "Tes Tertulis / Penilaian Produk",
+          instrumenPenilaian: "Soal Evaluasi Tertulis & Rubrik Penilaian Produk Akhir " + lm + "."
+        }
+      ]
     },
     remedialDanPengayaan: {
       remedial: "Bimbingan individu/kelompok kecil bagi murid yang memerlukan pendampingan materi dasar.",
@@ -289,6 +308,50 @@ export default function App() {
   const [isRefinerModalOpen, setIsRefinerModalOpen] = useState(false);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+
+  // Licensing & Trial System States
+  const [accessCode, setAccessCode] = useState(() => localStorage.getItem('rpm_access_code') || '');
+  const [trialCount, setTrialCount] = useState(5);
+  const [accessType, setAccessType] = useState<'TRIAL' | 'PERMANENT' | 'MONTHLY'>('TRIAL');
+  const [isTrialExhaustedModalOpen, setIsTrialExhaustedModalOpen] = useState(false);
+  const [isEnterCodeModalOpen, setIsEnterCodeModalOpen] = useState(false);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isTrialConfirmModalOpen, setIsTrialConfirmModalOpen] = useState(false);
+
+  // Sync / Fetch licensing status helper
+  const fetchLicensingStatus = async () => {
+    try {
+      const fp = getOrGenerateFingerprint();
+      const code = localStorage.getItem('rpm_access_code') || '';
+      const res = await fetch('/api/licensing/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fingerprint: fp, code }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setTrialCount(json.trial.remaining_trials);
+        
+        if (json.activeCode && json.activeCode.status === 'ACTIVE') {
+          setAccessCode(json.activeCode.code);
+          setAccessType(json.activeCode.type);
+        } else {
+          // No active code found or expired/disabled on server
+          setAccessType('TRIAL');
+          if (localStorage.getItem('rpm_access_code')) {
+            localStorage.removeItem('rpm_access_code');
+            setAccessCode('');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching licensing status:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLicensingStatus();
+  }, [accessCode]);
 
   // Load saved plans from localStorage on mount
   useEffect(() => {
@@ -501,8 +564,17 @@ export default function App() {
   };
 
   // Main Submit Handler to Generate RPM with Streaming SSE
-  const handleGeneratePlan = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGeneratePlan = async (e?: React.FormEvent, bypassConfirmation = false) => {
+    if (e) e.preventDefault();
+
+    if (accessType === 'TRIAL' && !bypassConfirmation) {
+      if (trialCount <= 0) {
+        setIsTrialExhaustedModalOpen(true);
+      } else {
+        setIsTrialConfirmModalOpen(true);
+      }
+      return;
+    }
 
     let updatedData = { ...formData };
     
@@ -563,13 +635,29 @@ export default function App() {
     }, 2000);
 
     try {
+      const fp = getOrGenerateFingerprint();
+      const code = localStorage.getItem('rpm_access_code') || '';
+
       const res = await fetch('/api/generate-lesson-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedData),
+        body: JSON.stringify({
+          ...updatedData,
+          accessCode: code,
+          fingerprint: fp
+        }),
       });
 
       if (!res.ok) {
+        if (res.status === 403) {
+          const errData = await res.json().catch(() => ({}));
+          if (errData.error === 'TRIAL_EXHAUSTED') {
+            setIsTrialExhaustedModalOpen(true);
+            setIsGenerating(false);
+            clearInterval(progressInterval);
+            return;
+          }
+        }
         throw new Error(`Gagal menghubungi server AI (Status HTTP ${res.status})`);
       }
 
@@ -707,6 +795,7 @@ export default function App() {
     } finally {
       clearInterval(progressInterval);
       setIsGenerating(false);
+      fetchLicensingStatus();
     }
   };
 
@@ -805,6 +894,10 @@ export default function App() {
         onOpenSaved={() => setIsSavedModalOpen(true)}
         savedCount={savedPlans.length}
         onShowGuide={() => setIsGuideModalOpen(true)}
+        trialCount={trialCount}
+        accessType={accessType}
+        onOpenCodeModal={() => setIsEnterCodeModalOpen(true)}
+        onOpenAdmin={() => setIsAdminPanelOpen(true)}
       />
 
       {/* Main Container */}
@@ -983,6 +1076,34 @@ export default function App() {
       <GuideModal
         isOpen={isGuideModalOpen}
         onClose={() => setIsGuideModalOpen(false)}
+      />
+
+      {/* Licensing Modals */}
+      <TrialConfirmationModal
+        isOpen={isTrialConfirmModalOpen}
+        onClose={() => setIsTrialConfirmModalOpen(false)}
+        onConfirm={() => handleGeneratePlan(undefined, true)}
+        onOpenCodeModal={() => setIsEnterCodeModalOpen(true)}
+        trialCount={trialCount}
+      />
+
+      <TrialExhaustedModal
+        isOpen={isTrialExhaustedModalOpen}
+        onClose={() => setIsTrialExhaustedModalOpen(false)}
+        onOpenCodeModal={() => setIsEnterCodeModalOpen(true)}
+      />
+
+      <EnterAccessCodeModal
+        isOpen={isEnterCodeModalOpen}
+        onClose={() => setIsEnterCodeModalOpen(false)}
+        currentCode={accessCode}
+        onCodeActivated={(code) => setAccessCode(code)}
+      />
+
+      <AdminPanelModal
+        isOpen={isAdminPanelOpen}
+        onClose={() => setIsAdminPanelOpen(false)}
+        onLogOut={() => setAccessCode('')}
       />
     </div>
   );

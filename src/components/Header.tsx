@@ -1,11 +1,15 @@
 import React from 'react';
-import { BookOpen, Sparkles, History, HelpCircle, FileText } from 'lucide-react';
+import { BookOpen, Sparkles, History, HelpCircle, Key, ShieldCheck, Settings } from 'lucide-react';
 
 interface HeaderProps {
   onLoadDemo: () => void;
   onOpenSaved: () => void;
   savedCount: number;
   onShowGuide: () => void;
+  trialCount: number;
+  accessType: 'TRIAL' | 'PERMANENT' | 'MONTHLY';
+  onOpenCodeModal: () => void;
+  onOpenAdmin: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -13,6 +17,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSaved,
   savedCount,
   onShowGuide,
+  trialCount,
+  accessType,
+  onOpenCodeModal,
+  onOpenAdmin,
 }) => {
   return (
     <header id="header-main" className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md print:hidden">
@@ -37,8 +45,31 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons & Licensing Indicator */}
         <div className="flex items-center flex-wrap gap-2 w-full md:w-auto justify-end">
+          {/* Licensing Status */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-950 border border-slate-800 shadow-inner mr-1">
+            {accessType === 'TRIAL' ? (
+              <button
+                onClick={onOpenCodeModal}
+                className="flex items-center gap-1.5 text-rose-300 hover:text-rose-200 transition-all font-bold focus:outline-none"
+                title="Masukkan Kode Akses Anda"
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block animate-pulse"></span>
+                <span>Trial: {trialCount} Sisa</span>
+                <span className="text-[9px] bg-rose-500/20 px-1.5 py-0.5 rounded border border-rose-500/30 text-rose-300 ml-1 font-semibold flex items-center gap-0.5">
+                  <Key size={10} /> Kode Akses
+                </span>
+              </button>
+            ) : (
+              <span className="flex items-center gap-1.5 text-emerald-300 font-bold">
+                <ShieldCheck size={14} className="text-emerald-400 animate-pulse" />
+                <span>{accessType === 'PERMANENT' ? 'Permanen' : 'Bulanan'}</span>
+                <span className="text-[9px] bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-300 font-semibold">Premium</span>
+              </span>
+            )}
+          </div>
+
           <button
             id="btn-demo-preset"
             onClick={onLoadDemo}
@@ -73,6 +104,16 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <HelpCircle className="w-4 h-4 text-slate-400" />
             <span className="hidden sm:inline">Panduan</span>
+          </button>
+
+          <button
+            onClick={onOpenAdmin}
+            type="button"
+            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-all cursor-pointer"
+            title="Akses Portal Admin"
+          >
+            <Settings size={14} className="text-slate-500 hover:text-slate-300" />
+            <span className="hidden lg:inline">Admin</span>
           </button>
         </div>
       </div>

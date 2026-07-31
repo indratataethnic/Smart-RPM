@@ -119,6 +119,12 @@ export interface LKPDData {
   };
 }
 
+export interface AsesmenItem {
+  bentukPenilaian: string;
+  teknikPenilaian: string;
+  instrumenPenilaian: string;
+}
+
 export interface LessonPlanOutput {
   identitas: {
     namaGuru: string;
@@ -164,9 +170,12 @@ export interface LessonPlanOutput {
     };
   };
   asesmen: {
-    diagnostik: string;
-    formatif: string;
-    sumatif: string;
+    assessmentAsLearning?: AsesmenItem[] | AsesmenItem | string;
+    assessmentForLearning?: AsesmenItem[] | AsesmenItem | string;
+    assessmentOfLearning?: AsesmenItem[] | AsesmenItem | string;
+    diagnostik?: string;
+    formatif?: string;
+    sumatif?: string;
   };
   remedialDanPengayaan: {
     remedial: string;
@@ -190,4 +199,77 @@ export interface SavedLessonPlan {
   faseKelas: string;
   plan: LessonPlanOutput;
   formData: LessonFormData;
+}
+
+export function normalizeAsesmen(asesmenInput: any): {
+  assessmentAsLearning: AsesmenItem[];
+  assessmentForLearning: AsesmenItem[];
+  assessmentOfLearning: AsesmenItem[];
+} {
+  const parseCategory = (
+    val: any,
+    defaultBentuk: string,
+    defaultTeknik: string,
+    defaultInstrumen: string
+  ): AsesmenItem[] => {
+    if (!val) {
+      return [{ bentukPenilaian: defaultBentuk, teknikPenilaian: defaultTeknik, instrumenPenilaian: defaultInstrumen }];
+    }
+    if (Array.isArray(val) && val.length > 0) {
+      return val.map((item) => {
+        if (typeof item === 'string') {
+          return { bentukPenilaian: defaultBentuk, teknikPenilaian: defaultTeknik, instrumenPenilaian: item };
+        }
+        return {
+          bentukPenilaian: item.bentukPenilaian || defaultBentuk,
+          teknikPenilaian: item.teknikPenilaian || defaultTeknik,
+          instrumenPenilaian: item.instrumenPenilaian || defaultInstrumen,
+        };
+      });
+    }
+    if (typeof val === 'object' && val !== null) {
+      return [{
+        bentukPenilaian: val.bentukPenilaian || defaultBentuk,
+        teknikPenilaian: val.teknikPenilaian || defaultTeknik,
+        instrumenPenilaian: val.instrumenPenilaian || defaultInstrumen,
+      }];
+    }
+    if (typeof val === 'string') {
+      return [{
+        bentukPenilaian: defaultBentuk,
+        teknikPenilaian: defaultTeknik,
+        instrumenPenilaian: val,
+      }];
+    }
+    return [{ bentukPenilaian: defaultBentuk, teknikPenilaian: defaultTeknik, instrumenPenilaian: defaultInstrumen }];
+  };
+
+  if (!asesmenInput) {
+    asesmenInput = {};
+  }
+
+  const asLearningVal = asesmenInput.assessmentAsLearning || asesmenInput.diagnostik;
+  const forLearningVal = asesmenInput.assessmentForLearning || asesmenInput.formatif;
+  const ofLearningVal = asesmenInput.assessmentOfLearning || asesmenInput.sumatif;
+
+  return {
+    assessmentAsLearning: parseCategory(
+      asLearningVal,
+      "Formatif (Refleksi Diri & Antarteman)",
+      "Self & Peer Assessment",
+      "Lembar Refleksi Metakognitif Mandiri & Rubrik Penilaian Antarteman"
+    ),
+    assessmentForLearning: parseCategory(
+      forLearningVal,
+      "Formatif (Proses Pembelajaran)",
+      "Observasi & Penugasan LKPD",
+      "Lembar Observasi Sikap/Kinerja & Rubrik Unjuk Kerja Kelompok"
+    ),
+    assessmentOfLearning: parseCategory(
+      ofLearningVal,
+      "Sumatif (Akhir Pembelajaran)",
+      "Tes Tertulis / Penilaian Produk",
+      "Soal Evaluasi Tertulis & Rubrik Penilaian Produk/Proyek Akhir"
+    ),
+  };
 }

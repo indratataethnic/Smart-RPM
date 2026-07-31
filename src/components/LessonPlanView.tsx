@@ -20,7 +20,7 @@ import {
   Trash2,
   RotateCcw,
 } from 'lucide-react';
-import { LessonPlanOutput, KKTPData, LKPDData, JurnalHarianGuru, JurnalHarianEntry } from '../types';
+import { LessonPlanOutput, KKTPData, LKPDData, JurnalHarianGuru, JurnalHarianEntry, normalizeAsesmen, AsesmenItem } from '../types';
 import { LKPDModal } from './LKPDModal';
 import { JurnalHarianModal } from './JurnalHarianModal';
 
@@ -355,11 +355,55 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
     });
   };
 
-  const updateAsesmen = (field: keyof LessonPlanOutput['asesmen'], val: string) => {
-    setEditedPlan((prev) => ({
-      ...prev,
-      asesmen: { ...prev.asesmen, [field]: val },
-    }));
+  const updateAsesmenItem = (
+    category: 'assessmentAsLearning' | 'assessmentForLearning' | 'assessmentOfLearning',
+    index: number,
+    field: keyof AsesmenItem,
+    val: string
+  ) => {
+    setEditedPlan((prev) => {
+      const norm = normalizeAsesmen(prev.asesmen);
+      const list = [...norm[category]];
+      if (!list[index]) {
+        list[index] = { bentukPenilaian: '', teknikPenilaian: '', instrumenPenilaian: '' };
+      }
+      list[index] = { ...list[index], [field]: val };
+      return {
+        ...prev,
+        asesmen: {
+          ...norm,
+          [category]: list,
+        },
+      };
+    });
+  };
+
+  const addAsesmenItem = (category: 'assessmentAsLearning' | 'assessmentForLearning' | 'assessmentOfLearning') => {
+    setEditedPlan((prev) => {
+      const norm = normalizeAsesmen(prev.asesmen);
+      const list = [...norm[category], { bentukPenilaian: '', teknikPenilaian: '', instrumenPenilaian: '' }];
+      return {
+        ...prev,
+        asesmen: {
+          ...norm,
+          [category]: list,
+        },
+      };
+    });
+  };
+
+  const removeAsesmenItem = (category: 'assessmentAsLearning' | 'assessmentForLearning' | 'assessmentOfLearning', index: number) => {
+    setEditedPlan((prev) => {
+      const norm = normalizeAsesmen(prev.asesmen);
+      const list = norm[category].filter((_, i) => i !== index);
+      return {
+        ...prev,
+        asesmen: {
+          ...norm,
+          [category]: list.length > 0 ? list : [{ bentukPenilaian: '', teknikPenilaian: '', instrumenPenilaian: '' }],
+        },
+      };
+    });
   };
 
   const updateRemedial = (field: keyof LessonPlanOutput['remedialDanPengayaan'], val: string) => {
@@ -586,6 +630,8 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
       remedialDanPengayaan,
       lampiran,
     } = planData;
+
+    const normAsesmen = normalizeAsesmen(asesmen);
 
     const { fase: wordFase, kelas: wordKelas } = parseFaseAndKelas(identitas.faseKelas);
 
@@ -931,17 +977,35 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
 
       <!-- Section V -->
       <div class="section-header">V. ASESMEN & PENILAIAN PEMBELAJARAN</div>
-      <table class="grid-table">
-        <tr>
-          <td class="bg-label" width="33%">A. Asesmen Diagnostik (Awal)</td>
-          <td class="bg-label" width="33%">B. Asesmen Formatif (Proses)</td>
-          <td class="bg-label" width="34%">C. Asesmen Sumatif (Akhir)</td>
-        </tr>
-        <tr>
-          <td style="background-color: #f8fafc;">${asesmen.diagnostik}</td>
-          <td style="background-color: #f8fafc;">${asesmen.formatif}</td>
-          <td style="background-color: #f8fafc;">${asesmen.sumatif}</td>
-        </tr>
+      <table class="grid-table" style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+        <thead>
+          <tr style="background-color: #0f766e; color: #ffffff;">
+            <th width="22%" style="padding: 6px; border: 1px solid #cbd5e1; font-weight: bold; text-align: left; font-size: 11px;">Pendekatan Asesmen</th>
+            <th width="26%" style="padding: 6px; border: 1px solid #cbd5e1; font-weight: bold; text-align: left; font-size: 11px;">Bentuk Penilaian</th>
+            <th width="26%" style="padding: 6px; border: 1px solid #cbd5e1; font-weight: bold; text-align: left; font-size: 11px;">Teknik Penilaian</th>
+            <th width="26%" style="padding: 6px; border: 1px solid #cbd5e1; font-weight: bold; text-align: left; font-size: 11px;">Instrumen Penilaian</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${[
+            { key: 'assessmentAsLearning', label: 'Assessment as Learning', desc: '(Asesmen saat pembelajaran - Refleksi & Evaluasi Diri)' },
+            { key: 'assessmentForLearning', label: 'Assessment for Learning', desc: '(Asesmen selama proses - Umpan Balik Guru)' },
+            { key: 'assessmentOfLearning', label: 'Assessment of Learning', desc: '(Asesmen akhir - Ketercapaian Hasil Belajar)' },
+          ].map(({ key, label, desc }) => {
+            const list = normAsesmen[key as keyof typeof normAsesmen];
+            return list.map((item, idx) => `
+              <tr>
+                ${idx === 0 ? `<td rowspan="${list.length}" style="padding: 6px; border: 1px solid #cbd5e1; background-color: #f8fafc; vertical-align: top; font-size: 11px;">
+                  <strong style="color: #0f766e;">${label}</strong><br/>
+                  <span style="font-size: 9px; color: #64748b;">${desc}</span>
+                </td>` : ''}
+                <td style="padding: 6px; border: 1px solid #cbd5e1; vertical-align: top; font-size: 11px;">${item.bentukPenilaian}</td>
+                <td style="padding: 6px; border: 1px solid #cbd5e1; vertical-align: top; font-size: 11px;">${item.teknikPenilaian}</td>
+                <td style="padding: 6px; border: 1px solid #cbd5e1; vertical-align: top; font-size: 11px;">${item.instrumenPenilaian}</td>
+              </tr>
+            `).join('');
+          }).join('')}
+        </tbody>
       </table>
 
       <!-- Section VI -->
@@ -2121,58 +2185,133 @@ ${formatActivityText(k.aktivitasMurid)}
 
         {/* SECTION 5: ASESMEN & PENILAIAN */}
         <div className="mb-6">
-          <h2 className="text-sm sm:text-base font-bold bg-teal-800 text-white px-3 py-1.5 rounded-lg mb-3">
-            V. ASESMEN & PENILAIAN PEMBELAJARAN
+          <h2 className="text-sm sm:text-base font-bold bg-teal-800 text-white px-3 py-1.5 rounded-lg mb-3 flex items-center justify-between">
+            <span>V. ASESMEN & PENILAIAN PEMBELAJARAN</span>
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs sm:text-sm">
-            <div className="border border-slate-200 p-3.5 rounded-xl bg-slate-50">
-              <span className="font-bold text-slate-900 block mb-1 text-xs uppercase text-teal-800">
-                A. Asesmen Diagnostik (Awal)
-              </span>
-              {isEditing ? (
-                <textarea
-                  rows={3}
-                  className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs"
-                  value={editedPlan.asesmen.diagnostik}
-                  onChange={(e) => updateAsesmen('diagnostik', e.target.value)}
-                />
-              ) : (
-                <p className="text-slate-700 leading-relaxed">{activePlan.asesmen.diagnostik}</p>
-              )}
-            </div>
+          <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-xs">
+            <table className="w-full text-xs sm:text-sm text-left border-collapse">
+              <thead>
+                <tr className="bg-teal-700 text-white font-semibold">
+                  <th className="p-3 border-b border-teal-800 w-1/4 min-w-[160px]">Pendekatan Asesmen</th>
+                  <th className="p-3 border-b border-teal-800 w-1/4 min-w-[180px]">Bentuk Penilaian</th>
+                  <th className="p-3 border-b border-teal-800 w-1/4 min-w-[180px]">Teknik Penilaian</th>
+                  <th className="p-3 border-b border-teal-800 w-1/4 min-w-[200px]">Instrumen Penilaian</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-slate-700">
+                {[
+                  {
+                    key: 'assessmentAsLearning' as const,
+                    title: 'Assessment as Learning',
+                    badge: 'Refleksi Diri / Antarteman',
+                    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
+                    desc: 'Asesmen saat pembelajaran berlangsung untuk refleksi & evaluasi diri murid'
+                  },
+                  {
+                    key: 'assessmentForLearning' as const,
+                    title: 'Assessment for Learning',
+                    badge: 'Proses Pembelajaran',
+                    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+                    desc: 'Asesmen selama proses pembelajaran untuk umpan balik & perbaikan guru'
+                  },
+                  {
+                    key: 'assessmentOfLearning' as const,
+                    title: 'Assessment of Learning',
+                    badge: 'Hasil Belajar (Sumatif)',
+                    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                    desc: 'Asesmen pada akhir pembelajaran untuk mengukur ketercapaian hasil belajar'
+                  },
+                ].map((cat) => {
+                  const items = isEditing
+                    ? normalizeAsesmen(editedPlan.asesmen)[cat.key]
+                    : normalizeAsesmen(activePlan.asesmen)[cat.key];
 
-            <div className="border border-slate-200 p-3.5 rounded-xl bg-slate-50">
-              <span className="font-bold text-slate-900 block mb-1 text-xs uppercase text-teal-800">
-                B. Asesmen Formatif (Proses)
-              </span>
-              {isEditing ? (
-                <textarea
-                  rows={3}
-                  className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs"
-                  value={editedPlan.asesmen.formatif}
-                  onChange={(e) => updateAsesmen('formatif', e.target.value)}
-                />
-              ) : (
-                <p className="text-slate-700 leading-relaxed">{activePlan.asesmen.formatif}</p>
-              )}
-            </div>
+                  return items.map((item, idx) => (
+                    <tr key={`${cat.key}-${idx}`} className="hover:bg-slate-50/70 transition-colors">
+                      {idx === 0 && (
+                        <td
+                          rowSpan={items.length}
+                          className="p-3 bg-slate-50 font-medium align-top border-r border-slate-200"
+                        >
+                          <div className="font-bold text-teal-900 text-xs sm:text-sm">{cat.title}</div>
+                          <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-semibold border ${cat.badgeColor}`}>
+                            {cat.badge}
+                          </span>
+                          <p className="text-[11px] text-slate-500 mt-1.5 leading-tight">{cat.desc}</p>
+                          {isEditing && (
+                            <button
+                              type="button"
+                              onClick={() => addAsesmenItem(cat.key)}
+                              className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2 py-1 rounded-md transition-all"
+                            >
+                              <Plus size={12} /> Tambah Baris
+                            </button>
+                          )}
+                        </td>
+                      )}
+                      
+                      {/* Bentuk Penilaian */}
+                      <td className="p-3 align-top border-r border-slate-200">
+                        {isEditing ? (
+                          <textarea
+                            rows={2}
+                            className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                            value={item.bentukPenilaian}
+                            onChange={(e) => updateAsesmenItem(cat.key, idx, 'bentukPenilaian', e.target.value)}
+                            placeholder="Contoh: Formatif (Penilaian Diri)"
+                          />
+                        ) : (
+                          <span className="font-medium text-slate-800">{item.bentukPenilaian}</span>
+                        )}
+                      </td>
 
-            <div className="border border-slate-200 p-3.5 rounded-xl bg-slate-50">
-              <span className="font-bold text-slate-900 block mb-1 text-xs uppercase text-teal-800">
-                C. Asesmen Sumatif (Akhir)
-              </span>
-              {isEditing ? (
-                <textarea
-                  rows={3}
-                  className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs"
-                  value={editedPlan.asesmen.sumatif}
-                  onChange={(e) => updateAsesmen('sumatif', e.target.value)}
-                />
-              ) : (
-                <p className="text-slate-700 leading-relaxed">{activePlan.asesmen.sumatif}</p>
-              )}
-            </div>
+                      {/* Teknik Penilaian */}
+                      <td className="p-3 align-top border-r border-slate-200">
+                        {isEditing ? (
+                          <textarea
+                            rows={2}
+                            className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                            value={item.teknikPenilaian}
+                            onChange={(e) => updateAsesmenItem(cat.key, idx, 'teknikPenilaian', e.target.value)}
+                            placeholder="Contoh: Self-Assessment & Peer Assessment"
+                          />
+                        ) : (
+                          <span>{item.teknikPenilaian}</span>
+                        )}
+                      </td>
+
+                      {/* Instrumen Penilaian */}
+                      <td className="p-3 align-top relative group">
+                        {isEditing ? (
+                          <div className="flex items-start gap-1.5">
+                            <textarea
+                              rows={2}
+                              className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                              value={item.instrumenPenilaian}
+                              onChange={(e) => updateAsesmenItem(cat.key, idx, 'instrumenPenilaian', e.target.value)}
+                              placeholder="Contoh: Lembar Refleksi Metakognitif & Rubrik Penilaian Antarteman"
+                            />
+                            {items.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeAsesmenItem(cat.key, idx)}
+                                title="Hapus baris"
+                                className="p-1.5 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-md transition-all shrink-0 mt-0.5"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span>{item.instrumenPenilaian}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ));
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 

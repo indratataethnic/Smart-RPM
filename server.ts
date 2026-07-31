@@ -1,8 +1,10 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { LicensingDB } from "./server-db";
 
 dotenv.config();
 
@@ -10,6 +12,53 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
+
+// Helper to check and apply license / trial quota
+function checkAndApplyLicense(fingerprint: string | undefined, codeStr: string | undefined, ip: string, userAgent: string) {
+  // Step 1: Check if an access code is provided
+  if (codeStr && codeStr.trim().length > 0) {
+    const cleanCode = codeStr.trim().toUpperCase();
+    const codeObj = LicensingDB.getAccessCodeByCode(cleanCode);
+    
+    if (!codeObj) {
+      LicensingDB.addLog("VALIDATE_CODE_FAILED", `Validasi kode gagal (tidak ditemukan): ${cleanCode}`, { ip, browser: userAgent, codeUsed: cleanCode });
+      return { success: false, status: "INVALID", message: "Kode tidak ditemukan. Silakan periksa kembali." };
+    }
+    
+    if (codeObj.status === "DISABLED") {
+      LicensingDB.addLog("VALIDATE_CODE_FAILED", `Validasi kode gagal (dinonaktifkan Admin): ${cleanCode}`, { ip, browser: userAgent, codeUsed: cleanCode });
+      return { success: false, status: "DISABLED", message: "Kode telah dinonaktifkan." };
+    }
+    
+    if (codeObj.status === "EXPIRED") {
+      LicensingDB.addLog("VALIDATE_CODE_FAILED", `Validasi kode gagal (kedaluwarsa): ${cleanCode}`, { ip, browser: userAgent, codeUsed: cleanCode });
+      return { success: false, status: "EXPIRED", message: "Masa berlaku kode telah berakhir. Silakan hubungi Admin untuk memperoleh kode bulan terbaru." };
+    }
+    
+    // Check if MONTHLY has expired based on current date
+    if (codeObj.type === "MONTHLY" && codeObj.valid_until && new Date(codeObj.valid_until) < new Date()) {
+      LicensingDB.updateAccessCode(codeObj.id, { status: "EXPIRED" });
+      LicensingDB.addLog("VALIDATE_CODE_FAILED", `Validasi kode gagal (kedaluwarsa tanggal): ${cleanCode}`, { ip, browser: userAgent, codeUsed: cleanCode });
+      return { success: false, status: "EXPIRED", message: "Masa berlaku kode telah berakhir. Silakan hubungi Admin untuk memperoleh kode bulan terbaru." };
+    }
+    
+    // Code is valid!
+    LicensingDB.addLog("VALIDATE_CODE_SUCCESS", `Validasi kode sukses (${codeObj.type}): ${cleanCode}`, { ip, browser: userAgent, codeUsed: cleanCode });
+    return { success: true, status: "VALID", type: codeObj.type, code: cleanCode };
+  }
+  
+  // Step 2: No code provided, use trial
+  const fp = fingerprint && fingerprint.trim().length > 0 ? fingerprint.trim() : "ip-" + ip.replace(/[^a-zA-Z0-9]/g, "");
+  
+  const user = LicensingDB.registerOrGetTrialUser(fp, ip);
+  
+  if (user.remaining_trials > 0) {
+    return { success: true, status: "TRIAL", remainingTrials: user.remaining_trials, fingerprint: fp };
+  } else {
+    LicensingDB.addLog("TRIAL_EXHAUSTED", `Gagal generate RPM: Kuota trial habis untuk fingerprint: ${fp}`, { ip, browser: userAgent });
+    return { success: false, status: "EXHAUSTED", message: "Anda telah menggunakan seluruh kuota gratis. Silakan masukkan Kode Akses agar dapat melanjutkan menggunakan Generator RPM." };
+  }
+}
 
 // Lazy init for Gemini API
 function getGeminiClient() {
@@ -462,9 +511,27 @@ function createFallbackLessonPlan(formData: any) {
       }
     },
     asesmen: {
-      diagnostik: "Tanya jawab pemantik di awal pembelajaran untuk pemetaan kemampuan awal murid.",
-      formatif: "Observasi diskusi kelompok, lembar penilaian kinerja LKPD, dan kuis singkat interaktif.",
-      sumatif: "Tes tertulis / penilaian produk akhir proyek sesuai kriteria ketuntasan."
+      assessmentAsLearning: [
+        {
+          bentukPenilaian: "Formatif (Refleksi Diri & Antarteman)",
+          teknikPenilaian: "Self & Peer Assessment",
+          instrumenPenilaian: "Lembar refleksi metakognitif mandiri dan rubrik penilaian antarteman tentang pemahaman konsep " + lm + "."
+        }
+      ],
+      assessmentForLearning: [
+        {
+          bentukPenilaian: "Formatif (Proses Pembelajaran)",
+          teknikPenilaian: "Observasi Diskusi & Penugasan LKPD",
+          instrumenPenilaian: "Lembar observasi sikap/keterampilan dan rubrik penilaian unjuk kerja kelompok " + mp + "."
+        }
+      ],
+      assessmentOfLearning: [
+        {
+          bentukPenilaian: "Sumatif (Akhir Pembelajaran)",
+          teknikPenilaian: "Tes Tertulis / Penilaian Produk",
+          instrumenPenilaian: "Soal evaluasi tertulis dan rubrik penilaian karya/produk akhir materi " + lm + "."
+        }
+      ]
     },
     remedialDanPengayaan: {
       remedial: "Bimbingan individu/kelompok kecil bagi murid yang memerlukan pendampingan materi dasar.",
@@ -523,6 +590,42 @@ function createFallbackLessonPlan(formData: any) {
 app.post("/api/generate-lesson-plan", async (req, res) => {
   try {
     const formData = req.body;
+    const { accessCode, fingerprint } = formData;
+    const ip = req.ip || req.headers["x-forwarded-for"] || "127.0.0.1";
+    const userAgent = req.headers["user-agent"] || "Unknown";
+    
+    const clientIp = Array.isArray(ip) ? ip[0] : String(ip);
+
+    // Validate license / trial quota first
+    const licenseCheck = checkAndApplyLicense(fingerprint, accessCode, clientIp, userAgent);
+    if (!licenseCheck.success) {
+      return res.status(403).json({
+        success: false,
+        error: "TRIAL_EXHAUSTED",
+        status: licenseCheck.status,
+        message: licenseCheck.message
+      });
+    }
+
+    // Apply trial decrement if using trial
+    if (licenseCheck.status === "TRIAL" && licenseCheck.fingerprint) {
+      const ok = LicensingDB.decrementTrial(licenseCheck.fingerprint);
+      if (ok) {
+        const updatedUser = LicensingDB.getTrialUser(licenseCheck.fingerprint);
+        const rem = updatedUser ? updatedUser.remaining_trials : 0;
+        LicensingDB.addLog("TRIAL_USED", `Trial digunakan. Sisa kuota gratis: ${rem} kali`, {
+          ip: clientIp,
+          browser: userAgent
+        });
+      }
+    } else if (licenseCheck.status === "VALID" && licenseCheck.code) {
+      LicensingDB.addLog("GENERATE_RPM", `Penyusunan RPM sukses menggunakan kode: ${licenseCheck.code} (${licenseCheck.type})`, {
+        ip: clientIp,
+        browser: userAgent,
+        codeUsed: licenseCheck.code
+      });
+    }
+
     const ai = getGeminiClient();
 
     const systemPrompt = `Kamu adalah pakar desain instruksional Kurikulum Merdeka dan pelopor Pembelajaran Mendalam (Deep Learning) di Indonesia.
@@ -563,7 +666,11 @@ PERSYARATAN WAJIB DOKUMEN RENCANA PEMBELAJARAN MENDALAM:
    - [Prinsip Pembelajaran Mendalam: Metakognisi & Feedback Loop]
 
 3. Cantumkan rincian kegiatan Guru dan Kegiatan Murid secara sistematis, operasional, dan inspiratif.
-4. Cantumkan Asesmen Awal (Diagnostik), Asesmen Formatif (Proses), dan Asesmen Sumatif (Akhir).
+4. Cantumkan Asesmen dan Penilaian Pembelajaran dengan format 3 Kategori Utama:
+   - Assessment as Learning (Asesmen saat pembelajaran - refleksi & penilaian diri/antarteman)
+   - Assessment for Learning (Asesmen selama proses - observasi, umpan balik & penugasan)
+   - Assessment of Learning (Asesmen akhir - tes tertulis, produk/proyek sumatif)
+   Untuk setiap kategori di atas, wajib sertakan atribut: "bentukPenilaian", "teknikPenilaian", dan "instrumenPenilaian".
 5. Berikan Lampiran LKPD ringkas, Bahan Ajar ringkas, dan Rubrik Penilaian.
 
 Keluarkan dalam format JSON struktur persis berikut:
@@ -678,9 +785,27 @@ Keluarkan dalam format JSON struktur persis berikut:
     }
   },
   "asesmen": {
-    "diagnostik": "Teknik dan instrumen asesmen awal...",
-    "formatif": "Teknik dan instrumen asesmen proses (observasi, jurnal, produk)...",
-    "sumatif": "Teknik dan instrumen asesmen akhir (tes tulis, portofolio, rubrik unjuk kerja)..."
+    "assessmentAsLearning": [
+      {
+        "bentukPenilaian": "Formatif (Refleksi Diri & Antarteman)",
+        "teknikPenilaian": "Self-Assessment / Peer Assessment / Jurnal Metakognitif",
+        "instrumenPenilaian": "Lembar Refleksi Diri & Rubrik Penilaian Teman Sejawat"
+      }
+    ],
+    "assessmentForLearning": [
+      {
+        "bentukPenilaian": "Formatif (Proses Pembelajaran)",
+        "teknikPenilaian": "Observasi Kinerja & Penugasan Kelompok (LKPD)",
+        "instrumenPenilaian": "Lembar Observasi Sikap & Rubrik Kinerja Diskusi Kelompok"
+      }
+    ],
+    "assessmentOfLearning": [
+      {
+        "bentukPenilaian": "Sumatif (Akhir Pembelajaran)",
+        "teknikPenilaian": "Tes Tertulis & Penilaian Produk/Proyek",
+        "instrumenPenilaian": "Soal Tes Evaluasi Uraian/PG & Rubrik Penilaian Karya/Produk"
+      }
+    ]
   },
   "remedialDanPengayaan": {
     "remedial": "Langkah pendampingan bagi siswa yang belum mencapai TP...",
@@ -1131,6 +1256,265 @@ Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
       }
     };
     return res.json({ success: true, lkpd: fallbackLKPD, isFallback: true });
+  }
+});
+
+// ==================================================================
+// LICENSING & TRIAL SYSTEM REST APIs
+// ==================================================================
+
+// Validate an access code
+app.post("/api/licensing/validate", (req, res) => {
+  try {
+    const { code, fingerprint } = req.body;
+    const ip = req.ip || req.headers["x-forwarded-for"] || "127.0.0.1";
+    const userAgent = req.headers["user-agent"] || "Unknown";
+    
+    const clientIp = Array.isArray(ip) ? ip[0] : String(ip);
+    const result = checkAndApplyLicense(fingerprint, code, clientIp, userAgent);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Check trial and current license status
+app.post("/api/licensing/status", (req, res) => {
+  try {
+    const { code, fingerprint } = req.body;
+    const ip = req.ip || req.headers["x-forwarded-for"] || "127.0.0.1";
+    const userAgent = req.headers["user-agent"] || "Unknown";
+    
+    const clientIp = Array.isArray(ip) ? ip[0] : String(ip);
+    
+    let activeCodeStatus = null;
+    if (code && code.trim().length > 0) {
+      const cleanCode = code.trim().toUpperCase();
+      const codeObj = LicensingDB.getAccessCodeByCode(cleanCode);
+      if (codeObj) {
+        const isExpired = codeObj.type === "MONTHLY" && codeObj.valid_until && new Date(codeObj.valid_until) < new Date();
+        activeCodeStatus = {
+          code: codeObj.code,
+          type: codeObj.type,
+          status: isExpired ? "EXPIRED" : codeObj.status,
+          valid_until: codeObj.valid_until,
+          notes: codeObj.notes
+        };
+      }
+    }
+    
+    const fp = fingerprint && fingerprint.trim().length > 0 ? fingerprint.trim() : "ip-" + clientIp.replace(/[^a-zA-Z0-9]/g, "");
+    const user = LicensingDB.registerOrGetTrialUser(fp, clientIp);
+    
+    res.json({
+      success: true,
+      trial: {
+        id: user.id,
+        remaining_trials: user.remaining_trials,
+        created_at: user.created_at,
+        last_active: user.last_active
+      },
+      activeCode: activeCodeStatus
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin Authentication Login Check
+app.post("/api/licensing/admin/login", (req, res) => {
+  try {
+    const { password } = req.body;
+    const expected = process.env.ADMIN_PASSWORD || "admin123";
+    if (password === expected) {
+      res.json({ success: true, token: "admin-token-secure-2026" });
+    } else {
+      res.status(401).json({ success: false, error: "Password Admin tidak valid" });
+    }
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin Dashboard stats and logs
+app.post("/api/licensing/admin/dashboard", (req, res) => {
+  try {
+    const { password } = req.body;
+    const expected = process.env.ADMIN_PASSWORD || "admin123";
+    if (password !== expected) {
+      return res.status(401).json({ success: false, error: "Akses ditolak" });
+    }
+    
+    const codes = LicensingDB.getAccessCodes();
+    const logs = LicensingDB.getLogs();
+    
+    // Access trial_users list safely
+    let trialUsers: any[] = [];
+    try {
+      const DB_FILE = path.join(process.cwd(), "licensing_db.json");
+      if (fs.existsSync(DB_FILE)) {
+        const raw = fs.readFileSync(DB_FILE, "utf8");
+        const parsed = JSON.parse(raw);
+        trialUsers = parsed.trial_users || [];
+      }
+    } catch (e) {
+      console.error("Error reading trial_users directly for admin:", e);
+    }
+    
+    res.json({
+      success: true,
+      stats: {
+        totalCodes: codes.length,
+        activeCodes: codes.filter(c => c.status === "ACTIVE").length,
+        expiredCodes: codes.filter(c => c.status === "EXPIRED").length,
+        disabledCodes: codes.filter(c => c.status === "DISABLED").length,
+        totalTrialUsers: trialUsers.length,
+        totalLogs: logs.length
+      },
+      codes,
+      trialUsers,
+      logs
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin Create new access code
+app.post("/api/licensing/admin/code/create", (req, res) => {
+  try {
+    const { password, type, codeFormat, month, year, notes } = req.body;
+    const expected = process.env.ADMIN_PASSWORD || "admin123";
+    if (password !== expected) {
+      return res.status(401).json({ success: false, error: "Akses ditolak" });
+    }
+    
+    let code = "";
+    if (type === "PERMANENT") {
+      code = codeFormat ? codeFormat.toUpperCase().trim() : `RPM-PERM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    } else {
+      const mStr = String(month).padStart(2, '0');
+      const suffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+      code = `RPM-${year}-${mStr}-${suffix}`;
+    }
+    
+    // Check duplication
+    const existing = LicensingDB.getAccessCodeByCode(code);
+    if (existing) {
+      return res.status(400).json({ success: false, error: "Kode ini sudah ada di database." });
+    }
+
+    let valid_from = new Date().toISOString();
+    let valid_until = null;
+    
+    if (type === "MONTHLY") {
+      // Setup start and end of selected month/year
+      valid_from = new Date(Number(year), Number(month) - 1, 1, 0, 0, 0, 0).toISOString();
+      const lastDay = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
+      valid_until = lastDay.toISOString();
+    }
+    
+    const created = LicensingDB.createAccessCode({
+      code,
+      type,
+      status: "ACTIVE",
+      valid_from,
+      valid_until,
+      created_by: "Admin",
+      notes: notes || (type === "PERMANENT" ? "Akses Permanen Sekolah" : `Akses Bulanan ${month}/${year}`)
+    });
+    
+    res.json({ success: true, code: created });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin toggle code status
+app.post("/api/licensing/admin/code/toggle", (req, res) => {
+  try {
+    const { password, id, status } = req.body;
+    const expected = process.env.ADMIN_PASSWORD || "admin123";
+    if (password !== expected) {
+      return res.status(401).json({ success: false, error: "Akses ditolak" });
+    }
+    
+    const updated = LicensingDB.updateAccessCode(id, { status });
+    if (updated) {
+      LicensingDB.addLog(
+        status === "DISABLED" ? "CODE_DISABLED" : "CODE_ENABLED",
+        `Kode ${updated.code} telah di-${status === "DISABLED" ? "nonaktifkan" : "aktifkan"}`,
+        { ip: "127.0.0.1", browser: "Admin Dashboard" }
+      );
+      res.json({ success: true, code: updated });
+    } else {
+      res.status(404).json({ success: false, error: "Kode tidak ditemukan" });
+    }
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin edit code notes / valid_until
+app.post("/api/licensing/admin/code/edit", (req, res) => {
+  try {
+    const { password, id, notes, valid_until } = req.body;
+    const expected = process.env.ADMIN_PASSWORD || "admin123";
+    if (password !== expected) {
+      return res.status(401).json({ success: false, error: "Akses ditolak" });
+    }
+    
+    const updated = LicensingDB.updateAccessCode(id, { notes, valid_until });
+    if (updated) {
+      res.json({ success: true, code: updated });
+    } else {
+      res.status(404).json({ success: false, error: "Kode tidak ditemukan" });
+    }
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin Delete an access code
+app.post("/api/licensing/admin/code/delete", (req, res) => {
+  try {
+    const { password, id } = req.body;
+    const expected = process.env.ADMIN_PASSWORD || "admin123";
+    if (password !== expected) {
+      return res.status(401).json({ success: false, error: "Akses ditolak" });
+    }
+    
+    const success = LicensingDB.deleteAccessCode(id);
+    res.json({ success });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin reset user trial
+app.post("/api/licensing/admin/trial/reset", (req, res) => {
+  try {
+    const { password, userId } = req.body;
+    const expected = process.env.ADMIN_PASSWORD || "admin123";
+    if (password !== expected) {
+      return res.status(401).json({ success: false, error: "Akses ditolak" });
+    }
+    
+    const DB_FILE = path.join(process.cwd(), "licensing_db.json");
+    if (fs.existsSync(DB_FILE)) {
+      const raw = fs.readFileSync(DB_FILE, "utf8");
+      const db = JSON.parse(raw);
+      const userIdx = db.trial_users.findIndex((u: any) => u.id === userId);
+      if (userIdx !== -1) {
+        db.trial_users[userIdx].remaining_trials = 5;
+        fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf8");
+        LicensingDB.addLog("CODE_EDITED", `Trial di-reset ke 5 untuk user: ${userId}`, { ip: "127.0.0.1", browser: "Admin Dashboard" });
+        return res.json({ success: true });
+      }
+    }
+    res.status(404).json({ success: false, error: "User tidak ditemukan" });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
