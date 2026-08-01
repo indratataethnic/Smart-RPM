@@ -280,23 +280,38 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
     e.preventDefault();
     setLoginError(null);
 
+    const inputPw = (password || '').trim();
+    if (!inputPw) {
+      setLoginError('Silakan masukkan password admin.');
+      return;
+    }
+
     try {
       const res = await fetch('/api/licensing/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ password: inputPw })
       });
-      const data = await res.json();
+      
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        setLoginError('Gagal memproses respon dari server.');
+        return;
+      }
+
       if (res.ok && data.success) {
         setIsLoggedIn(true);
         sessionStorage.setItem('rpm_admin_token', data.token);
-        sessionStorage.setItem('rpm_admin_pw', password); // Saved temporarily for request credentials
-        fetchDashboardData();
+        sessionStorage.setItem('rpm_admin_pw', inputPw);
+        fetchDashboardData(inputPw);
       } else {
-        setLoginError(data.error || 'Password Admin salah!');
+        setLoginError(data.error || 'Password Admin tidak valid!');
       }
     } catch (err) {
-      setLoginError('Gagal menghubungkan ke server.');
+      console.error('Error in handleLogin:', err);
+      setLoginError('Gagal menghubungkan ke server. Pastikan dev server berjalan.');
     }
   };
 
@@ -306,21 +321,34 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
     sessionStorage.removeItem('rpm_admin_pw');
   };
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (customPw?: string) => {
     setIsLoadingData(true);
-    const pw = sessionStorage.getItem('rpm_admin_pw') || '';
+    const pw = customPw !== undefined ? customPw : (sessionStorage.getItem('rpm_admin_pw') || '');
     try {
       const res = await fetch('/api/licensing/admin/dashboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pw })
       });
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        console.error('Failed to parse dashboard data:', e);
+      }
+
       if (res.ok && data.success) {
         setStats(data.stats);
         setCodes(data.codes);
         setTrialUsers(data.trialUsers);
         setLogs(data.logs);
+      } else {
+        if (res.status === 401) {
+          setIsLoggedIn(false);
+          sessionStorage.removeItem('rpm_admin_token');
+          sessionStorage.removeItem('rpm_admin_pw');
+          setLoginError('Sesi tidak valid atau password salah. Silakan login kembali.');
+        }
       }
     } catch (err) {
       console.error('Error fetching admin data:', err);
@@ -414,7 +442,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   };
 
   const handleResetTrial = async (userId: string) => {
-    if (!confirm('Berikan kuota gratis 3 kali lagi untuk pengguna ini?')) return;
+    if (!confirm('Berikan kuota gratis 5 kali lagi untuk pengguna ini?')) return;
     const pw = sessionStorage.getItem('rpm_admin_pw') || '';
     try {
       const res = await fetch('/api/licensing/admin/trial/reset', {
@@ -424,7 +452,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
       });
       if (res.ok) {
         fetchDashboardData();
-        alert('Trial berhasil direset menjadi 3 kuota gratis!');
+        alert('Trial berhasil direset menjadi 5 kuota gratis!');
       }
     } catch (err) {
       console.error(err);
@@ -468,7 +496,10 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
               <Lock size={28} />
             </div>
             <h3 className="font-bold text-gray-800 text-lg mb-1">Akses Terbatas Administrator</h3>
-            <p className="text-gray-500 text-xs mb-6 max-w-xs text-center">Masukkan Password Admin yang dikonfigurasi di environment variables aplikasi Anda.</p>
+            <p className="text-gray-500 text-xs mb-6 max-w-xs text-center">
+              Masukkan Password Admin. <br />
+              <span className="text-blue-600 font-medium">(Default: admin123 atau sesuai ENV ADMIN_PASSWORD)</span>
+            </p>
 
             <form onSubmit={handleLogin} className="w-full max-w-sm">
               <div className="mb-4">

@@ -1321,12 +1321,18 @@ app.post("/api/licensing/status", (req, res) => {
   }
 });
 
+// Admin Authentication Helper
+const checkAdminAuth = (givenPw: any): boolean => {
+  const expected = (process.env.ADMIN_PASSWORD || "admin123").trim();
+  const given = (givenPw || "").toString().trim();
+  return given === expected;
+};
+
 // Admin Authentication Login Check
 app.post("/api/licensing/admin/login", (req, res) => {
   try {
-    const { password } = req.body;
-    const expected = process.env.ADMIN_PASSWORD || "admin123";
-    if (password === expected) {
+    const { password } = req.body || {};
+    if (checkAdminAuth(password)) {
       res.json({ success: true, token: "admin-token-secure-2026" });
     } else {
       res.status(401).json({ success: false, error: "Password Admin tidak valid" });
@@ -1339,10 +1345,9 @@ app.post("/api/licensing/admin/login", (req, res) => {
 // Admin Dashboard stats and logs
 app.post("/api/licensing/admin/dashboard", (req, res) => {
   try {
-    const { password } = req.body;
-    const expected = process.env.ADMIN_PASSWORD || "admin123";
-    if (password !== expected) {
-      return res.status(401).json({ success: false, error: "Akses ditolak" });
+    const { password } = req.body || {};
+    if (!checkAdminAuth(password)) {
+      return res.status(401).json({ success: false, error: "Akses ditolak (Password salah)" });
     }
     
     const codes = LicensingDB.getAccessCodes();
@@ -1383,9 +1388,8 @@ app.post("/api/licensing/admin/dashboard", (req, res) => {
 // Admin Create new access code
 app.post("/api/licensing/admin/code/create", (req, res) => {
   try {
-    const { password, type, codeFormat, month, year, notes } = req.body;
-    const expected = process.env.ADMIN_PASSWORD || "admin123";
-    if (password !== expected) {
+    const { password, type, codeFormat, month, year, notes } = req.body || {};
+    if (!checkAdminAuth(password)) {
       return res.status(401).json({ success: false, error: "Akses ditolak" });
     }
     
@@ -1433,9 +1437,8 @@ app.post("/api/licensing/admin/code/create", (req, res) => {
 // Admin toggle code status
 app.post("/api/licensing/admin/code/toggle", (req, res) => {
   try {
-    const { password, id, status } = req.body;
-    const expected = process.env.ADMIN_PASSWORD || "admin123";
-    if (password !== expected) {
+    const { password, id, status } = req.body || {};
+    if (!checkAdminAuth(password)) {
       return res.status(401).json({ success: false, error: "Akses ditolak" });
     }
     
@@ -1458,9 +1461,8 @@ app.post("/api/licensing/admin/code/toggle", (req, res) => {
 // Admin edit code notes / valid_until
 app.post("/api/licensing/admin/code/edit", (req, res) => {
   try {
-    const { password, id, notes, valid_until } = req.body;
-    const expected = process.env.ADMIN_PASSWORD || "admin123";
-    if (password !== expected) {
+    const { password, id, notes, valid_until } = req.body || {};
+    if (!checkAdminAuth(password)) {
       return res.status(401).json({ success: false, error: "Akses ditolak" });
     }
     
@@ -1478,9 +1480,8 @@ app.post("/api/licensing/admin/code/edit", (req, res) => {
 // Admin Delete an access code
 app.post("/api/licensing/admin/code/delete", (req, res) => {
   try {
-    const { password, id } = req.body;
-    const expected = process.env.ADMIN_PASSWORD || "admin123";
-    if (password !== expected) {
+    const { password, id } = req.body || {};
+    if (!checkAdminAuth(password)) {
       return res.status(401).json({ success: false, error: "Akses ditolak" });
     }
     
@@ -1494,9 +1495,8 @@ app.post("/api/licensing/admin/code/delete", (req, res) => {
 // Admin reset user trial
 app.post("/api/licensing/admin/trial/reset", (req, res) => {
   try {
-    const { password, userId } = req.body;
-    const expected = process.env.ADMIN_PASSWORD || "admin123";
-    if (password !== expected) {
+    const { password, userId } = req.body || {};
+    if (!checkAdminAuth(password)) {
       return res.status(401).json({ success: false, error: "Akses ditolak" });
     }
     
