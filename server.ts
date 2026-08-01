@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { LicensingDB } from "./server-db";
@@ -1514,7 +1515,6 @@ app.post(["/api/licensing/admin/trial/reset", "/licensing/admin/trial/reset"], (
 // Serve Vite in dev or static files in production
 async function start() {
   if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -1533,8 +1533,8 @@ async function start() {
   });
 }
 
-if (!process.env.VERCEL && !process.env.NOW_REGION) {
-  start();
-}
+start().catch((err) => {
+  console.error("Failed to start server:", err);
+});
 
 export default app;
