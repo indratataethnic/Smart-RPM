@@ -1539,4 +1539,8 @@ async function start() {
   });
 }
 
-start();
+if (!process.env.VERCEL && !process.env.NOW_REGION) {
+  start();
+}
+
+export default app;

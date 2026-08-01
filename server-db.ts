@@ -50,67 +50,84 @@ interface DatabaseSchema {
 }
 
 const DB_FILE = path.join(process.cwd(), "licensing_db.json");
+const TMP_DB_FILE = path.join("/tmp", "licensing_db.json");
+
+let memoryDB: DatabaseSchema | null = null;
 
 // Safe load helper
 function loadDB(): DatabaseSchema {
+  if (memoryDB) return memoryDB;
+
+  const initialDB: DatabaseSchema = {
+    access_codes: [
+      {
+        id: "code-perm-1",
+        code: "RPM-PERM-KARANGANYAR",
+        type: "PERMANENT",
+        status: "ACTIVE",
+        valid_from: new Date().toISOString(),
+        valid_until: null,
+        created_at: new Date().toISOString(),
+        created_by: "System Admin",
+        notes: "Akses Permanen & Selamanya Khusus SD Negeri Karanganyar",
+      },
+      {
+        id: "code-monthly-demo",
+        code: "RPM-2026-07-DEMO123",
+        type: "MONTHLY",
+        status: "ACTIVE",
+        valid_from: "2026-07-01T00:00:00.000Z",
+        valid_until: "2026-08-31T23:59:59.000Z",
+        created_at: new Date().toISOString(),
+        created_by: "System Admin",
+        notes: "Kode Akses Bulan Juli - Agustus 2026 (Demo Bulanan Sekolah Lain)",
+      },
+      {
+        id: "code-monthly-exp",
+        code: "RPM-2026-06-EXPIRED",
+        type: "MONTHLY",
+        status: "ACTIVE", // Start as active, but validation logic checks date
+        valid_from: "2026-06-01T00:00:00.000Z",
+        valid_until: "2026-06-30T23:59:59.000Z",
+        created_at: new Date().toISOString(),
+        created_by: "System Admin",
+        notes: "Kode Bulanan Lama (Juni 2026) - Sudah Kedaluwarsa",
+      }
+    ],
+    trial_users: [],
+    activity_logs: [],
+  };
+
   try {
-    if (!fs.existsSync(DB_FILE)) {
-      const initialDB: DatabaseSchema = {
-        access_codes: [
-          {
-            id: "code-perm-1",
-            code: "RPM-PERM-KARANGANYAR",
-            type: "PERMANENT",
-            status: "ACTIVE",
-            valid_from: new Date().toISOString(),
-            valid_until: null,
-            created_at: new Date().toISOString(),
-            created_by: "System Admin",
-            notes: "Akses Permanen & Selamanya Khusus SD Negeri Karanganyar",
-          },
-          {
-            id: "code-monthly-demo",
-            code: "RPM-2026-07-DEMO123",
-            type: "MONTHLY",
-            status: "ACTIVE",
-            valid_from: "2026-07-01T00:00:00.000Z",
-            valid_until: "2026-08-31T23:59:59.000Z",
-            created_at: new Date().toISOString(),
-            created_by: "System Admin",
-            notes: "Kode Akses Bulan Juli - Agustus 2026 (Demo Bulanan Sekolah Lain)",
-          },
-          {
-            id: "code-monthly-exp",
-            code: "RPM-2026-06-EXPIRED",
-            type: "MONTHLY",
-            status: "ACTIVE", // Start as active, but validation logic checks date
-            valid_from: "2026-06-01T00:00:00.000Z",
-            valid_until: "2026-06-30T23:59:59.000Z",
-            created_at: new Date().toISOString(),
-            created_by: "System Admin",
-            notes: "Kode Bulanan Lama (Juni 2026) - Sudah Kedaluwarsa",
-          }
-        ],
-        trial_users: [],
-        activity_logs: [],
-      };
-      fs.writeFileSync(DB_FILE, JSON.stringify(initialDB, null, 2), "utf8");
-      return initialDB;
+    let targetFile = DB_FILE;
+    if (!fs.existsSync(targetFile) && fs.existsSync(TMP_DB_FILE)) {
+      targetFile = TMP_DB_FILE;
     }
-    const data = fs.readFileSync(DB_FILE, "utf8");
-    return JSON.parse(data);
+    if (fs.existsSync(targetFile)) {
+      const data = fs.readFileSync(targetFile, "utf8");
+      memoryDB = JSON.parse(data);
+      return memoryDB!;
+    }
   } catch (err) {
-    console.error("Error loading licensing database, fallback empty database:", err);
-    return { access_codes: [], trial_users: [], activity_logs: [] };
+    console.error("Error loading licensing database, fallback to memory database:", err);
   }
+
+  memoryDB = initialDB;
+  saveDB(memoryDB);
+  return memoryDB;
 }
 
 // Safe save helper
 function saveDB(db: DatabaseSchema) {
+  memoryDB = db;
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf8");
   } catch (err) {
-    console.error("Error writing licensing database file:", err);
+    try {
+      fs.writeFileSync(TMP_DB_FILE, JSON.stringify(db, null, 2), "utf8");
+    } catch (e) {
+      console.warn("Read-only filesystem detected (Vercel/Serverless). Database saved in memory.");
+    }
   }
 }
 
