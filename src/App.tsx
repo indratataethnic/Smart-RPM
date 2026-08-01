@@ -12,7 +12,7 @@ import { GeneratingProgressModal } from './components/GeneratingProgressModal';
 import { LessonFormData, LessonPlanOutput, SavedLessonPlan } from './types';
 import { DEMO_PRESETS, getKelasOptions, DPL_OPTIONS, METODE_MODEL_OPTIONS, KEMITRAAN_OPTIONS, DIGITAL_TOOLS_OPTIONS, LINTAS_DISIPLIN_OPTIONS, LINGKUNGAN_PEMBELAJARAN_OPTIONS } from './data/presets';
 import { Sparkles, Loader2, ArrowRight, RotateCcw, AlertCircle, Trash2 } from 'lucide-react';
-import { TrialExhaustedModal, EnterAccessCodeModal, AdminPanelModal, getOrGenerateFingerprint, TrialConfirmationModal } from './components/LicensingModals';
+import { TrialExhaustedModal, EnterAccessCodeModal, AdminPanelModal, getOrGenerateFingerprint, TrialConfirmationModal, getLocalCodes } from './components/LicensingModals';
 
 const matchOptionLabels = (recommended: string[] | undefined, options: { label: string }[], fallbackCount = 2, maxCount = 3): string[] => {
   if (!recommended || !Array.isArray(recommended) || recommended.length === 0) {
@@ -323,26 +323,52 @@ export default function App() {
     try {
       const fp = getOrGenerateFingerprint();
       const code = localStorage.getItem('rpm_access_code') || '';
-      const res = await fetch('/api/licensing/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fingerprint: fp, code }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        setTrialCount(json.trial.remaining_trials);
-        
-        if (json.activeCode && json.activeCode.status === 'ACTIVE') {
-          setAccessCode(json.activeCode.code);
-          setAccessType(json.activeCode.type);
-        } else {
-          // No active code found or expired/disabled on server
-          setAccessType('TRIAL');
-          if (localStorage.getItem('rpm_access_code')) {
-            localStorage.removeItem('rpm_access_code');
-            setAccessCode('');
+      let isServerOk = false;
+
+      try {
+        const res = await fetch('/api/licensing/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fingerprint: fp, code }),
+        });
+        if (res.ok) {
+          const json = await res.json().catch(() => null);
+          if (json && json.success) {
+            isServerOk = true;
+            setTrialCount(json.trial.remaining_trials);
+            
+            if (json.activeCode && json.activeCode.status === 'ACTIVE') {
+              setAccessCode(json.activeCode.code);
+              setAccessType(json.activeCode.type);
+            } else {
+              setAccessType('TRIAL');
+              if (localStorage.getItem('rpm_access_code')) {
+                localStorage.removeItem('rpm_access_code');
+                setAccessCode('');
+              }
+            }
           }
         }
+      } catch (err) {
+        console.warn('Server status check unreachable, using local status:', err);
+      }
+
+      if (!isServerOk) {
+        // Fallback local status check
+        const localCodes = getLocalCodes();
+        const activeLocalCode = localCodes.find((c: any) => c.code.trim().toUpperCase() === code.trim().toUpperCase() && c.status === 'ACTIVE');
+        if (activeLocalCode) {
+          if (!activeLocalCode.valid_until || new Date(activeLocalCode.valid_until) >= new Date()) {
+            setAccessCode(activeLocalCode.code);
+            setAccessType(activeLocalCode.type);
+            return;
+          }
+        }
+
+        // Default to TRIAL if no valid active code
+        setAccessType('TRIAL');
+        const storedTrial = localStorage.getItem('rpm_trial_count');
+        setTrialCount(storedTrial ? parseInt(storedTrial, 10) : 5);
       }
     } catch (err) {
       console.error('Error fetching licensing status:', err);
