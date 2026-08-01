@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { LicensingDB } from "./server-db";
@@ -12,6 +11,20 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
+
+// Normalize request URL for Vercel Serverless Function rewrites safely without breaking SPA static assets
+app.use((req, res, next) => {
+  if (
+    req.url &&
+    !req.url.startsWith("/api/") &&
+    (req.url.startsWith("/licensing") ||
+      req.url.startsWith("/generate-rpm") ||
+      req.url.startsWith("/verify-license"))
+  ) {
+    req.url = "/api" + (req.url.startsWith("/") ? req.url : "/" + req.url);
+  }
+  next();
+});
 
 // Helper to check and apply license / trial quota
 function checkAndApplyLicense(fingerprint: string | undefined, codeStr: string | undefined, ip: string, userAgent: string) {
@@ -1264,7 +1277,7 @@ Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
 // ==================================================================
 
 // Validate an access code
-app.post("/api/licensing/validate", (req, res) => {
+app.post(["/api/licensing/validate", "/licensing/validate"], (req, res) => {
   try {
     const { code, fingerprint } = req.body;
     const ip = req.ip || req.headers["x-forwarded-for"] || "127.0.0.1";
@@ -1279,7 +1292,7 @@ app.post("/api/licensing/validate", (req, res) => {
 });
 
 // Check trial and current license status
-app.post("/api/licensing/status", (req, res) => {
+app.post(["/api/licensing/status", "/licensing/status"], (req, res) => {
   try {
     const { code, fingerprint } = req.body;
     const ip = req.ip || req.headers["x-forwarded-for"] || "127.0.0.1";
@@ -1329,7 +1342,7 @@ const checkAdminAuth = (givenPw: any): boolean => {
 };
 
 // Admin Authentication Login Check
-app.post("/api/licensing/admin/login", (req, res) => {
+app.post(["/api/licensing/admin/login", "/licensing/admin/login"], (req, res) => {
   try {
     const { password } = req.body || {};
     if (checkAdminAuth(password)) {
@@ -1343,7 +1356,7 @@ app.post("/api/licensing/admin/login", (req, res) => {
 });
 
 // Admin Dashboard stats and logs
-app.post("/api/licensing/admin/dashboard", (req, res) => {
+app.post(["/api/licensing/admin/dashboard", "/licensing/admin/dashboard"], (req, res) => {
   try {
     const { password } = req.body || {};
     if (!checkAdminAuth(password)) {
@@ -1352,19 +1365,7 @@ app.post("/api/licensing/admin/dashboard", (req, res) => {
     
     const codes = LicensingDB.getAccessCodes();
     const logs = LicensingDB.getLogs();
-    
-    // Access trial_users list safely
-    let trialUsers: any[] = [];
-    try {
-      const DB_FILE = path.join(process.cwd(), "licensing_db.json");
-      if (fs.existsSync(DB_FILE)) {
-        const raw = fs.readFileSync(DB_FILE, "utf8");
-        const parsed = JSON.parse(raw);
-        trialUsers = parsed.trial_users || [];
-      }
-    } catch (e) {
-      console.error("Error reading trial_users directly for admin:", e);
-    }
+    const trialUsers = LicensingDB.getAllTrialUsers();
     
     res.json({
       success: true,
@@ -1386,7 +1387,7 @@ app.post("/api/licensing/admin/dashboard", (req, res) => {
 });
 
 // Admin Create new access code
-app.post("/api/licensing/admin/code/create", (req, res) => {
+app.post(["/api/licensing/admin/code/create", "/licensing/admin/code/create"], (req, res) => {
   try {
     const { password, type, codeFormat, month, year, notes } = req.body || {};
     if (!checkAdminAuth(password)) {
@@ -1435,7 +1436,7 @@ app.post("/api/licensing/admin/code/create", (req, res) => {
 });
 
 // Admin toggle code status
-app.post("/api/licensing/admin/code/toggle", (req, res) => {
+app.post(["/api/licensing/admin/code/toggle", "/licensing/admin/code/toggle"], (req, res) => {
   try {
     const { password, id, status } = req.body || {};
     if (!checkAdminAuth(password)) {
@@ -1459,7 +1460,7 @@ app.post("/api/licensing/admin/code/toggle", (req, res) => {
 });
 
 // Admin edit code notes / valid_until
-app.post("/api/licensing/admin/code/edit", (req, res) => {
+app.post(["/api/licensing/admin/code/edit", "/licensing/admin/code/edit"], (req, res) => {
   try {
     const { password, id, notes, valid_until } = req.body || {};
     if (!checkAdminAuth(password)) {
@@ -1478,7 +1479,7 @@ app.post("/api/licensing/admin/code/edit", (req, res) => {
 });
 
 // Admin Delete an access code
-app.post("/api/licensing/admin/code/delete", (req, res) => {
+app.post(["/api/licensing/admin/code/delete", "/licensing/admin/code/delete"], (req, res) => {
   try {
     const { password, id } = req.body || {};
     if (!checkAdminAuth(password)) {
@@ -1493,24 +1494,16 @@ app.post("/api/licensing/admin/code/delete", (req, res) => {
 });
 
 // Admin reset user trial
-app.post("/api/licensing/admin/trial/reset", (req, res) => {
+app.post(["/api/licensing/admin/trial/reset", "/licensing/admin/trial/reset"], (req, res) => {
   try {
     const { password, userId } = req.body || {};
     if (!checkAdminAuth(password)) {
       return res.status(401).json({ success: false, error: "Akses ditolak" });
     }
     
-    const DB_FILE = path.join(process.cwd(), "licensing_db.json");
-    if (fs.existsSync(DB_FILE)) {
-      const raw = fs.readFileSync(DB_FILE, "utf8");
-      const db = JSON.parse(raw);
-      const userIdx = db.trial_users.findIndex((u: any) => u.id === userId);
-      if (userIdx !== -1) {
-        db.trial_users[userIdx].remaining_trials = 5;
-        fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf8");
-        LicensingDB.addLog("CODE_EDITED", `Trial di-reset ke 5 untuk user: ${userId}`, { ip: "127.0.0.1", browser: "Admin Dashboard" });
-        return res.json({ success: true });
-      }
+    const success = LicensingDB.resetTrial(userId);
+    if (success) {
+      return res.json({ success: true });
     }
     res.status(404).json({ success: false, error: "User tidak ditemukan" });
   } catch (err: any) {
@@ -1521,6 +1514,7 @@ app.post("/api/licensing/admin/trial/reset", (req, res) => {
 // Serve Vite in dev or static files in production
 async function start() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

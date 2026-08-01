@@ -210,9 +210,27 @@ export const LicensingDB = {
   },
 
   // --- Trial Users ---
+  getAllTrialUsers(): TrialUser[] {
+    const db = loadDB();
+    return db.trial_users || [];
+  },
+
   getTrialUser(id: string): TrialUser | undefined {
     const db = loadDB();
     return db.trial_users.find((u) => u.id === id);
+  },
+
+  resetTrial(id: string): boolean {
+    const db = loadDB();
+    const user = db.trial_users.find((u) => u.id === id);
+    if (user) {
+      user.remaining_trials = 5;
+      user.last_active = new Date().toISOString();
+      saveDB(db);
+      this.addLog("CODE_EDITED", `Trial di-reset ke 5 untuk user: ${id}`, { ip: "127.0.0.1", browser: "Admin Dashboard" });
+      return true;
+    }
+    return false;
   },
 
   registerOrGetTrialUser(id: string, ip: string): TrialUser {
