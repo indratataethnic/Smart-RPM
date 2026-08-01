@@ -497,8 +497,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
             </div>
             <h3 className="font-bold text-gray-800 text-lg mb-1">Akses Terbatas Administrator</h3>
             <p className="text-gray-500 text-xs mb-6 max-w-xs text-center">
-              Masukkan Password Admin. <br />
-              <span className="text-blue-600 font-semibold">(Password Admin: sekarmelati)</span>
+              Masukkan Password Administrator untuk mengakses panel kontrol lisensi.
             </p>
 
             <form onSubmit={handleLogin} className="w-full max-w-sm">
