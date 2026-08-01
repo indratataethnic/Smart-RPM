@@ -19,7 +19,9 @@ import {
   Search,
   Check,
   Power,
-  Edit2
+  Edit2,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 
 // Get or Generate Fingerprint
@@ -293,21 +295,21 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
         body: JSON.stringify({ password: inputPw })
       });
       
-      let data: any = {};
+      let data: any = null;
       try {
         data = await res.json();
       } catch (e) {
-        setLoginError('Gagal memproses respon dari server.');
-        return;
+        console.error('Failed to parse JSON response:', e);
       }
 
-      if (res.ok && data.success) {
+      if (res.ok && data && data.success) {
         setIsLoggedIn(true);
         sessionStorage.setItem('rpm_admin_token', data.token);
         sessionStorage.setItem('rpm_admin_pw', inputPw);
         fetchDashboardData(inputPw);
       } else {
-        setLoginError(data.error || 'Password Admin tidak valid!');
+        const errorMsg = data?.error || (res.status === 401 ? 'Password Admin salah atau tidak valid!' : `Server merespon error (${res.status}).`);
+        setLoginError(errorMsg);
       }
     } catch (err) {
       console.error('Error in handleLogin:', err);
@@ -319,6 +321,60 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
     setIsLoggedIn(false);
     sessionStorage.removeItem('rpm_admin_token');
     sessionStorage.removeItem('rpm_admin_pw');
+  };
+
+  // Helper untuk Ekspor Data ke CSV (Excel Compatible)
+  const exportToCSV = (filename: string, headers: string[], rows: (string | number)[][]) => {
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${filename}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportCodesToExcel = () => {
+    const headers = ['Kode Akses', 'Tipe', 'Status', 'Berlaku Hingga', 'Catatan / Keterangan', 'Dibuat Pada'];
+    const rows = codes.map(c => [
+      c.code,
+      c.type,
+      c.status,
+      c.valid_until ? new Date(c.valid_until).toLocaleDateString('id-ID') : 'Selamanya',
+      c.notes,
+      new Date(c.created_at).toLocaleString('id-ID')
+    ]);
+    exportToCSV('Data_Kode_Lisensi_RPM', headers, rows);
+  };
+
+  const exportTrialsToExcel = () => {
+    const headers = ['Browser Fingerprint', 'IP Address', 'Sisa Kuota Trial', 'Tanggal Mendaftar', 'Aktif Terakhir'];
+    const rows = trialUsers.map(u => [
+      u.id,
+      u.ip,
+      `${u.remaining_trials} / 5`,
+      new Date(u.created_at).toLocaleString('id-ID'),
+      new Date(u.last_active).toLocaleString('id-ID')
+    ]);
+    exportToCSV('Data_Pengguna_Trial_RPM', headers, rows);
+  };
+
+  const exportLogsToExcel = () => {
+    const headers = ['Waktu Kegiatan', 'Jenis Kegiatan', 'Keterangan', 'IP Address', 'Browser User'];
+    const rows = logs.map(l => [
+      new Date(l.timestamp).toLocaleString('id-ID'),
+      l.activity_type,
+      l.details,
+      l.user_info.ip,
+      l.user_info.browser
+    ]);
+    exportToCSV('Log_Aktivitas_Guru_RPM', headers, rows);
   };
 
   const fetchDashboardData = async (customPw?: string) => {
@@ -747,7 +803,15 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                             className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md text-xs placeholder-gray-400"
                           />
                         </div>
-                        <span className="text-xs text-gray-500 font-semibold">Total: {codes.length} Kode</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-gray-500 font-semibold">Total: {codes.length} Kode</span>
+                          <button
+                            onClick={exportCodesToExcel}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
+                          >
+                            <FileSpreadsheet size={13} /> Ekspor Excel (CSV)
+                          </button>
+                        </div>
                       </div>
 
                       <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex-1 overflow-x-auto">
@@ -871,7 +935,15 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                     <div className="space-y-4 flex-1 flex flex-col">
                       <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex justify-between items-center shrink-0">
                         <span className="text-xs text-gray-500 font-semibold">Memantau guru yang mencoba aplikasi tanpa kode</span>
-                        <span className="text-xs bg-rose-50 text-rose-700 px-2.5 py-1 rounded font-bold border border-rose-100">Total Pengguna Unik: {trialUsers.length} Guru</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-rose-50 text-rose-700 px-2.5 py-1 rounded font-bold border border-rose-100">Total Pengguna Unik: {trialUsers.length} Guru</span>
+                          <button
+                            onClick={exportTrialsToExcel}
+                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
+                          >
+                            <FileSpreadsheet size={13} /> Ekspor Excel (CSV)
+                          </button>
+                        </div>
                       </div>
 
                       <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex-1 overflow-x-auto">
@@ -946,7 +1018,15 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                             className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md text-xs placeholder-gray-400"
                           />
                         </div>
-                        <span className="text-xs text-gray-500 font-semibold">Menampilkan {logs.length} riwayat logs terakhir</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-gray-500 font-semibold">Menampilkan {logs.length} riwayat logs terakhir</span>
+                          <button
+                            onClick={exportLogsToExcel}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
+                          >
+                            <FileSpreadsheet size={13} /> Ekspor Excel (CSV)
+                          </button>
+                        </div>
                       </div>
 
                       <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex-1 overflow-x-auto max-h-[400px]">
