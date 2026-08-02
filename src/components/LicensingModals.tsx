@@ -605,15 +605,19 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
     }
   };
 
-  const handleLoadTrialsFromSheet = async () => {
+  const handleLoadTrialsFromSheet = async (isManual = true) => {
     try {
       const webhookUrl = localStorage.getItem('rpm_google_sheet_webhook_url');
       if (!webhookUrl || !webhookUrl.startsWith('http')) {
-        alert('URL Google Spreadsheet belum disetel! Silakan atur di tab "Google Spreadsheet Sync".');
-        setActiveTab('sheets');
+        if (isManual) {
+          alert('URL Google Spreadsheet belum disetel! Silakan atur di tab "Google Spreadsheet Sync".');
+          setActiveTab('sheets');
+        }
         return;
       }
-      setSyncTrialsStatus('Memuat data pengguna trial dari Sheet 2 Google Spreadsheet...');
+      if (isManual) {
+        setSyncTrialsStatus('Memuat data pengguna trial dari Sheet 2 Google Spreadsheet...');
+      }
       const res = await fetch(webhookUrl, { method: 'GET', mode: 'cors' }).catch(() => null);
       if (res && res.ok) {
         const data = await res.json();
@@ -630,18 +634,31 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
           const merged = Array.from(mergedMap.values());
           setTrialUsers(merged);
           saveLocalTrialUsers(merged);
-          setSyncTrialsStatus(`Berhasil memuat ${data.trialUsers.length} data pengguna trial dari Sheet 2 Google Spreadsheet!`);
-          setTimeout(() => setSyncTrialsStatus(null), 5000);
+          if (isManual) {
+            setSyncTrialsStatus(`Berhasil memuat ${data.trialUsers.length} data pengguna trial dari Sheet 2 Google Spreadsheet!`);
+            setTimeout(() => setSyncTrialsStatus(null), 5000);
+          }
           return;
         }
       }
-      alert('Gagal mengambil data dari Google Spreadsheet secara langsung (CORS/Apps Script). Pastikan skrip Google Apps Script memiliki fungsi doGet yang mengembalikan trialUsers.');
-      setSyncTrialsStatus(null);
+      if (isManual) {
+        alert('Gagal mengambil data dari Google Spreadsheet secara langsung (CORS/Apps Script). Pastikan skrip Google Apps Script memiliki fungsi doGet yang mengembalikan trialUsers.');
+        setSyncTrialsStatus(null);
+      }
     } catch (e: any) {
-      alert('Gagal memuat dari spreadsheet: ' + e.message);
-      setSyncTrialsStatus(null);
+      if (isManual) {
+        alert('Gagal memuat dari spreadsheet: ' + e.message);
+        setSyncTrialsStatus(null);
+      }
     }
   };
+
+  // Auto load trials from spreadsheet when switching to trials tab
+  useEffect(() => {
+    if (isLoggedIn && activeTab === 'trials') {
+      handleLoadTrialsFromSheet(false);
+    }
+  }, [isLoggedIn, activeTab]);
 
   // Check login state on open
   useEffect(() => {
@@ -1011,6 +1028,14 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   const handleResetTrial = async (userId: string) => {
     if (!confirm('Berikan kuota gratis 5 kali lagi untuk pengguna ini?')) return;
     const pw = sessionStorage.getItem('rpm_admin_pw') || '';
+    
+    // Temukan detail user yang ada saat ini untuk IP, Lokasi, dan Tanggal Dibuat agar tetap konsisten di Spreadsheet
+    const existingUser = trialUsers.find((u: any) => u.id === userId);
+    const userIp = existingUser?.ip || '127.0.0.1';
+    const userLocation = existingUser?.location || 'Indonesia';
+    const userCreatedAt = existingUser?.created_at || new Date().toISOString();
+
+    let serverSuccess = false;
     try {
       const res = await fetch('/api/licensing/admin/trial/reset', {
         method: 'POST',
@@ -1018,23 +1043,53 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
         body: JSON.stringify({ password: pw, userId })
       });
       if (res.ok) {
-        fetchDashboardData();
-        alert('Trial berhasil direset menjadi 5 kuota gratis!');
-        return;
+        serverSuccess = true;
       }
     } catch (err) {
       console.warn('Server reset trial failed, performing locally:', err);
     }
 
-    const localTrials = getLocalTrialUsers();
-    const user = localTrials.find((u: any) => u.id === userId);
-    if (user) {
-      user.remaining_trials = 5;
-      user.last_active = new Date().toISOString();
-      saveLocalTrialUsers(localTrials);
-      addLocalLog('TRIAL_RESET', `Reset trial user: ${userId}`);
+    if (serverSuccess) {
+      // Sinkronisasikan ke Google Spreadsheet secara langsung agar sisa kuota di sheet terupdate menjadi 5
+      syncToGoogleSheet({
+        timestamp: new Date().toISOString(),
+        fingerprint: userId,
+        ip: userIp,
+        location: userLocation,
+        remaining_trials: 5,
+        created_at: userCreatedAt,
+        last_active: new Date().toISOString(),
+        activity_type: 'TRIAL_USER_RECORD',
+        details: 'Reset kuota trial ke 5'
+      });
+
       fetchDashboardData();
-      alert('Trial berhasil direset menjadi 5 kuota gratis (Mode Lokal)!');
+      alert('Trial berhasil direset menjadi 5 kuota gratis!');
+    } else {
+      const localTrials = getLocalTrialUsers();
+      const user = localTrials.find((u: any) => u.id === userId);
+      if (user) {
+        user.remaining_trials = 5;
+        user.last_active = new Date().toISOString();
+        saveLocalTrialUsers(localTrials);
+        addLocalLog('TRIAL_RESET', `Reset trial user: ${userId}`);
+
+        // Sinkronisasikan ke Google Spreadsheet secara langsung agar sisa kuota di sheet terupdate menjadi 5
+        syncToGoogleSheet({
+          timestamp: user.last_active,
+          fingerprint: userId,
+          ip: user.ip || '127.0.0.1',
+          location: user.location || 'Indonesia',
+          remaining_trials: 5,
+          created_at: user.created_at || new Date().toISOString(),
+          last_active: user.last_active,
+          activity_type: 'TRIAL_USER_RECORD',
+          details: 'Reset kuota trial ke 5 (Mode Lokal)'
+        });
+
+        fetchDashboardData();
+        alert('Trial berhasil direset menjadi 5 kuota gratis (Mode Lokal)!');
+      }
     }
   };
 
@@ -1756,12 +1811,13 @@ function doGet(e) {
     var rows = sheet2.getDataRange().getValues();
     for (var i = 1; i < rows.length; i++) {
       if (rows[i][1]) {
+        var trialVal = Number(rows[i][4]);
         trialUsers.push({
           created_at: rows[i][5] || rows[i][0],
           id: rows[i][1],
           ip: rows[i][2],
           location: rows[i][3],
-          remaining_trials: Number(rows[i][4]) !== NaN ? Number(rows[i][4]) : 5,
+          remaining_trials: !isNaN(trialVal) ? trialVal : 5,
           last_active: rows[i][6] || rows[i][0]
         });
       }
