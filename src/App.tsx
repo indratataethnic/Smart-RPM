@@ -1079,7 +1079,7 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 py-6 text-center text-xs border-t border-slate-800 mt-12 print:hidden">
         <p className="font-medium text-slate-300">
-          Generator Rencana Pembelajaran Mendalam (RPM) • Kurikulum Merdeka Indonesia
+          SMART RPM (Rencana Pembelajaran Mendalam) • Kurikulum Merdeka Indonesia
         </p>
         <p className="text-[11px] text-slate-500 mt-1">
           Didesain untuk Membantu Guru Indonesia Menyusun Modul Ajar Mendalam Berbasis AI

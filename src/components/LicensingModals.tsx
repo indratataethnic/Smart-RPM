@@ -187,6 +187,17 @@ export function getOrRegisterLocalTrialUser(fingerprint: string): number {
     };
     users.push(existing);
     saveLocalTrialUsers(users);
+
+    // Sync new trial user registration to Google Spreadsheet
+    syncToGoogleSheet({
+      timestamp: existing.created_at,
+      teacher_name: `Guru Baru (${fingerprint.substring(0, 10)})`,
+      fingerprint: fingerprint,
+      ip: '127.0.0.1',
+      activity_type: 'NEW_TRIAL_USER',
+      details: `Pendaftaran pengguna trial baru dengan ${existing.remaining_trials} kuota gratis`,
+      code_used: 'TRIAL_REGISTRATION'
+    });
   }
   
   localStorage.setItem('rpm_trial_count', String(existing.remaining_trials));
@@ -245,7 +256,7 @@ export function TrialExhaustedModal({ isOpen, onClose, onOpenCodeModal }: TrialE
           <h3 className="text-xl font-bold text-gray-900 mb-2">Kuota Gratis Telah Habis</h3>
           
           <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-            Anda telah menggunakan seluruh kuota gratis (5 kali pembuatan). Silakan masukkan Kode Akses agar dapat melanjutkan menggunakan Generator Rencana Pembelajaran Mendalam (RPM).
+            Anda telah menggunakan seluruh kuota gratis (5 kali pembuatan). Silakan masukkan Kode Akses agar dapat melanjutkan menggunakan SMART RPM (Rencana Pembelajaran Mendalam).
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -457,7 +468,16 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'codes' | 'trials' | 'logs' | 'sheets'>('dashboard');
   const [spreadsheetUrl, setSpreadsheetUrl] = useState(() => {
-    return typeof localStorage !== 'undefined' ? (localStorage.getItem('rpm_google_sheet_webhook_url') || '') : '';
+    const defaultUrl = 'https://script.google.com/macros/s/AKfycbzRIrWhUDCCdQD5eT2CtrDFqkBcgEYVoRu6NYpu_g84SC7e49I2IXa0ptw2sbIB_Ot3/exec';
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('rpm_google_sheet_webhook_url');
+      if (!saved) {
+        localStorage.setItem('rpm_google_sheet_webhook_url', defaultUrl);
+        return defaultUrl;
+      }
+      return saved;
+    }
+    return defaultUrl;
   });
   const [sheetSaveStatus, setSheetSaveStatus] = useState<string | null>(null);
 
@@ -1142,7 +1162,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                             Proteksi Trial Aman Aktif
                           </p>
                           <p className="text-[11px] text-slate-400 leading-relaxed max-w-lg">
-                            Generator Rencana Pembelajaran Mendalam ini memproteksi kuota trial menggunakan kombinasi browser fingerprint yang diperkuat cookies serta enkripsi log validasi server-side. Pengguna trial tidak dapat mengakali batas 5 kali generate dengan membersihkan browser cache.
+                            SMART RPM ini memproteksi kuota trial menggunakan kombinasi browser fingerprint yang diperkuat cookies serta enkripsi log validasi server-side. Pengguna trial tidak dapat mengakali batas 5 kali generate dengan membersihkan browser cache.
                           </p>
                         </div>
                         <div className="p-2.5 bg-slate-800 rounded-lg text-center font-mono border border-slate-700 min-w-[120px]">

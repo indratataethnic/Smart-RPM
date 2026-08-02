@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-100">
-                Generator RPM <span className="text-teal-400 font-extrabold">(Rencana Pembelajaran Mendalam)</span>
+                SMART RPM <span className="text-teal-400 font-extrabold">(Rencana Pembelajaran Mendalam)</span>
               </h1>
               <span className="text-[10px] sm:text-xs bg-teal-500/20 text-teal-300 border border-teal-500/30 font-semibold px-2 py-0.5 rounded-full">
                 Kurikulum Merdeka
