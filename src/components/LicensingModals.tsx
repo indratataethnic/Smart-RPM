@@ -252,18 +252,33 @@ function updateUserIp(fingerprint: string, ip: string, location: string) {
     existing.location = location;
     saveLocalTrialUsers(users);
     
-    // Sync updated data directly to Google Spreadsheet
-    syncToGoogleSheet({
-      timestamp: existing.last_active || new Date().toISOString(),
-      fingerprint: fingerprint,
-      ip: ip,
-      location: location,
-      remaining_trials: existing.remaining_trials,
-      created_at: existing.created_at,
-      last_active: existing.last_active || new Date().toISOString(),
-      activity_type: 'TRIAL_USER_RECORD',
-      details: `IP terupdate otomatis: ${ip} (${location})`
-    });
+    const hasGenerated = existing.has_generated || existing.remaining_trials < 5 || (existing.used_trials && existing.used_trials > 0);
+
+    if (hasGenerated) {
+      // Sync updated data directly to Google Spreadsheet Sheet 2 (Data Trial)
+      syncToGoogleSheet({
+        timestamp: existing.last_active || new Date().toISOString(),
+        fingerprint: fingerprint,
+        ip: ip,
+        location: location,
+        remaining_trials: existing.remaining_trials,
+        created_at: existing.created_at,
+        last_active: existing.last_active || new Date().toISOString(),
+        activity_type: 'TRIAL_USER_RECORD',
+        details: `IP terupdate otomatis: ${ip} (${location})`
+      });
+    } else {
+      // Guru baru berkunjung: log update IP/Lokasi di Log Aktivitas Guru (Sheet 1)
+      syncToGoogleSheet({
+        timestamp: new Date().toISOString(),
+        teacher_name: `Guru (${fingerprint.substring(0, 10)})`,
+        fingerprint: fingerprint,
+        ip: ip,
+        activity_type: 'VISIT',
+        details: `Kunjungan guru terdeteksi dari ${location} (IP: ${ip})`,
+        code_used: 'Kunjungan'
+      });
+    }
     
     // Sync to backend DB
     fetch('/api/licensing/trial/register', {
@@ -284,6 +299,8 @@ export function getOrRegisterLocalTrialUser(fingerprint: string): number {
     existing = {
       id: fingerprint,
       remaining_trials: isNaN(rem) ? 5 : rem,
+      has_generated: false,
+      used_trials: 0,
       created_at: new Date().toISOString(),
       last_active: new Date().toISOString(),
       ip: '127.0.0.1',
@@ -292,18 +309,8 @@ export function getOrRegisterLocalTrialUser(fingerprint: string): number {
     users.push(existing);
     saveLocalTrialUsers(users);
 
-    // Sync new trial user registration to Google Spreadsheet (Sheet 2)
-    syncToGoogleSheet({
-      timestamp: existing.created_at,
-      fingerprint: fingerprint,
-      ip: existing.ip,
-      location: existing.location,
-      remaining_trials: existing.remaining_trials,
-      created_at: existing.created_at,
-      last_active: existing.last_active,
-      activity_type: 'TRIAL_USER_RECORD',
-      details: 'Pendaftaran trial baru'
-    });
+    // Kunjungan pertama: Masuk di Log Aktivitas Guru (Sheet 1)
+    addLocalLog('VISIT', `Guru baru mengunjungi aplikasi RPM Smart (${fingerprint.substring(0, 10)}...)`);
   } else {
     existing.last_active = new Date().toISOString();
     saveLocalTrialUsers(users);
@@ -334,6 +341,8 @@ export function decrementLocalTrial(fingerprint: string): number {
     existing = {
       id: fingerprint,
       remaining_trials: isNaN(rem) ? 5 : rem,
+      has_generated: true,
+      used_trials: 1,
       created_at: new Date().toISOString(),
       last_active: new Date().toISOString(),
       ip: '127.0.0.1',
@@ -341,6 +350,9 @@ export function decrementLocalTrial(fingerprint: string): number {
     };
     users.push(existing);
   }
+
+  existing.has_generated = true;
+  existing.used_trials = (existing.used_trials || 0) + 1;
 
   if (existing.remaining_trials > 0) {
     existing.remaining_trials -= 1;
@@ -350,12 +362,12 @@ export function decrementLocalTrial(fingerprint: string): number {
   saveLocalTrialUsers(users);
   localStorage.setItem('rpm_trial_count', String(existing.remaining_trials));
   
-  addLocalLog('TRIAL_USED', `Trial digunakan (${fingerprint.substring(0, 14)}...). Sisa kuota gratis: ${existing.remaining_trials} kali`);
+  addLocalLog('GENERATE_RPM', `Guru melakukan Generate RPM (${fingerprint.substring(0, 10)}...). Sisa kuota gratis: ${existing.remaining_trials} kali`);
 
   // Proactively fetch real IP and location asynchronously to keep sheet fresh
   fetchClientIpAndLocation(fingerprint);
 
-  // Sync to Google Sheet (Sheet 2) & server backend
+  // Guru melakukan Generate: Catat ke Daftar Pengguna Trial di Sheet 2 Google Spreadsheet
   syncToGoogleSheet({
     timestamp: existing.last_active,
     fingerprint: fingerprint,
@@ -365,7 +377,7 @@ export function decrementLocalTrial(fingerprint: string): number {
     created_at: existing.created_at,
     last_active: existing.last_active,
     activity_type: 'TRIAL_USER_RECORD',
-    details: `Penggunaan trial (${existing.remaining_trials}/5 tersisa)`
+    details: `Penggunaan trial / Generate RPM (${existing.remaining_trials}/5 tersisa)`
   });
 
   fetch('/api/licensing/trial/register', {
@@ -663,7 +675,9 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
         return;
       }
 
-      trialUsers.forEach(u => {
+      const generatedTrialUsers = trialUsers.filter((u: any) => u.has_generated || u.remaining_trials < 5 || (u.used_trials && u.used_trials > 0));
+
+      generatedTrialUsers.forEach(u => {
         syncToGoogleSheet({
           timestamp: u.last_active || new Date().toISOString(),
           teacher_name: `Guru Trial (${(u.id || '').substring(0, 10)})`,
@@ -679,7 +693,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
         });
       });
 
-      setSyncTrialsStatus(`Berhasil menyinkronkan ${trialUsers.length} data pengguna trial ke Sheet 2 Google Spreadsheet!`);
+      setSyncTrialsStatus(`Berhasil menyinkronkan ${generatedTrialUsers.length} data pengguna trial (Generate) ke Sheet 2 Google Spreadsheet!`);
       setTimeout(() => setSyncTrialsStatus(null), 5000);
     } catch (e: any) {
       alert('Gagal menyinkronkan trial ke spreadsheet: ' + e.message);
@@ -865,15 +879,17 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   };
 
   const exportTrialsToExcel = () => {
-    const headers = ['Browser Fingerprint', 'IP Address', 'Sisa Kuota Trial', 'Tanggal Mendaftar', 'Aktif Terakhir'];
-    const rows = trialUsers.map(u => [
+    const headers = ['Browser Fingerprint', 'IP Address', 'Lokasi', 'Sisa Kuota Trial', 'Tanggal Mendaftar', 'Aktif Terakhir'];
+    const generatedTrialUsers = trialUsers.filter((u: any) => u.has_generated || u.remaining_trials < 5 || (u.used_trials && u.used_trials > 0));
+    const rows = generatedTrialUsers.map(u => [
       u.id,
-      u.ip,
+      u.ip || '127.0.0.1',
+      u.location || 'Indonesia',
       `${u.remaining_trials} / 5`,
-      new Date(u.created_at).toLocaleString('id-ID'),
-      new Date(u.last_active).toLocaleString('id-ID')
+      safeParseDate(u.created_at).toLocaleString('id-ID'),
+      safeParseDate(u.last_active).toLocaleString('id-ID')
     ]);
-    exportToCSV('Data_Pengguna_Trial_RPM', headers, rows);
+    exportToCSV('Data_Pengguna_Trial_Generate_RPM', headers, rows);
   };
 
   const exportLogsToExcel = () => {
@@ -1599,99 +1615,102 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                   )}
 
                   {/* TAB 3: TRIAL USERS LIST */}
-                  {activeTab === 'trials' && (
-                    <div className="space-y-4 flex-1 flex flex-col">
-                      <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
-                        <span className="text-xs text-gray-500 font-semibold">Memantau guru yang mencoba aplikasi tanpa kode</span>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs bg-rose-50 text-rose-700 px-2.5 py-1 rounded font-bold border border-rose-100">Total Pengguna Unik: {trialUsers.length} Guru</span>
-                          <button
-                            onClick={handleSyncTrialsToSheet}
-                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
-                          >
-                            <RefreshCw size={13} /> Sinkronkan ke Spreadsheet
-                          </button>
-                          <button
-                            onClick={handleLoadTrialsFromSheet}
-                            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
-                          >
-                            <FileSpreadsheet size={13} /> Muat dari Sheet 2
-                          </button>
-                          <button
-                            onClick={exportTrialsToExcel}
-                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
-                          >
-                            <FileSpreadsheet size={13} /> Ekspor Excel (CSV)
-                          </button>
+                  {activeTab === 'trials' && (() => {
+                    const generatedTrialUsers = trialUsers.filter((u: any) => u.has_generated || u.remaining_trials < 5 || (u.used_trials && u.used_trials > 0));
+                    return (
+                      <div className="space-y-4 flex-1 flex flex-col">
+                        <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
+                          <span className="text-xs text-gray-500 font-semibold">Memantau guru yang telah melakukan Generate RPM menggunakan kuota trial</span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs bg-rose-50 text-rose-700 px-2.5 py-1 rounded font-bold border border-rose-100">Total Guru Generate: {generatedTrialUsers.length} Guru</span>
+                            <button
+                              onClick={handleSyncTrialsToSheet}
+                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
+                            >
+                              <RefreshCw size={13} /> Sinkronkan ke Spreadsheet
+                            </button>
+                            <button
+                              onClick={() => handleLoadTrialsFromSheet(true)}
+                              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
+                            >
+                              <FileSpreadsheet size={13} /> Muat Data Trial
+                            </button>
+                            <button
+                              onClick={exportTrialsToExcel}
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
+                            >
+                              <FileSpreadsheet size={13} /> Ekspor Excel (CSV)
+                            </button>
+                          </div>
+                        </div>
+
+                        {syncTrialsStatus && (
+                          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-medium shrink-0">
+                            ✅ {syncTrialsStatus}
+                          </div>
+                        )}
+
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex-1 overflow-x-auto">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-gray-200">
+                                <th className="p-3">Browser Fingerprint</th>
+                                <th className="p-3">IP & Lokasi</th>
+                                <th className="p-3">Kuota Tersisa (Trial)</th>
+                                <th className="p-3">Tanggal Dibuat</th>
+                                <th className="p-3">Aktif Terakhir</th>
+                                <th className="p-3 text-center">Ulangi Trial</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 text-xs">
+                              {generatedTrialUsers.map((u) => (
+                                <tr key={u.id} className="hover:bg-slate-50">
+                                  <td className="p-3 font-mono text-gray-500 font-medium select-all text-[11px] truncate max-w-[200px]" title={u.id}>
+                                    {u.id}
+                                  </td>
+                                  <td className="p-3 text-gray-600">
+                                    <div className="font-mono text-[11px] font-medium text-slate-800">{u.ip || '127.0.0.1'}</div>
+                                    <div className="text-[10px] text-gray-400">{u.location || 'Indonesia'}</div>
+                                  </td>
+                                  <td className="p-3 font-bold">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                                      u.remaining_trials === 0 
+                                        ? 'bg-rose-100 text-rose-800' 
+                                        : 'bg-emerald-100 text-emerald-800'
+                                    }`}>
+                                      {u.remaining_trials} / 5 Pembuatan
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-gray-400 text-[11px]">
+                                    {safeParseDate(u.created_at).toLocaleString('id-ID')}
+                                  </td>
+                                  <td className="p-3 text-gray-500 text-[11px] font-semibold">
+                                    {safeParseDate(u.last_active).toLocaleString('id-ID')}
+                                  </td>
+                                  <td className="p-3 text-center">
+                                    <button
+                                      onClick={() => handleResetTrial(u.id)}
+                                      title="Reset Sisa Kuota ke 5"
+                                      className="p-1 text-blue-600 hover:bg-blue-50 border border-blue-100 rounded transition-all inline-flex items-center gap-1 text-[10px]"
+                                    >
+                                      <RefreshCw size={11} /> Reset ke 5
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                              {generatedTrialUsers.length === 0 && (
+                                <tr>
+                                  <td colSpan={6} className="p-8 text-center text-gray-400 text-xs italic">
+                                    Belum ada guru yang melakukan Generate RPM menggunakan kuota trial. Kunjungan saja dapat dilihat di tab "Log Aktivitas Guru".
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
-
-                      {syncTrialsStatus && (
-                        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-medium shrink-0">
-                          ✅ {syncTrialsStatus}
-                        </div>
-                      )}
-
-                      <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex-1 overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                          <thead>
-                            <tr className="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-gray-200">
-                              <th className="p-3">Browser Fingerprint</th>
-                              <th className="p-3">IP & Lokasi</th>
-                              <th className="p-3">Kuota Tersisa (Trial)</th>
-                              <th className="p-3">Tanggal Dibuat</th>
-                              <th className="p-3">Aktif Terakhir</th>
-                              <th className="p-3 text-center">Ulangi Trial</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100 text-xs">
-                            {trialUsers.map((u) => (
-                              <tr key={u.id} className="hover:bg-slate-50">
-                                <td className="p-3 font-mono text-gray-500 font-medium select-all text-[11px] truncate max-w-[200px]" title={u.id}>
-                                  {u.id}
-                                </td>
-                                <td className="p-3 text-gray-600">
-                                  <div className="font-mono text-[11px] font-medium text-slate-800">{u.ip || '127.0.0.1'}</div>
-                                  <div className="text-[10px] text-gray-400">{u.location || 'Indonesia'}</div>
-                                </td>
-                                <td className="p-3 font-bold">
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] ${
-                                    u.remaining_trials === 0 
-                                      ? 'bg-rose-100 text-rose-800' 
-                                      : 'bg-emerald-100 text-emerald-800'
-                                  }`}>
-                                    {u.remaining_trials} / 5 Pembuatan
-                                  </span>
-                                </td>
-                                <td className="p-3 text-gray-400 text-[11px]">
-                                  {safeParseDate(u.created_at).toLocaleString('id-ID')}
-                                </td>
-                                <td className="p-3 text-gray-500 text-[11px] font-semibold">
-                                  {safeParseDate(u.last_active).toLocaleString('id-ID')}
-                                </td>
-                                <td className="p-3 text-center">
-                                  <button
-                                    onClick={() => handleResetTrial(u.id)}
-                                    title="Reset Sisa Kuota ke 5"
-                                    className="p-1 text-blue-600 hover:bg-blue-50 border border-blue-100 rounded transition-all inline-flex items-center gap-1 text-[10px]"
-                                  >
-                                    <RefreshCw size={11} /> Reset ke 5
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                            {trialUsers.length === 0 && (
-                              <tr>
-                                <td colSpan={6} className="p-8 text-center text-gray-400 text-xs italic">
-                                  Belum ada pengguna unik yang mendaftar trial.
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* TAB 4: AUDIT LOGS */}
                   {activeTab === 'logs' && (
@@ -1838,7 +1857,12 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm space-y-3">
                         <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider text-slate-700">Panduan Skrip Google Apps Script (Copy-Paste)</h4>
                         <p className="text-xs text-gray-600 leading-relaxed">
-                          Buka Google Spreadsheet Anda, klik menu <strong className="text-gray-900">Ekstensi &gt; Apps Script</strong>, hapus semua kode di editor, lalu tempelkan kode JavaScript di bawah ini:
+                          Buka Google Spreadsheet Anda, klik menu <strong className="text-gray-900">Ekstensi &gt; Apps Script</strong>, hapus semua kode di editor, lalu tempelkan kode JavaScript di bawah ini.
+                          <br />
+                          <span className="text-[11px] text-blue-600 font-medium">
+                            • Data pengguna Trial (Guru yang melakukan Generate RPM) otomatis tercatat di sheet <strong>"Data Trial"</strong>.<br />
+                            • Log kunjungan &amp; aktivitas umum otomatis tercatat di sheet <strong>"Log Aktivitas Guru"</strong>.
+                          </span>
                         </p>
                         <div className="relative">
                           <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg text-[11px] font-mono overflow-x-auto leading-relaxed select-all">
@@ -1846,11 +1870,13 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   try {
     var data = JSON.parse(e.postData.contents);
+    
+    // 1. Data Trial (Khusus Guru yang melakukan Generate RPM)
     if (data.activity_type === 'TRIAL_USER_RECORD' || data.activity_type === 'NEW_TRIAL_USER') {
       var sheet2 = ss.getSheetByName("Data Trial");
       if (!sheet2) {
         sheet2 = ss.insertSheet("Data Trial");
-        sheet2.appendRow(["Waktu", "ID / Fingerprint", "IP Address", "Lokasi", "Sisa Kuota", "Dibuat", "Aktif Terakhir"]);
+        sheet2.appendRow(["Waktu Update", "ID / Fingerprint", "IP Address", "Lokasi", "Sisa Kuota", "Tanggal Dibuat", "Aktif Terakhir"]);
       }
       
       var rows = sheet2.getDataRange().getValues();
@@ -1868,7 +1894,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
       
       if (foundRowIndex > 0) {
         // Update baris pengguna trial yang sudah ada
-        sheet2.getRange(foundRowIndex, 1).setValue(new Date()); // Waktu sinkronisasi terakhir
+        sheet2.getRange(foundRowIndex, 1).setValue(new Date());
         if (data.ip && data.ip !== '-') {
           sheet2.getRange(foundRowIndex, 3).setValue(data.ip);
         }
@@ -1882,7 +1908,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
           sheet2.getRange(foundRowIndex, 7).setValue(data.last_active);
         }
       } else {
-        // Tambahkan baris pengguna baru jika fingerprint belum terdaftar
+        // Baris baru untuk guru yang pertama kali melakukan Generate RPM
         sheet2.appendRow([
           new Date(),
           targetId,
@@ -1894,7 +1920,16 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
         ]);
       }
     } else {
-      var sheet1 = ss.getActiveSheet();
+      // 2. Log Aktivitas Guru (Kunjungan, Penggunaan Kode Lisensi, Ping Test, dsb.)
+      var sheet1 = ss.getSheetByName("Log Aktivitas Guru");
+      if (!sheet1) {
+        sheet1 = ss.getSheetByName("Sheet1") || ss.getSheetByName("Laporan Utama");
+        if (sheet1) {
+          sheet1.setName("Log Aktivitas Guru");
+        } else {
+          sheet1 = ss.insertSheet("Log Aktivitas Guru");
+        }
+      }
       if (sheet1.getLastRow() === 0) {
         sheet1.appendRow(["Waktu", "Nama Guru", "Fingerprint", "IP Address", "Tipe Aktivitas", "Detail", "Kode Digunakan"]);
       }
@@ -1903,11 +1938,12 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
         data.teacher_name || 'Guru Tanpa Nama',
         data.fingerprint || '-',
         data.ip || '-',
-        data.activity_type || 'TRIAL_USED',
+        data.activity_type || 'VISIT',
         data.details || '-',
         data.code_used || '-'
       ]);
     }
+    
     return ContentService.createTextOutput(JSON.stringify({status: 'success'}))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
@@ -1931,7 +1967,8 @@ function doGet(e) {
           ip: rows[i][2],
           location: rows[i][3],
           remaining_trials: !isNaN(trialVal) ? trialVal : 5,
-          last_active: rows[i][6] || rows[i][0]
+          last_active: rows[i][6] || rows[i][0],
+          has_generated: true
         });
       }
     }
