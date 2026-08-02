@@ -1338,7 +1338,7 @@ app.post(["/api/licensing/status", "/licensing/status"], (req, res) => {
 // Register or update trial user from client
 app.post(["/api/licensing/trial/register", "/licensing/trial/register"], (req, res) => {
   try {
-    const { id, remaining_trials, created_at, last_active, ip } = req.body || {};
+    const { id, remaining_trials, created_at, last_active, ip, location } = req.body || {};
     if (!id) {
       return res.status(400).json({ success: false, error: "Missing trial user id" });
     }
@@ -1346,7 +1346,8 @@ app.post(["/api/licensing/trial/register", "/licensing/trial/register"], (req, r
       remaining_trials: remaining_trials !== undefined ? remaining_trials : 5,
       created_at: created_at || new Date().toISOString(),
       last_active: last_active || new Date().toISOString(),
-      ip: ip || "127.0.0.1"
+      ip: ip || "127.0.0.1",
+      location: location || "Indonesia"
     });
     res.json({ success: true, user });
   } catch (err: any) {

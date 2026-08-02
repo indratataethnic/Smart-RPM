@@ -19,6 +19,7 @@ export interface TrialUser {
   created_at: string;
   last_active: string;
   ip: string;
+  location?: string;
 }
 
 export interface ActivityLog {
@@ -264,6 +265,7 @@ export const LicensingDB = {
         created_at: data.created_at || new Date().toISOString(),
         last_active: data.last_active || new Date().toISOString(),
         ip: data.ip || "127.0.0.1",
+        location: data.location || "Indonesia",
       };
       db.trial_users.push(user);
       saveDB(db);
@@ -273,6 +275,7 @@ export const LicensingDB = {
       }
       user.last_active = data.last_active || new Date().toISOString();
       if (data.ip) user.ip = data.ip;
+      if (data.location) user.location = data.location;
       saveDB(db);
     }
     return user;

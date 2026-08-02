@@ -183,21 +183,55 @@ export function getOrRegisterLocalTrialUser(fingerprint: string): number {
       remaining_trials: isNaN(rem) ? 5 : rem,
       created_at: new Date().toISOString(),
       last_active: new Date().toISOString(),
-      ip: '127.0.0.1'
+      ip: '127.0.0.1',
+      location: 'Indonesia'
     };
     users.push(existing);
     saveLocalTrialUsers(users);
 
-    // Sync new trial user registration to Google Spreadsheet
+    // Fetch IP & location asynchronously
+    fetch('https://ipapi.co/json/')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.ip) {
+          existing.ip = data.ip;
+          existing.location = `${data.city || ''}, ${data.country_name || 'Indonesia'}`.trim();
+          saveLocalTrialUsers(users);
+          syncToGoogleSheet({
+            timestamp: existing.created_at,
+            fingerprint: fingerprint,
+            ip: existing.ip,
+            location: existing.location,
+            remaining_trials: existing.remaining_trials,
+            created_at: existing.created_at,
+            last_active: existing.last_active,
+            activity_type: 'TRIAL_USER_RECORD',
+            details: `Pendaftaran baru dari ${existing.location}`
+          });
+          fetch('/api/licensing/trial/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(existing)
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+
+    // Sync new trial user registration to Google Spreadsheet (Sheet 2)
     syncToGoogleSheet({
       timestamp: existing.created_at,
-      teacher_name: `Guru Baru (${fingerprint.substring(0, 10)})`,
       fingerprint: fingerprint,
-      ip: '127.0.0.1',
-      activity_type: 'NEW_TRIAL_USER',
-      details: `Pendaftaran pengguna trial baru dengan ${existing.remaining_trials} kuota gratis`,
-      code_used: 'TRIAL_REGISTRATION'
+      ip: existing.ip,
+      location: existing.location,
+      remaining_trials: existing.remaining_trials,
+      created_at: existing.created_at,
+      last_active: existing.last_active,
+      activity_type: 'TRIAL_USER_RECORD',
+      details: 'Pendaftaran trial baru'
     });
+  } else {
+    existing.last_active = new Date().toISOString();
+    saveLocalTrialUsers(users);
   }
   
   localStorage.setItem('rpm_trial_count', String(existing.remaining_trials));
@@ -224,7 +258,8 @@ export function decrementLocalTrial(fingerprint: string): number {
       remaining_trials: isNaN(rem) ? 5 : rem,
       created_at: new Date().toISOString(),
       last_active: new Date().toISOString(),
-      ip: '127.0.0.1'
+      ip: '127.0.0.1',
+      location: 'Indonesia'
     };
     users.push(existing);
   }
@@ -239,7 +274,19 @@ export function decrementLocalTrial(fingerprint: string): number {
   
   addLocalLog('TRIAL_USED', `Trial digunakan (${fingerprint.substring(0, 14)}...). Sisa kuota gratis: ${existing.remaining_trials} kali`);
 
-  // Sync to server backend
+  // Sync to Google Sheet (Sheet 2) & server backend
+  syncToGoogleSheet({
+    timestamp: existing.last_active,
+    fingerprint: fingerprint,
+    ip: existing.ip,
+    location: existing.location || 'Indonesia',
+    remaining_trials: existing.remaining_trials,
+    created_at: existing.created_at,
+    last_active: existing.last_active,
+    activity_type: 'TRIAL_USER_RECORD',
+    details: `Penggunaan trial (${existing.remaining_trials}/5 tersisa)`
+  });
+
   fetch('/api/licensing/trial/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -524,6 +571,77 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   // Editing notes
   const [editingCodeId, setEditingCodeId] = useState<string | null>(null);
   const [editingNotesText, setEditingNotesText] = useState('');
+  const [syncTrialsStatus, setSyncTrialsStatus] = useState<string | null>(null);
+
+  const handleSyncTrialsToSheet = () => {
+    try {
+      const webhookUrl = localStorage.getItem('rpm_google_sheet_webhook_url');
+      if (!webhookUrl || !webhookUrl.startsWith('http')) {
+        alert('URL Google Spreadsheet belum disetel! Silakan atur di tab "Google Spreadsheet Sync".');
+        setActiveTab('sheets');
+        return;
+      }
+
+      trialUsers.forEach(u => {
+        syncToGoogleSheet({
+          timestamp: u.last_active || new Date().toISOString(),
+          teacher_name: `Guru Trial (${(u.id || '').substring(0, 10)})`,
+          fingerprint: u.id,
+          ip: u.ip || '127.0.0.1',
+          location: u.location || 'Indonesia',
+          remaining_trials: u.remaining_trials,
+          created_at: u.created_at,
+          last_active: u.last_active,
+          activity_type: 'TRIAL_USER_RECORD',
+          details: `Sisa Kuota: ${u.remaining_trials}/5 (Dibuat: ${new Date(u.created_at).toLocaleString('id-ID')})`,
+          code_used: 'TRIAL'
+        });
+      });
+
+      setSyncTrialsStatus(`Berhasil menyinkronkan ${trialUsers.length} data pengguna trial ke Sheet 2 Google Spreadsheet!`);
+      setTimeout(() => setSyncTrialsStatus(null), 5000);
+    } catch (e: any) {
+      alert('Gagal menyinkronkan trial ke spreadsheet: ' + e.message);
+    }
+  };
+
+  const handleLoadTrialsFromSheet = async () => {
+    try {
+      const webhookUrl = localStorage.getItem('rpm_google_sheet_webhook_url');
+      if (!webhookUrl || !webhookUrl.startsWith('http')) {
+        alert('URL Google Spreadsheet belum disetel! Silakan atur di tab "Google Spreadsheet Sync".');
+        setActiveTab('sheets');
+        return;
+      }
+      setSyncTrialsStatus('Memuat data pengguna trial dari Sheet 2 Google Spreadsheet...');
+      const res = await fetch(webhookUrl, { method: 'GET', mode: 'cors' }).catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data && data.trialUsers && Array.isArray(data.trialUsers)) {
+          const mergedMap = new Map();
+          [...trialUsers, ...data.trialUsers].forEach((u: any) => {
+            if (u && u.id) {
+              const existing = mergedMap.get(u.id);
+              if (!existing || new Date(u.last_active || 0) > new Date(existing.last_active || 0)) {
+                mergedMap.set(u.id, u);
+              }
+            }
+          });
+          const merged = Array.from(mergedMap.values());
+          setTrialUsers(merged);
+          saveLocalTrialUsers(merged);
+          setSyncTrialsStatus(`Berhasil memuat ${data.trialUsers.length} data pengguna trial dari Sheet 2 Google Spreadsheet!`);
+          setTimeout(() => setSyncTrialsStatus(null), 5000);
+          return;
+        }
+      }
+      alert('Gagal mengambil data dari Google Spreadsheet secara langsung (CORS/Apps Script). Pastikan skrip Google Apps Script memiliki fungsi doGet yang mengembalikan trialUsers.');
+      setSyncTrialsStatus(null);
+    } catch (e: any) {
+      alert('Gagal memuat dari spreadsheet: ' + e.message);
+      setSyncTrialsStatus(null);
+    }
+  };
 
   // Check login state on open
   useEffect(() => {
@@ -1347,10 +1465,22 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                   {/* TAB 3: TRIAL USERS LIST */}
                   {activeTab === 'trials' && (
                     <div className="space-y-4 flex-1 flex flex-col">
-                      <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex justify-between items-center shrink-0">
+                      <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
                         <span className="text-xs text-gray-500 font-semibold">Memantau guru yang mencoba aplikasi tanpa kode</span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs bg-rose-50 text-rose-700 px-2.5 py-1 rounded font-bold border border-rose-100">Total Pengguna Unik: {trialUsers.length} Guru</span>
+                          <button
+                            onClick={handleSyncTrialsToSheet}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
+                          >
+                            <RefreshCw size={13} /> Sinkronkan ke Spreadsheet
+                          </button>
+                          <button
+                            onClick={handleLoadTrialsFromSheet}
+                            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
+                          >
+                            <FileSpreadsheet size={13} /> Muat dari Sheet 2
+                          </button>
                           <button
                             onClick={exportTrialsToExcel}
                             className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
@@ -1360,12 +1490,18 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                         </div>
                       </div>
 
+                      {syncTrialsStatus && (
+                        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-medium shrink-0">
+                          ✅ {syncTrialsStatus}
+                        </div>
+                      )}
+
                       <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex-1 overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                           <thead>
                             <tr className="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-gray-200">
                               <th className="p-3">Browser Fingerprint</th>
-                              <th className="p-3">IP Address</th>
+                              <th className="p-3">IP & Lokasi</th>
                               <th className="p-3">Kuota Tersisa (Trial)</th>
                               <th className="p-3">Tanggal Dibuat</th>
                               <th className="p-3">Aktif Terakhir</th>
@@ -1378,7 +1514,10 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                                 <td className="p-3 font-mono text-gray-500 font-medium select-all text-[11px] truncate max-w-[200px]" title={u.id}>
                                   {u.id}
                                 </td>
-                                <td className="p-3 font-mono text-gray-500">{u.ip}</td>
+                                <td className="p-3 text-gray-600">
+                                  <div className="font-mono text-[11px] font-medium text-slate-800">{u.ip || '127.0.0.1'}</div>
+                                  <div className="text-[10px] text-gray-400">{u.location || 'Indonesia'}</div>
+                                </td>
                                 <td className="p-3 font-bold">
                                   <span className={`px-2 py-0.5 rounded-full text-[10px] ${
                                     u.remaining_trials === 0 
@@ -1568,18 +1707,39 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                         <div className="relative">
                           <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg text-[11px] font-mono overflow-x-auto leading-relaxed select-all">
 {`function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   try {
     var data = JSON.parse(e.postData.contents);
-    sheet.appendRow([
-      new Date(),
-      data.teacher_name || 'Guru Tanpa Nama',
-      data.fingerprint || '-',
-      data.ip || '-',
-      data.activity_type || 'TRIAL_USED',
-      data.details || '-',
-      data.code_used || '-'
-    ]);
+    if (data.activity_type === 'TRIAL_USER_RECORD' || data.activity_type === 'NEW_TRIAL_USER') {
+      var sheet2 = ss.getSheetByName("Data Trial");
+      if (!sheet2) {
+        sheet2 = ss.insertSheet("Data Trial");
+        sheet2.appendRow(["Waktu", "ID / Fingerprint", "IP Address", "Lokasi", "Sisa Kuota", "Dibuat", "Aktif Terakhir"]);
+      }
+      sheet2.appendRow([
+        new Date(),
+        data.fingerprint || '-',
+        data.ip || '-',
+        data.location || 'Indonesia',
+        data.remaining_trials !== undefined ? data.remaining_trials : 5,
+        data.created_at || new Date(),
+        data.last_active || new Date()
+      ]);
+    } else {
+      var sheet1 = ss.getActiveSheet();
+      if (sheet1.getLastRow() === 0) {
+        sheet1.appendRow(["Waktu", "Nama Guru", "Fingerprint", "IP Address", "Tipe Aktivitas", "Detail", "Kode Digunakan"]);
+      }
+      sheet1.appendRow([
+        new Date(),
+        data.teacher_name || 'Guru Tanpa Nama',
+        data.fingerprint || '-',
+        data.ip || '-',
+        data.activity_type || 'TRIAL_USED',
+        data.details || '-',
+        data.code_used || '-'
+      ]);
+    }
     return ContentService.createTextOutput(JSON.stringify({status: 'success'}))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
@@ -1589,7 +1749,25 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
 }
 
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({status: 'active', app: 'Smart RPM'}))
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet2 = ss.getSheetByName("Data Trial");
+  var trialUsers = [];
+  if (sheet2) {
+    var rows = sheet2.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][1]) {
+        trialUsers.push({
+          created_at: rows[i][5] || rows[i][0],
+          id: rows[i][1],
+          ip: rows[i][2],
+          location: rows[i][3],
+          remaining_trials: Number(rows[i][4]) !== NaN ? Number(rows[i][4]) : 5,
+          last_active: rows[i][6] || rows[i][0]
+        });
+      }
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({status: 'active', app: 'Smart RPM', trialUsers: trialUsers}))
     .setMimeType(ContentService.MimeType.JSON);
 }`}
                           </pre>
