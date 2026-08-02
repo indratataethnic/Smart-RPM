@@ -12,7 +12,7 @@ import { GeneratingProgressModal } from './components/GeneratingProgressModal';
 import { LessonFormData, LessonPlanOutput, SavedLessonPlan } from './types';
 import { DEMO_PRESETS, getKelasOptions, DPL_OPTIONS, METODE_MODEL_OPTIONS, KEMITRAAN_OPTIONS, DIGITAL_TOOLS_OPTIONS, LINTAS_DISIPLIN_OPTIONS, LINGKUNGAN_PEMBELAJARAN_OPTIONS } from './data/presets';
 import { Sparkles, Loader2, ArrowRight, RotateCcw, AlertCircle, Trash2 } from 'lucide-react';
-import { TrialExhaustedModal, EnterAccessCodeModal, AdminPanelModal, getOrGenerateFingerprint, TrialConfirmationModal, getLocalCodes } from './components/LicensingModals';
+import { TrialExhaustedModal, EnterAccessCodeModal, AdminPanelModal, getOrGenerateFingerprint, TrialConfirmationModal, getLocalCodes, getOrRegisterLocalTrialUser, decrementLocalTrial, addLocalLog } from './components/LicensingModals';
 
 const matchOptionLabels = (recommended: string[] | undefined, options: { label: string }[], fallbackCount = 2, maxCount = 3): string[] => {
   if (!recommended || !Array.isArray(recommended) || recommended.length === 0) {
@@ -367,8 +367,8 @@ export default function App() {
 
         // Default to TRIAL if no valid active code
         setAccessType('TRIAL');
-        const storedTrial = localStorage.getItem('rpm_trial_count');
-        setTrialCount(storedTrial ? parseInt(storedTrial, 10) : 5);
+        const localRem = getOrRegisterLocalTrialUser(fp);
+        setTrialCount(localRem);
       }
     } catch (err) {
       console.error('Error fetching licensing status:', err);
@@ -641,6 +641,16 @@ export default function App() {
     setGeneratingCharCount(0);
     setGeneratingStep(1);
     setErrorMessage(null);
+
+    // Apply trial decrement and local database activity logging immediately
+    const fp = getOrGenerateFingerprint();
+    const code = localStorage.getItem('rpm_access_code') || '';
+    if (accessType === 'TRIAL') {
+      const newRem = decrementLocalTrial(fp);
+      setTrialCount(newRem);
+    } else if (code) {
+      addLocalLog('GENERATE_RPM', `Penyusunan RPM sukses menggunakan kode: ${code} (${accessType})`);
+    }
 
     // Dynamic Simulated Progress Timer (ensures the progress modal always animates active progress to the user immediately)
     let simulatedStep = 1;

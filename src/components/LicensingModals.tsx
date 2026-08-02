@@ -146,6 +146,57 @@ export function addLocalLog(type: string, details: string) {
   } catch (e) {}
 }
 
+export function getOrRegisterLocalTrialUser(fingerprint: string): number {
+  const users = getLocalTrialUsers();
+  let existing = users.find((u: any) => u.id === fingerprint);
+  
+  if (!existing) {
+    const storedStr = localStorage.getItem('rpm_trial_count');
+    const rem = storedStr !== null ? parseInt(storedStr, 10) : 5;
+    existing = {
+      id: fingerprint,
+      remaining_trials: isNaN(rem) ? 5 : rem,
+      created_at: new Date().toISOString(),
+      last_active: new Date().toISOString(),
+      ip: '127.0.0.1'
+    };
+    users.push(existing);
+    saveLocalTrialUsers(users);
+  }
+  
+  localStorage.setItem('rpm_trial_count', String(existing.remaining_trials));
+  return existing.remaining_trials;
+}
+
+export function decrementLocalTrial(fingerprint: string): number {
+  const users = getLocalTrialUsers();
+  let existing = users.find((u: any) => u.id === fingerprint);
+  
+  if (!existing) {
+    const storedStr = localStorage.getItem('rpm_trial_count');
+    const rem = storedStr !== null ? parseInt(storedStr, 10) : 5;
+    existing = {
+      id: fingerprint,
+      remaining_trials: isNaN(rem) ? 5 : rem,
+      created_at: new Date().toISOString(),
+      last_active: new Date().toISOString(),
+      ip: '127.0.0.1'
+    };
+    users.push(existing);
+  }
+
+  if (existing.remaining_trials > 0) {
+    existing.remaining_trials -= 1;
+  }
+  existing.last_active = new Date().toISOString();
+  
+  saveLocalTrialUsers(users);
+  localStorage.setItem('rpm_trial_count', String(existing.remaining_trials));
+  
+  addLocalLog('TRIAL_USED', `Trial digunakan (${fingerprint.substring(0, 14)}...). Sisa kuota gratis: ${existing.remaining_trials} kali`);
+  return existing.remaining_trials;
+}
+
 // -------------------------------------------------------------
 // 1. TRIAL EXHAUSTED MODAL
 // -------------------------------------------------------------
@@ -586,7 +637,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
         expiredCodes: localCodes.filter((c: any) => c.valid_until && new Date(c.valid_until) < new Date()).length,
         totalTrialUsers: localTrials.length,
         exhaustedTrialUsers: localTrials.filter((u: any) => u.remaining_trials <= 0).length,
-        totalRPMGenerated: localLogs.filter((l: any) => l.activity_type === 'GENERATE_RPM').length
+        totalRPMGenerated: localLogs.filter((l: any) => l.activity_type === 'GENERATE_RPM' || l.activity_type === 'TRIAL_USED').length
       });
     }
 
