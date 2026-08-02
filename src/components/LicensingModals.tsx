@@ -102,6 +102,44 @@ export function saveLocalCodes(codes: any[]) {
   } catch (e) {}
 }
 
+export function safeParseDate(dateVal: any): Date {
+  if (!dateVal) return new Date();
+  if (dateVal instanceof Date) return dateVal;
+  
+  if (typeof dateVal === 'number') {
+    return new Date(dateVal);
+  }
+  
+  const dateStr = String(dateVal).trim();
+  
+  // Try direct parse first
+  let parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+  
+  // Match Indonesian/European format: DD/MM/YYYY or DD-MM-YYYY
+  // optionally followed by HH:mm:ss or HH.mm.ss
+  // Examples: "02/08/2026, 12.45.00", "02-08-2026 12:45:00", "02/08/2026 12:45:00"
+  const dmyRegex = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[\s,]+(\d{1,2})[\:\.](\d{1,2})(?:[\:\.](\d{1,2}))?)?/;
+  const match = dateStr.match(dmyRegex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1; // 0-indexed
+    const year = parseInt(match[3], 10);
+    const hours = match[4] ? parseInt(match[4], 10) : 0;
+    const minutes = match[5] ? parseInt(match[5], 10) : 0;
+    const seconds = match[6] ? parseInt(match[6], 10) : 0;
+    
+    parsed = new Date(year, month, day, hours, minutes, seconds);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  
+  return new Date(); // fallback to current date instead of showing Invalid Date
+}
+
 export function getLocalTrialUsers(): any[] {
   try {
     const raw = localStorage.getItem('rpm_local_trials_db');
@@ -171,6 +209,71 @@ export function addLocalLog(type: string, details: string) {
   });
 }
 
+export function fetchClientIpAndLocation(fingerprint: string) {
+  // Try fetching IP & location
+  fetch('https://ipapi.co/json/')
+    .then(res => {
+      if (!res.ok) throw new Error('ipapi failed');
+      return res.json();
+    })
+    .then(data => {
+      if (data && data.ip) {
+        updateUserIp(fingerprint, data.ip, `${data.city || ''}, ${data.country_name || 'Indonesia'}`.trim());
+      }
+    })
+    .catch(() => {
+      // Fallback 1: ipinfo.io
+      fetch('https://ipinfo.io/json')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.ip) {
+            updateUserIp(fingerprint, data.ip, `${data.city || ''}, ${data.country || 'Indonesia'}`.trim());
+          }
+        })
+        .catch(() => {
+          // Fallback 2: ipify (just IP)
+          fetch('https://api.ipify.org?format=json')
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.ip) {
+                updateUserIp(fingerprint, data.ip, 'Indonesia');
+              }
+            })
+            .catch(() => {});
+        });
+    });
+}
+
+function updateUserIp(fingerprint: string, ip: string, location: string) {
+  const users = getLocalTrialUsers();
+  const existing = users.find((u: any) => u.id === fingerprint);
+  if (existing) {
+    existing.ip = ip;
+    existing.location = location;
+    saveLocalTrialUsers(users);
+    
+    // Sync updated data directly to Google Spreadsheet
+    syncToGoogleSheet({
+      timestamp: existing.last_active || new Date().toISOString(),
+      fingerprint: fingerprint,
+      ip: ip,
+      location: location,
+      remaining_trials: existing.remaining_trials,
+      created_at: existing.created_at,
+      last_active: existing.last_active || new Date().toISOString(),
+      activity_type: 'TRIAL_USER_RECORD',
+      details: `IP terupdate otomatis: ${ip} (${location})`
+    });
+    
+    // Sync to backend DB
+    fetch('/api/licensing/trial/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(existing)
+    }).catch(() => {});
+  }
+}
+
 export function getOrRegisterLocalTrialUser(fingerprint: string): number {
   const users = getLocalTrialUsers();
   let existing = users.find((u: any) => u.id === fingerprint);
@@ -189,34 +292,6 @@ export function getOrRegisterLocalTrialUser(fingerprint: string): number {
     users.push(existing);
     saveLocalTrialUsers(users);
 
-    // Fetch IP & location asynchronously
-    fetch('https://ipapi.co/json/')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.ip) {
-          existing.ip = data.ip;
-          existing.location = `${data.city || ''}, ${data.country_name || 'Indonesia'}`.trim();
-          saveLocalTrialUsers(users);
-          syncToGoogleSheet({
-            timestamp: existing.created_at,
-            fingerprint: fingerprint,
-            ip: existing.ip,
-            location: existing.location,
-            remaining_trials: existing.remaining_trials,
-            created_at: existing.created_at,
-            last_active: existing.last_active,
-            activity_type: 'TRIAL_USER_RECORD',
-            details: `Pendaftaran baru dari ${existing.location}`
-          });
-          fetch('/api/licensing/trial/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(existing)
-          }).catch(() => {});
-        }
-      })
-      .catch(() => {});
-
     // Sync new trial user registration to Google Spreadsheet (Sheet 2)
     syncToGoogleSheet({
       timestamp: existing.created_at,
@@ -233,6 +308,9 @@ export function getOrRegisterLocalTrialUser(fingerprint: string): number {
     existing.last_active = new Date().toISOString();
     saveLocalTrialUsers(users);
   }
+  
+  // Proactively fetch real IP and location asynchronously
+  fetchClientIpAndLocation(fingerprint);
   
   localStorage.setItem('rpm_trial_count', String(existing.remaining_trials));
 
@@ -273,6 +351,9 @@ export function decrementLocalTrial(fingerprint: string): number {
   localStorage.setItem('rpm_trial_count', String(existing.remaining_trials));
   
   addLocalLog('TRIAL_USED', `Trial digunakan (${fingerprint.substring(0, 14)}...). Sisa kuota gratis: ${existing.remaining_trials} kali`);
+
+  // Proactively fetch real IP and location asynchronously to keep sheet fresh
+  fetchClientIpAndLocation(fingerprint);
 
   // Sync to Google Sheet (Sheet 2) & server backend
   syncToGoogleSheet({
@@ -626,7 +707,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
           [...trialUsers, ...data.trialUsers].forEach((u: any) => {
             if (u && u.id) {
               const existing = mergedMap.get(u.id);
-              if (!existing || new Date(u.last_active || 0) > new Date(existing.last_active || 0)) {
+              if (!existing || safeParseDate(u.last_active || 0) > safeParseDate(existing.last_active || 0)) {
                 mergedMap.set(u.id, u);
               }
             }
@@ -1583,10 +1664,10 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                                   </span>
                                 </td>
                                 <td className="p-3 text-gray-400 text-[11px]">
-                                  {new Date(u.created_at).toLocaleString('id-ID')}
+                                  {safeParseDate(u.created_at).toLocaleString('id-ID')}
                                 </td>
                                 <td className="p-3 text-gray-500 text-[11px] font-semibold">
-                                  {new Date(u.last_active).toLocaleString('id-ID')}
+                                  {safeParseDate(u.last_active).toLocaleString('id-ID')}
                                 </td>
                                 <td className="p-3 text-center">
                                   <button
@@ -1771,15 +1852,47 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
         sheet2 = ss.insertSheet("Data Trial");
         sheet2.appendRow(["Waktu", "ID / Fingerprint", "IP Address", "Lokasi", "Sisa Kuota", "Dibuat", "Aktif Terakhir"]);
       }
-      sheet2.appendRow([
-        new Date(),
-        data.fingerprint || '-',
-        data.ip || '-',
-        data.location || 'Indonesia',
-        data.remaining_trials !== undefined ? data.remaining_trials : 5,
-        data.created_at || new Date(),
-        data.last_active || new Date()
-      ]);
+      
+      var rows = sheet2.getDataRange().getValues();
+      var foundRowIndex = -1;
+      var targetId = data.fingerprint || '-';
+      
+      if (targetId !== '-') {
+        for (var i = 1; i < rows.length; i++) {
+          if (rows[i][1] === targetId) {
+            foundRowIndex = i + 1; // 1-based index
+            break;
+          }
+        }
+      }
+      
+      if (foundRowIndex > 0) {
+        // Update baris pengguna trial yang sudah ada
+        sheet2.getRange(foundRowIndex, 1).setValue(new Date()); // Waktu sinkronisasi terakhir
+        if (data.ip && data.ip !== '-') {
+          sheet2.getRange(foundRowIndex, 3).setValue(data.ip);
+        }
+        if (data.location && data.location !== 'Indonesia') {
+          sheet2.getRange(foundRowIndex, 4).setValue(data.location);
+        }
+        if (data.remaining_trials !== undefined) {
+          sheet2.getRange(foundRowIndex, 5).setValue(data.remaining_trials);
+        }
+        if (data.last_active) {
+          sheet2.getRange(foundRowIndex, 7).setValue(data.last_active);
+        }
+      } else {
+        // Tambahkan baris pengguna baru jika fingerprint belum terdaftar
+        sheet2.appendRow([
+          new Date(),
+          targetId,
+          data.ip || '-',
+          data.location || 'Indonesia',
+          data.remaining_trials !== undefined ? data.remaining_trials : 5,
+          data.created_at || new Date().toISOString(),
+          data.last_active || new Date().toISOString()
+        ]);
+      }
     } else {
       var sheet1 = ss.getActiveSheet();
       if (sheet1.getLastRow() === 0) {
