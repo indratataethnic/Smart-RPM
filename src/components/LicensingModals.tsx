@@ -132,18 +132,43 @@ export function getLocalLogs(): any[] {
   ];
 }
 
+export function syncToGoogleSheet(payload: any) {
+  try {
+    const webhookUrl = localStorage.getItem('rpm_google_sheet_webhook_url');
+    if (!webhookUrl || !webhookUrl.startsWith('http')) return;
+    
+    fetch(webhookUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(e => console.warn('Google sheet webhook sync failed:', e));
+  } catch (e) {}
+}
+
 export function addLocalLog(type: string, details: string) {
   const logs = getLocalLogs();
-  logs.unshift({
+  const newLog = {
     id: "log-" + Date.now(),
     timestamp: new Date().toISOString(),
     activity_type: type,
     details: details,
     user_info: { ip: "127.0.0.1", browser: typeof navigator !== 'undefined' ? navigator.userAgent : "Browser" }
-  });
+  };
+  logs.unshift(newLog);
   try {
     localStorage.setItem('rpm_local_logs_db', JSON.stringify(logs.slice(0, 100)));
   } catch (e) {}
+
+  syncToGoogleSheet({
+    timestamp: newLog.timestamp,
+    teacher_name: `Guru (${typeof localStorage !== 'undefined' ? (localStorage.getItem('rpm_user_fingerprint') || 'Guest').substring(0, 12) : 'Guest'})`,
+    fingerprint: typeof localStorage !== 'undefined' ? localStorage.getItem('rpm_user_fingerprint') : '-',
+    ip: '127.0.0.1',
+    activity_type: type,
+    details: details,
+    code_used: 'Trial / Aktivitas'
+  });
 }
 
 export function getOrRegisterLocalTrialUser(fingerprint: string): number {
@@ -430,7 +455,22 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   const [trialUsers, setTrialUsers] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'codes' | 'trials' | 'logs'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'codes' | 'trials' | 'logs' | 'sheets'>('dashboard');
+  const [spreadsheetUrl, setSpreadsheetUrl] = useState(() => {
+    return typeof localStorage !== 'undefined' ? (localStorage.getItem('rpm_google_sheet_webhook_url') || '') : '';
+  });
+  const [sheetSaveStatus, setSheetSaveStatus] = useState<string | null>(null);
+
+  const handleSaveSpreadsheetUrl = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      localStorage.setItem('rpm_google_sheet_webhook_url', spreadsheetUrl.trim());
+      setSheetSaveStatus('URL Google Spreadsheet berhasil disimpan!');
+      setTimeout(() => setSheetSaveStatus(null), 4000);
+    } catch (e) {
+      setSheetSaveStatus('Gagal menyimpan URL.');
+    }
+  };
 
   // Generator states
   const [newCodeType, setNewCodeType] = useState<'PERMANENT' | 'MONTHLY'>('MONTHLY');
@@ -942,6 +982,15 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                   <FileText size={15} />
                   Log Aktivitas Guru
                 </button>
+                <button
+                  onClick={() => setActiveTab('sheets')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all ${
+                    activeTab === 'sheets' ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-700 hover:text-white'
+                  }`}
+                >
+                  <FileSpreadsheet size={15} />
+                  Google Spreadsheet Sync
+                </button>
               </nav>
 
               <div className="p-4 border-t border-slate-700 bg-slate-900 flex items-center justify-between text-[11px] text-slate-400">
@@ -1395,6 +1444,115 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                             )}
                           </tbody>
                         </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 5: GOOGLE SPREADSHEET WEBHOOK */}
+                  {activeTab === 'sheets' && (
+                    <div className="space-y-6 flex-1 flex flex-col max-w-3xl overflow-y-auto">
+                      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                            <FileSpreadsheet size={22} />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-gray-900 text-sm">Hubungkan dengan Google Spreadsheet Anda</h3>
+                            <p className="text-xs text-gray-500">Setiap guru se-Indonesia yang mencoba aplikasi atau melakukan aktivitas akan otomatis tercatat ke Spreadsheet Anda secara real-time.</p>
+                          </div>
+                        </div>
+
+                        <form onSubmit={handleSaveSpreadsheetUrl} className="space-y-4 mt-4">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">URL Web App Google Apps Script (Webhook)</label>
+                            <input
+                              type="url"
+                              value={spreadsheetUrl}
+                              onChange={(e) => setSpreadsheetUrl(e.target.value)}
+                              placeholder="https://script.google.com/macros/s/.../exec"
+                              className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                            />
+                            <p className="text-[11px] text-gray-400 mt-1">Tempelkan URL Web App yang didapatkan setelah Anda men-deploy skrip Apps Script di Google Spreadsheet.</p>
+                          </div>
+
+                          {sheetSaveStatus && (
+                            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-medium">
+                              ✅ {sheetSaveStatus}
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="submit"
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow transition-all"
+                            >
+                              Simpan URL Webhook
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                syncToGoogleSheet({
+                                  timestamp: new Date().toISOString(),
+                                  teacher_name: "Test Admin Sinkronisasi",
+                                  fingerprint: "TEST-FP-000",
+                                  ip: "127.0.0.1",
+                                  activity_type: "TEST_SYNC",
+                                  details: "Pengujian koneksi Google Spreadsheet webhook",
+                                  code_used: "TEST-CODE"
+                                });
+                                alert('Ping test sinkronisasi dikirim! Periksa Google Spreadsheet Anda.');
+                              }}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow transition-all"
+                            >
+                              Uji Coba Kirim Test Ping
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+
+                      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                        <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider text-slate-700">Panduan Skrip Google Apps Script (Copy-Paste)</h4>
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          Buka Google Spreadsheet Anda, klik menu <strong className="text-gray-900">Ekstensi &gt; Apps Script</strong>, hapus semua kode di editor, lalu tempelkan kode JavaScript di bawah ini:
+                        </p>
+                        <div className="relative">
+                          <pre className="bg-slate-900 text-slate-200 p-4 rounded-lg text-[11px] font-mono overflow-x-auto leading-relaxed select-all">
+{`function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  try {
+    var data = JSON.parse(e.postData.contents);
+    sheet.appendRow([
+      new Date(),
+      data.teacher_name || 'Guru Tanpa Nama',
+      data.fingerprint || '-',
+      data.ip || '-',
+      data.activity_type || 'TRIAL_USED',
+      data.details || '-',
+      data.code_used || '-'
+    ]);
+    return ContentService.createTextOutput(JSON.stringify({status: 'success'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({status: 'error', message: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({status: 'active', app: 'Smart RPM'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}`}
+                          </pre>
+                        </div>
+                        <div className="text-[11px] text-gray-500 space-y-1 bg-amber-50 border border-amber-200 p-3 rounded-lg">
+                          <strong className="text-amber-800 block font-bold">Cara Deploy di Google Sheets:</strong>
+                          <ol className="list-decimal pl-4 space-y-0.5 text-amber-900">
+                            <li>Klik tombol <strong className="font-bold">Deploy</strong> di pojok kanan atas Apps Script &gt; <strong className="font-bold">New deployment</strong>.</li>
+                            <li>Pilih jenis (Select type): <strong className="font-bold">Web app</strong>.</li>
+                            <li>Atur <strong className="font-bold">Execute as</strong>: Me (Akun Anda) dan <strong className="font-bold">Who has access</strong>: <strong className="font-bold">Anyone (Siapa saja)</strong>.</li>
+                            <li>Klik <strong className="font-bold">Deploy</strong>, beri izin otorisasi, lalu salin URL Web App yang dihasilkan ke kotak di atas!</li>
+                          </ol>
+                        </div>
                       </div>
                     </div>
                   )}
