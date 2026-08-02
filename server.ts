@@ -102,16 +102,15 @@ async function callGeminiWithRetry(
   const modelsToTry = [
     params.preferredModel || "gemini-3.6-flash",
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-3.1-flash-lite",
-    "gemini-flash-latest"
+    "gemini-flash-latest",
+    "gemini-3.1-flash-lite"
   ];
   // Filter unique
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
   let lastError: any = null;
 
   for (const model of uniqueModels) {
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const response = await ai.models.generateContent({
           model,
@@ -144,8 +143,8 @@ async function callGeminiWithRetry(
           errStr.includes("high demand") ||
           errStr.includes("overloaded");
 
-        if (isTransient && attempt < 3) {
-          await new Promise((res) => setTimeout(res, attempt * 1000));
+        if (isTransient && attempt === 1) {
+          await new Promise((res) => setTimeout(res, 500));
         } else {
           break;
         }
@@ -168,15 +167,14 @@ async function* streamGeminiWithRetry(
   const modelsToTry = [
     params.preferredModel || "gemini-3.6-flash",
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-3.1-flash-lite",
-    "gemini-flash-latest"
+    "gemini-flash-latest",
+    "gemini-3.1-flash-lite"
   ];
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
   let lastError: any = null;
 
   for (const model of uniqueModels) {
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const responseStream = await ai.models.generateContentStream({
           model,
@@ -213,8 +211,8 @@ async function* streamGeminiWithRetry(
           errStr.includes("high demand") ||
           errStr.includes("overloaded");
 
-        if (isTransient && attempt < 3) {
-          await new Promise((res) => setTimeout(res, attempt * 1000));
+        if (isTransient && attempt === 1) {
+          await new Promise((res) => setTimeout(res, 500));
         } else {
           break;
         }
@@ -1270,6 +1268,242 @@ Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
       }
     };
     return res.json({ success: true, lkpd: fallbackLKPD, isFallback: true });
+  }
+});
+
+// API Generate Detailed Rubrik Penilaian (Assessment as, for, of Learning) with AI
+app.post("/api/generate-rubrik", async (req, res) => {
+  try {
+    const { planData, customInstruction } = req.body;
+    const ai = getGeminiClient();
+
+    const mataPelajaran = planData?.identitas?.mataPelajaran || "Mata Pelajaran";
+    const faseKelas = planData?.identitas?.faseKelas || "Fase / Kelas";
+    const topik = planData?.tujuanDanDpl?.lingkupMateri || "Materi Pembelajaran";
+    const tp = planData?.tujuanDanDpl?.tujuanPembelajaran || "";
+    const cp = planData?.tujuanDanDpl?.capaianPembelajaran || "";
+
+    const prompt = `Kamu adalah pakar evaluasi dan asesmen pembelajaran Kurikulum Merdeka berorientasi Pembelajaran Mendalam (Deep Learning).
+Buatkan DOKUMEN RUBRIK PENILAIAN LENGKAP, OTENTIK, dan SPESIFIK untuk 3 Pendekatan Asesmen Kurikulum Merdeka:
+1. Assessment as Learning (Refleksi Diri & Penilaian Antarteman)
+2. Assessment for Learning (Observasi Kinerja, Keaktifan Diskusi, & Pengerjaan LKPD)
+3. Assessment of Learning (Evaluasi Akhir, Tes Tertulis / Hasil Produk Karya Sumatif)
+
+Berdasarkan Rencana Pembelajaran Mendalam (RPM):
+- Mata Pelajaran: ${mataPelajaran}
+- Fase / Kelas: ${faseKelas}
+- Topik / Lingkup Materi: ${topik}
+- Tujuan Pembelajaran: ${tp}
+- Capaian Pembelajaran: ${cp}
+${customInstruction ? `- Catatan Khusus Guru: ${customInstruction}` : ''}
+
+UNTUK MASING-MASING DARI 3 KATEGORI ASESMEN DI ATAS, BUATKAN TABEL RUBRIK DENGAN MINIMAL 3 ASPEK/INDIKATOR PENILAIAN LENGKAP DENGAN 4 TINGKAT DESKRIPSI KRITERIA (Perlu Bimbingan / Skor 1, Cukup / Skor 2, Layak / Skor 3, Mahir / Skor 4) SERTA FORMULA PEDOMAN PENSKORAN.
+
+Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
+{
+  "judulRubrik": "RUBRIK PENILAIAN PEMBELAJARAN MENDALAM - ${topik.toUpperCase()}",
+  "subJudul": "Pedoman Penilaian Otentik (Assessment as, for, & of Learning)",
+  "mataPelajaran": "${mataPelajaran}",
+  "faseKelas": "${faseKelas}",
+  "lingkupMateri": "${topik}",
+  "petunjukPenggunaan": [
+    "Gunakan Rubrik Assessment as Learning untuk membimbing murid melakukan refleksi metakognitif mandiri dan saling memberi umpan balik antar teman.",
+    "Gunakan Rubrik Assessment for Learning saat mengamati keaktifan, penalaran kritis, serta keterlibatan murid selama diskusi dan praktikum LKPD.",
+    "Gunakan Rubrik Assessment of Learning untuk menilai hasil karya/produk akhir atau tes sumatif murid pada akhir materi."
+  ],
+  "assessmentAsLearning": {
+    "kategori": "Assessment as Learning",
+    "subJudul": "Rubrik Penilaian Diri (Self Assessment) & Antarteman (Peer Assessment)",
+    "tujuanFokus": "Mengembangkan kesadaran metakognitif, kejujuran diri, dan kemampuan memberikan umpan balik konstruktif antar siswa.",
+    "teknikInstrumen": "Lembar Refleksi Metakognitif Mandiri & Angket Penilaian Teman Sejawat",
+    "tabelRubrik": [
+      {
+        "aspekPenilaian": "Refleksi Pemahaman Mandiri",
+        "perluBimbingan": "Belum mampu mengenali hal yang dipahami atau kesulitan belajar yang dihadapi.",
+        "cukup": "Mampu menyebutkan hal yang dipahami dan kesulitan belajar dengan bimbingan guru.",
+        "layak": "Mampu mengidentifikasi pemahaman dan hambatan belajar secara mandiri dan jujur.",
+        "mahir": "Sangat peka dalam merefleksikan pemahaman, hambatan, serta merumuskan strategi perbaikan diri."
+      },
+      {
+        "aspekPenilaian": "Apresiasi & Penilaian Antarteman",
+        "perluBimbingan": "Belum memberikan tanggapan atau penilaian objektif kepada teman kelompok.",
+        "cukup": "Memberikan penilaian kepada teman tetapi masih ragu/singkat tanpa saran pendukung.",
+        "layak": "Memberikan penilaian dan umpan balik yang jujur serta menghargai kontribusi teman.",
+        "mahir": "Memberikan umpan balik yang sangat apresiatif, obyektif, konstruktif, dan membangun semangat teman."
+      },
+      {
+        "aspekPenilaian": "Kemandirian & Tanggung Jawab Belajar",
+        "perluBimbingan": "Memerlukan dorongan terus-menerus untuk menyelesaikan lembar refleksi diri.",
+        "cukup": "Mengisi lembar refleksi diri tepat waktu saat diingatkan guru.",
+        "layak": "Mengisi lembar refleksi secara mandiri dengan sungguh-sungguh.",
+        "mahir": "Sangat proaktif, jujur, dan menunjukkan komitmen tinggi dalam evaluasi belajar mandiri."
+      }
+    ],
+    "pedomanPenskoran": "Nilai Akhir = (Total Skor Perolehan / 12) x 100. Kategori: 81-100 (Sangat Baik), 71-80 (Baik), 61-70 (Cukup), <60 (Perlu Bimbingan)."
+  },
+  "assessmentForLearning": {
+    "kategori": "Assessment for Learning",
+    "subJudul": "Rubrik Observasi Proses Pembelajaran & Kinerja Diskusi / LKPD",
+    "tujuanFokus": "Mengukur keaktifan, penalaran kritis, kolaborasi, dan pemecahan masalah selama proses pembelajaran berlangsung.",
+    "teknikInstrumen": "Lembar Observasi Unjuk Kerja & Rubrik Diskusi Kelompok",
+    "tabelRubrik": [
+      {
+        "aspekPenilaian": "Keaktifan Diskusi & Penalaran Kritis",
+        "perluBimbingan": "Pasif dalam diskusi dan belum mengajukan gagasan atau pertanyaan.",
+        "cukup": "Aktif mendengarkan dan sesekali menyampaikan pendapat sederhana saat diminta.",
+        "layak": "Aktif berpendapat, mengajukan pertanyaan kritis, dan menanggapi ide teman.",
+        "mahir": "Sangat aktif memimpin argumentasi kritis, menghubungkan fakta, dan memberikan solusi inovatif."
+      },
+      {
+        "aspekPenilaian": "Kerjasama & Gotong Royong Kelompok",
+        "perluBimbingan": "Cenderung bekerja sendiri atau enggan berbagian peran dalam kelompok.",
+        "cukup": "Menjalankan peran kelompok jika diarahkan oleh teman atau guru.",
+        "layak": "Bekerja sama dengan baik, menghargai pembagian tugas, dan membantu anggota kelompok.",
+        "mahir": "Sangat proaktif membangun kolaborasi harmonis, membantu teman yang kesulitan, dan menjaga kekompakan."
+      },
+      {
+        "aspekPenilaian": "Ketepatan Analisis & Penulisan LKPD",
+        "perluBimbingan": "Jawaban LKPD kurang tepat dan belum mencerminkan pemahaman materi ${topik}.",
+        "cukup": "Jawaban LKPD cukup tepat namun penjelasan analisis masih singkat.",
+        "layak": "Jawaban LKPD tepat, runtut, dan didukung alasan yang logis.",
+        "mahir": "Jawaban LKPD sangat akurat, mendalam, disertai analisis komprehensif dan contoh kontekstual."
+      }
+    ],
+    "pedomanPenskoran": "Nilai Akhir = (Total Skor Perolehan / 12) x 100. Digunakan guru sebagai umpan balik formatif untuk intervensi."
+  },
+  "assessmentOfLearning": {
+    "kategori": "Assessment of Learning",
+    "subJudul": "Rubrik Evaluasi Sumatif Akhir (Tes Tertulis / Penilaian Produk Karya)",
+    "tujuanFokus": "Mengukur secara komprehensif tingkat penguasaan konsep akhir dan kualitas produk/karya siswa pada materi ${topik}.",
+    "teknikInstrumen": "Lembar Tes Evaluasi Sumatif & Rubrik Penilaian Hasil Produk/Proyek",
+    "tabelRubrik": [
+      {
+        "aspekPenilaian": "Penguasaan Konsep & Kebenaran Substansi",
+        "perluBimbingan": "Banyak kesalahan konsep dasar materi ${topik} (skor tes <60%).",
+        "cukup": "Memahami konsep dasar namun terdapat beberapa kekeliruan kecil (skor tes 61-70%).",
+        "layak": "Memahami konsep materi secara benar dan tepat (skor tes 71-80%).",
+        "mahir": "Sangat menguasai konsep secara utuh, akurat, dan mampu mengaitkan dengan topik lain (skor 81-100%)."
+      },
+      {
+        "aspekPenilaian": "Kualitas Produk / Hasil Karya Akhir",
+        "perluBimbingan": "Karya belum selesai atau tidak sesuai dengan spesifikasi tugas yang ditentukan.",
+        "cukup": "Karya selesai sesuai petunjuk dasar, namun kerapian dan estetika perlu ditingkatkan.",
+        "layak": "Karya selesai dengan rapi, jelas, sistematis, dan memenuhi semua kriteria tugas.",
+        "mahir": "Karya sangat kreatif, estetik, orisinal, serta menyajikan penyelesaian masalah secara luar biasa."
+      },
+      {
+        "aspekPenilaian": "Kemampuan Pemecahan Masalah (HOTS)",
+        "perluBimbingan": "Belum mampu menjawab pertanyaan HOTS / studi kasus kontekstual.",
+        "cukup": "Mampu menjawab soal HOTS dengan analisis sederhana.",
+        "layak": "Mampu menyelesaikan soal HOTS dengan runtutan argumen yang logis.",
+        "mahir": "Mampu memecahkan masalah kompleks/HOTS dengan analisis tajam, kritis, dan sintesis jawaban yang matang."
+      }
+    ],
+    "pedomanPenskoran": "Nilai Akhir Sumatif = (Skor Tes Tertulis x 50%) + (Skor Produk x 50%). Konversi Predikat: A (89-100), B (78-88), C (66-77), D (<65)."
+  }
+}`;
+
+    const response = await callGeminiWithRetry(ai, {
+      preferredModel: "gemini-3.6-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.5,
+      },
+    });
+
+    const text = response.text || "{}";
+    const rubrikData = JSON.parse(text);
+    res.json({ success: true, rubrik: rubrikData });
+  } catch (error: any) {
+    console.error("Error in /api/generate-rubrik:", error);
+    const planData = req.body?.planData || {};
+    const mp = planData?.identitas?.mataPelajaran || "Mata Pelajaran";
+    const fk = planData?.identitas?.faseKelas || "Fase / Kelas";
+    const topik = planData?.tujuanDanDpl?.lingkupMateri || "Materi Pembelajaran";
+
+    const fallbackRubrik = {
+      judulRubrik: `RUBRIK PENILAIAN PEMBELAJARAN MENDALAM - ${topik.toUpperCase()}`,
+      subJudul: "Pedoman Penilaian Otentik (Assessment as, for, & of Learning)",
+      mataPelajaran: mp,
+      faseKelas: fk,
+      lingkupMateri: topik,
+      petunjukPenggunaan: [
+        "Gunakan Rubrik Assessment as Learning untuk membimbing murid melakukan refleksi metakognitif mandiri.",
+        "Gunakan Rubrik Assessment for Learning saat mengamati keaktifan dan kerjasama murid selama diskusi LKPD.",
+        "Gunakan Rubrik Assessment of Learning untuk menilai hasil karya/produk atau tes sumatif akhir."
+      ],
+      assessmentAsLearning: {
+        kategori: "Assessment as Learning",
+        subJudul: "Rubrik Penilaian Diri (Self Assessment) & Antarteman (Peer Assessment)",
+        tujuanFokus: "Mengembangkan kesadaran metakognitif, kejujuran diri, dan kemampuan memberikan umpan balik antar siswa.",
+        teknikInstrumen: "Lembar Refleksi Diri & Penilaian Teman Sejawat",
+        tabelRubrik: [
+          {
+            aspekPenilaian: "Refleksi Pemahaman Mandiri",
+            perluBimbingan: "Belum mampu mengenali hal yang dipahami atau kesulitan belajar.",
+            cukup: "Mampu menyebutkan pemahaman dengan bimbingan guru.",
+            layak: "Mampu mengidentifikasi pemahaman dan hambatan belajar secara mandiri.",
+            mahir: "Sangat peka dalam merefleksikan pemahaman dan merumuskan strategi perbaikan."
+          },
+          {
+            aspekPenilaian: "Penilaian Antarteman (Peer Assessment)",
+            perluBimbingan: "Belum memberikan tanggapan objektif kepada teman.",
+            cukup: "Memberikan penilaian kepada teman tetapi masih singkat.",
+            layak: "Memberikan penilaian dan umpan balik yang jujur serta menghargai teman.",
+            mahir: "Memberikan umpan balik yang sangat apresiatif, obyektif, dan membangun."
+          }
+        ],
+        pedomanPenskoran: "Nilai Akhir = (Total Skor Perolehan / 8) x 100."
+      },
+      assessmentForLearning: {
+        kategori: "Assessment for Learning",
+        subJudul: "Rubrik Observasi Proses Pembelajaran & Kinerja Diskusi / LKPD",
+        tujuanFokus: "Mengukur keaktifan, penalaran kritis, kolaborasi, dan pengerjaan LKPD saat proses pembelajaran.",
+        teknikInstrumen: "Lembar Observasi Diskusi & Rubrik LKPD",
+        tabelRubrik: [
+          {
+            aspekPenilaian: "Keaktifan Diskusi & Penalaran Kritis",
+            perluBimbingan: "Pasif dalam diskusi dan belum mengajukan gagasan.",
+            cukup: "Aktif mendengarkan dan sesekali menyampaikan pendapat.",
+            layak: "Aktif berpendapat dan mengajukan pertanyaan kritis.",
+            mahir: "Sangat aktif memimpin argumentasi kritis dan memberikan solusi inovatif."
+          },
+          {
+            aspekPenilaian: "Kerjasama Kelompok & Analisis LKPD",
+            perluBimbingan: "Jawaban LKPD belum sesuai dan kurang berkolaborasi.",
+            cukup: "Bekerja sama jika diarahkan dan analisis LKPD cukup lengkap.",
+            layak: "Bekerja sama dengan baik dan analisis LKPD tepat serta logis.",
+            mahir: "Sangat kolaboratif dan analisis LKPD sangat akurat serta mendalam."
+          }
+        ],
+        pedomanPenskoran: "Nilai Akhir = (Total Skor Perolehan / 8) x 100."
+      },
+      assessmentOfLearning: {
+        kategori: "Assessment of Learning",
+        subJudul: "Rubrik Evaluasi Sumatif Akhir (Tes Tertulis / Penilaian Produk)",
+        tujuanFokus: "Mengukur penguasaan konsep akhir dan kualitas produk/karya siswa.",
+        teknikInstrumen: "Tes Evaluasi Sumatif & Rubrik Penilaian Produk",
+        tabelRubrik: [
+          {
+            aspekPenilaian: "Penguasaan Konsep Materi",
+            perluBimbingan: "Banyak kesalahan konsep dasar (skor <60%).",
+            cukup: "Memahami konsep dasar dengan beberapa kekeliruan (skor 61-70%).",
+            layak: "Memahami konsep materi secara benar dan tepat (skor 71-80%).",
+            mahir: "Sangat menguasai konsep secara utuh dan akurat (skor 81-100%)."
+          },
+          {
+            aspekPenilaian: "Kualitas Produk / Pemecahan Masalah HOTS",
+            perluBimbingan: "Karya belum selesai atau belum menjawab soal HOTS.",
+            cukup: "Karya selesai sesuai petunjuk dasar.",
+            layak: "Karya rapi, sistematis, dan memenuhi kriteria.",
+            mahir: "Karya sangat kreatif, estetik, orisinal, dan analisis HOTS sangat matang."
+          }
+        ],
+        pedomanPenskoran: "Nilai Akhir Sumatif = (Skor Tes x 50%) + (Skor Produk x 50%)."
+      }
+    };
+    return res.json({ success: true, rubrik: fallbackRubrik, isFallback: true });
   }
 });
 

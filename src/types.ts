@@ -119,6 +119,53 @@ export interface LKPDData {
   };
 }
 
+export interface RubrikKriteriaItem {
+  aspekPenilaian: string;
+  perluBimbingan: string; // Skor 1 (0 - 60%)
+  cukup: string;          // Skor 2 (61 - 70%)
+  layak: string;          // Skor 3 (71 - 80%)
+  mahir: string;          // Skor 4 (81 - 100%)
+  bobotSkor?: string;
+}
+
+export interface RubrikSection {
+  kategori: 'Assessment as Learning' | 'Assessment for Learning' | 'Assessment of Learning';
+  subJudul: string;
+  tujuanFokus: string;
+  teknikInstrumen: string;
+  tabelRubrik: RubrikKriteriaItem[];
+  pedomanPenskoran: string;
+}
+
+export interface SiswaNilaiRecord {
+  id: string;
+  namaSiswa: string;
+  nisn?: string;
+  skorAs: number[];  // Skor 1-4 untuk tiap aspek di Assessment as Learning
+  skorFor: number[]; // Skor 1-4 untuk tiap aspek di Assessment for Learning
+  skorOf: number[];  // Skor 1-4 untuk tiap aspek di Assessment of Learning
+  catatanGuru?: string;
+}
+
+export interface LembarPenilaianSiswaData {
+  daftarSiswa: SiswaNilaiRecord[];
+  tanggalPenilaian?: string;
+  catatanUmumKelas?: string;
+}
+
+export interface RubrikPenilaianData {
+  judulRubrik: string;
+  subJudul?: string;
+  mataPelajaran: string;
+  faseKelas: string;
+  lingkupMateri: string;
+  petunjukPenggunaan: string[];
+  assessmentAsLearning: RubrikSection;
+  assessmentForLearning: RubrikSection;
+  assessmentOfLearning: RubrikSection;
+  lembarPenilaianSiswa?: LembarPenilaianSiswaData;
+}
+
 export interface AsesmenItem {
   bentukPenilaian: string;
   teknikPenilaian: string;
@@ -186,6 +233,7 @@ export interface LessonPlanOutput {
     lkpdStructured?: LKPDData;
     bahanAjar: string;
     rubrikPenilaian: string;
+    rubrikStructured?: RubrikPenilaianData;
     kktp?: KKTPData | string;
   };
   jurnalHarian?: JurnalHarianGuru;

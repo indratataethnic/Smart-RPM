@@ -20,9 +20,10 @@ import {
   Trash2,
   RotateCcw,
 } from 'lucide-react';
-import { LessonPlanOutput, KKTPData, LKPDData, JurnalHarianGuru, JurnalHarianEntry, normalizeAsesmen, AsesmenItem } from '../types';
+import { LessonPlanOutput, KKTPData, LKPDData, RubrikPenilaianData, JurnalHarianGuru, JurnalHarianEntry, normalizeAsesmen, AsesmenItem } from '../types';
 import { LKPDModal } from './LKPDModal';
 import { JurnalHarianModal } from './JurnalHarianModal';
+import { RubrikModal, getDefaultRubrikData } from './RubrikModal';
 
 export const getDefaultJurnalHarian = (p: LessonPlanOutput): JurnalHarianGuru => {
   if (p.jurnalHarian && Array.isArray(p.jurnalHarian.entries) && p.jurnalHarian.entries.length > 0) {
@@ -93,10 +94,59 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
   const [editedPlan, setEditedPlan] = useState<LessonPlanOutput>(plan);
   const [saveToast, setSaveToast] = useState(false);
 
-  // LKPD AI & Jurnal Harian State
+  // LKPD AI, Rubrik Penilaian AI, & Jurnal Harian State
   const [isLkpdModalOpen, setIsLkpdModalOpen] = useState(false);
   const [isGeneratingLkpd, setIsGeneratingLkpd] = useState(false);
+  const [isRubrikModalOpen, setIsRubrikModalOpen] = useState(false);
+  const [isGeneratingRubrik, setIsGeneratingRubrik] = useState(false);
   const [isJurnalModalOpen, setIsJurnalModalOpen] = useState(false);
+
+  const handleSaveRubrik = (newRubrik: RubrikPenilaianData) => {
+    const updated = {
+      ...(isEditing ? editedPlan : plan),
+      lampiran: {
+        ...(isEditing ? editedPlan : plan).lampiran,
+        rubrikStructured: newRubrik,
+      },
+    };
+    if (isEditing) {
+      setEditedPlan(updated);
+    }
+    if (onUpdatePlan) {
+      onUpdatePlan(updated);
+    }
+  };
+
+  const handleGenerateRubrik = async (customInstruction?: string) => {
+    try {
+      setIsGeneratingRubrik(true);
+      const res = await fetch('/api/generate-rubrik', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planData: isEditing ? editedPlan : plan,
+          customInstruction,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data.success && data.rubrik) {
+        handleSaveRubrik(data.rubrik);
+      } else {
+        throw new Error(data.error || 'Gagal membuat Rubrik Penilaian');
+      }
+    } catch (err: any) {
+      console.warn('Error generating Rubrik Penilaian, using local fallback:', err);
+      const fallbackRubrik = getDefaultRubrikData(isEditing ? editedPlan : plan);
+      handleSaveRubrik(fallbackRubrik);
+    } finally {
+      setIsGeneratingRubrik(false);
+    }
+  };
 
   const handleSaveJurnal = (newJurnal: JurnalHarianGuru) => {
     const updated = {
@@ -2185,9 +2235,24 @@ ${formatActivityText(k.aktivitasMurid)}
 
         {/* SECTION 5: ASESMEN & PENILAIAN */}
         <div className="mb-6">
-          <h2 className="text-sm sm:text-base font-bold bg-teal-800 text-white px-3 py-1.5 rounded-lg mb-3 flex items-center justify-between">
-            <span>V. ASESMEN & PENILAIAN PEMBELAJARAN</span>
-          </h2>
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <h2 className="text-sm sm:text-base font-bold bg-teal-800 text-white px-3 py-1.5 rounded-lg flex-1">
+              V. ASESMEN & PENILAIAN PEMBELAJARAN
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                setIsRubrikModalOpen(true);
+                if (!activePlan.lampiran.rubrikStructured) {
+                  handleGenerateRubrik();
+                }
+              }}
+              className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-teal-950 rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-teal-950" />
+              <span>{activePlan.lampiran.rubrikStructured ? 'Buka Rubrik Penilaian AI' : 'Buat Rubrik Penilaian dengan AI'}</span>
+            </button>
+          </div>
 
           <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-xs">
             <table className="w-full text-xs sm:text-sm text-left border-collapse">
@@ -2423,12 +2488,40 @@ ${formatActivityText(k.aktivitasMurid)}
               )}
             </div>
 
-            <div className="border border-slate-200 p-3.5 rounded-xl bg-slate-50">
-              <span className="font-bold text-slate-900 block mb-1 text-xs uppercase text-teal-800 flex items-center gap-1.5">
-                <Award className="w-3.5 h-3.5" />
-                C. Rubrik Penilaian
-              </span>
-              {isEditing ? (
+            <div className="border border-teal-200 p-4 rounded-xl bg-teal-50/40">
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                <span className="font-bold text-slate-900 text-xs uppercase text-teal-800 flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-teal-700" />
+                  C. Rubrik Penilaian AI (Assessment as, for, & of Learning)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRubrikModalOpen(true);
+                    if (!activePlan.lampiran.rubrikStructured) {
+                      handleGenerateRubrik();
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>{activePlan.lampiran.rubrikStructured ? 'Buka Rubrik Lengkap & Cetak' : 'Buat Rubrik Penilaian AI'}</span>
+                </button>
+              </div>
+
+              {activePlan.lampiran.rubrikStructured ? (
+                <div className="p-3 bg-white border border-teal-200 rounded-xl space-y-2 mt-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="font-bold text-teal-900 text-xs">{activePlan.lampiran.rubrikStructured.judulRubrik}</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">✓ Dokumen Rubrik 3 Asesmen Siap</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-600 flex-wrap pt-1">
+                    <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-semibold border border-purple-200">1. Assessment as Learning (Refleksi)</span>
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-semibold border border-blue-200">2. Assessment for Learning (Observasi)</span>
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-semibold border border-emerald-200">3. Assessment of Learning (Sumatif)</span>
+                  </div>
+                </div>
+              ) : isEditing ? (
                 <textarea
                   rows={4}
                   className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs"
@@ -2766,6 +2859,17 @@ ${formatActivityText(k.aktivitasMurid)}
         planData={activePlan}
         jurnalData={activePlan.jurnalHarian || getDefaultJurnalHarian(activePlan)}
         onSaveJurnal={handleSaveJurnal}
+      />
+
+      {/* RUBRIK PENILAIAN AI MODAL */}
+      <RubrikModal
+        isOpen={isRubrikModalOpen}
+        onClose={() => setIsRubrikModalOpen(false)}
+        planData={activePlan}
+        rubrikData={activePlan.lampiran.rubrikStructured || getDefaultRubrikData(activePlan)}
+        onSaveRubrik={handleSaveRubrik}
+        onGenerateRubrik={handleGenerateRubrik}
+        isGenerating={isGeneratingRubrik}
       />
     </div>
   );
