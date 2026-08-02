@@ -124,6 +124,10 @@ export const LKPDModal: React.FC<LKPDModalProps> = ({
         <title>${currentLkpd.judulLKPD}</title>
         <style>
           @page { size: A4 portrait; margin: 15mm; }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11pt; line-height: 1.4; color: #1e293b; margin: 0; padding: 15px; }
           .header { text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 10px; margin-bottom: 15px; }
           .title { font-size: 14pt; font-weight: bold; color: #0f766e; text-transform: uppercase; }

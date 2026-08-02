@@ -694,6 +694,10 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
           size: A4;
           margin: 15mm 12mm 15mm 12mm;
         }
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
         body {
           font-family: 'Calibri', 'Arial', sans-serif;
           font-size: 10.5pt;

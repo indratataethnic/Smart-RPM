@@ -102,6 +102,8 @@ async function callGeminiWithRetry(
   const modelsToTry = [
     params.preferredModel || "gemini-3.6-flash",
     "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash",
     "gemini-flash-latest",
     "gemini-3.1-flash-lite"
   ];
@@ -167,6 +169,8 @@ async function* streamGeminiWithRetry(
   const modelsToTry = [
     params.preferredModel || "gemini-3.6-flash",
     "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash",
     "gemini-flash-latest",
     "gemini-3.1-flash-lite"
   ];

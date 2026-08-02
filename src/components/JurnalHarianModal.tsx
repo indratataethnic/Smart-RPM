@@ -78,6 +78,10 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
         <title>Jurnal Harian Pelaksanaan Pembelajaran - ${identitas.faseKelas}</title>
         <style>
           @page { size: A4 landscape; margin: 12mm; }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10pt; line-height: 1.4; color: #1e293b; margin: 0; padding: 10px; }
           .header { text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 8px; margin-bottom: 12px; }
           .title { font-size: 13pt; font-weight: bold; color: #0f766e; text-transform: uppercase; }

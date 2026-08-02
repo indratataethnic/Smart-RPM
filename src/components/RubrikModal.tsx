@@ -290,6 +290,10 @@ ${lembarData.daftarSiswa.map((s, idx) => {
         <title>${currentRubrik.judulRubrik}</title>
         <style>
           @page { size: A4 landscape; margin: 12mm; }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 9.5pt; line-height: 1.4; color: #1e293b; margin: 0; padding: 10px; }
           .header { text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 8px; margin-bottom: 12px; }
           .title { font-size: 13pt; font-weight: bold; color: #0f766e; text-transform: uppercase; }
@@ -300,6 +304,9 @@ ${lembarData.daftarSiswa.map((s, idx) => {
           .data-table th, .data-table td { border: 1px solid #94a3b8; padding: 6px 8px; font-size: 8.5pt; text-align: left; vertical-align: top; }
           .data-table th { background-color: #f1f5f9; font-weight: bold; color: #0f766e; }
           .section-title { background-color: #0f766e; color: white; padding: 6px 10px; font-weight: bold; font-size: 10pt; margin-top: 15px; margin-bottom: 8px; page-break-after: avoid; border-radius: 3px; }
+          .section-title-as { background-color: #581c87; color: white; padding: 6px 10px; font-weight: bold; font-size: 10pt; margin-top: 15px; margin-bottom: 8px; page-break-after: avoid; border-radius: 3px; }
+          .section-title-for { background-color: #0369a1; color: white; padding: 6px 10px; font-weight: bold; font-size: 10pt; margin-top: 15px; margin-bottom: 8px; page-break-after: avoid; border-radius: 3px; }
+          .section-title-of { background-color: #047857; color: white; padding: 6px 10px; font-weight: bold; font-size: 10pt; margin-top: 15px; margin-bottom: 8px; page-break-after: avoid; border-radius: 3px; }
           .box { border: 1px solid #cbd5e1; padding: 8px 12px; background-color: #f8fafc; margin-bottom: 10px; border-radius: 4px; font-size: 9pt; }
           .page-break { page-break-before: always; }
           .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
@@ -341,7 +348,7 @@ ${lembarData.daftarSiswa.map((s, idx) => {
         </div>
 
         <!-- I. ASSESSMENT AS LEARNING -->
-        <div class="section-title">I. ${currentRubrik.assessmentAsLearning.kategori} - ${currentRubrik.assessmentAsLearning.subJudul}</div>
+        <div class="section-title-as">I. ${currentRubrik.assessmentAsLearning.kategori} - ${currentRubrik.assessmentAsLearning.subJudul}</div>
         <table class="meta-table" style="margin-bottom: 8px;">
           <tr>
             <td width="50%"><strong>Tujuan Fokus:</strong> ${currentRubrik.assessmentAsLearning.tujuanFokus}</td>
@@ -375,7 +382,7 @@ ${lembarData.daftarSiswa.map((s, idx) => {
         <div class="page-break"></div>
 
         <!-- II. ASSESSMENT FOR LEARNING -->
-        <div class="section-title" style="margin-top: 0;">II. ${currentRubrik.assessmentForLearning.kategori} - ${currentRubrik.assessmentForLearning.subJudul}</div>
+        <div class="section-title-for" style="margin-top: 0;">II. ${currentRubrik.assessmentForLearning.kategori} - ${currentRubrik.assessmentForLearning.subJudul}</div>
         <table class="meta-table" style="margin-bottom: 8px;">
           <tr>
             <td width="50%"><strong>Tujuan Fokus:</strong> ${currentRubrik.assessmentForLearning.tujuanFokus}</td>
@@ -407,7 +414,7 @@ ${lembarData.daftarSiswa.map((s, idx) => {
         <p style="font-size: 8.5pt; font-style: italic; margin-top: -5px; color: #475569;"><strong>Pedoman Skor:</strong> ${currentRubrik.assessmentForLearning.pedomanPenskoran}</p>
 
         <!-- III. ASSESSMENT OF LEARNING -->
-        <div class="section-title">III. ${currentRubrik.assessmentOfLearning.kategori} - ${currentRubrik.assessmentOfLearning.subJudul}</div>
+        <div class="section-title-of">III. ${currentRubrik.assessmentOfLearning.kategori} - ${currentRubrik.assessmentOfLearning.subJudul}</div>
         <table class="meta-table" style="margin-bottom: 8px;">
           <tr>
             <td width="50%"><strong>Tujuan Fokus:</strong> ${currentRubrik.assessmentOfLearning.tujuanFokus}</td>
