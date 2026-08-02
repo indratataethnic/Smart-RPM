@@ -411,9 +411,24 @@ export function TrialExhaustedModal({ isOpen, onClose, onOpenCodeModal }: TrialE
           
           <h3 className="text-xl font-bold text-gray-900 mb-2">Kuota Gratis Telah Habis</h3>
           
-          <p className="text-gray-600 text-sm mb-6 leading-relaxed">
+          <p className="text-gray-600 text-sm mb-4 leading-relaxed">
             Anda telah menggunakan seluruh kuota gratis (5 kali pembuatan). Silakan masukkan Kode Akses agar dapat melanjutkan menggunakan SMART RPM (Rencana Pembelajaran Mendalam).
           </p>
+          
+          <div className="bg-blue-50/80 border border-blue-100 rounded-lg p-3.5 mb-6 text-left">
+            <span className="text-xs font-semibold text-blue-800 block mb-1">💡 Cara Mendapatkan Kode Akses:</span>
+            <p className="text-xs text-blue-700 leading-relaxed">
+              Untuk berlangganan dan mendapatkan Kode Akses penuh, silakan hubungi kami melalui Instagram resmi kami di:{' '}
+              <a 
+                href="https://www.instagram.com/indratataethnic/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="font-bold underline text-blue-800 hover:text-blue-900 break-all"
+              >
+                https://www.instagram.com/indratataethnic/
+              </a>
+            </p>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -553,6 +568,21 @@ export function EnterAccessCodeModal({ isOpen, onClose, currentCode, onCodeActiv
           <p className="text-sm text-gray-600 mb-4 leading-relaxed">
             Masukkan Kode Akses yang diberikan oleh Admin untuk mengaktifkan generator Rencana Pembelajaran Mendalam (RPM) tanpa batasan kuota.
           </p>
+
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3.5 mb-5">
+            <span className="text-xs font-semibold text-blue-800 block mb-1">🔑 Belum Punya Kode Akses?</span>
+            <p className="text-xs text-blue-700 leading-relaxed">
+              Anda bisa mendapatkan berlangganan kode aksesnya melalui Instagram resmi kami di:{' '}
+              <a 
+                href="https://www.instagram.com/indratataethnic/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="font-bold underline text-blue-800 hover:text-blue-900 break-all"
+              >
+                https://www.instagram.com/indratataethnic/
+              </a>
+            </p>
+          </div>
 
           <div className="mb-4">
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Kode Akses</label>
