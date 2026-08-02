@@ -259,7 +259,379 @@ ${lembarData.daftarSiswa.map((s, idx) => {
   };
 
   const handlePrint = () => {
-    window.print();
+    const { identitas, tujuanDanDpl } = planData;
+    const currentRubrik = editedRubrik || getDefaultRubrikData(planData);
+    const lembarData = currentRubrik.lembarPenilaianSiswa || getDefaultLembarPenilaianSiswa();
+
+    // Calculate columns
+    const numAspekAs = currentRubrik.assessmentAsLearning.tabelRubrik.length;
+    const numAspekFor = currentRubrik.assessmentForLearning.tabelRubrik.length;
+    const numAspekOf = currentRubrik.assessmentOfLearning.tabelRubrik.length;
+    const totalMaxSkor = (numAspekAs + numAspekFor + numAspekOf) * 4;
+
+    // Class average
+    let classTotalScore = 0;
+    let totalSiswa = lembarData.daftarSiswa.length;
+    lembarData.daftarSiswa.forEach(s => {
+      const totAs = (s.skorAs || []).reduce((a, b) => a + (b || 0), 0);
+      const totFor = (s.skorFor || []).reduce((a, b) => a + (b || 0), 0);
+      const totOf = (s.skorOf || []).reduce((a, b) => a + (b || 0), 0);
+      const tot = totAs + totFor + totOf;
+      const nil = totalMaxSkor > 0 ? Math.round((tot / totalMaxSkor) * 100) : 0;
+      classTotalScore += nil;
+    });
+    const classAverageNilai = totalSiswa > 0 ? Math.round(classTotalScore / totalSiswa) : 0;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset='utf-8'>
+        <title>${currentRubrik.judulRubrik}</title>
+        <style>
+          @page { size: A4 landscape; margin: 12mm; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 9.5pt; line-height: 1.4; color: #1e293b; margin: 0; padding: 10px; }
+          .header { text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 8px; margin-bottom: 12px; }
+          .title { font-size: 13pt; font-weight: bold; color: #0f766e; text-transform: uppercase; }
+          .subtitle { font-size: 10pt; font-style: italic; color: #475569; }
+          .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+          .meta-table td { padding: 4px; font-size: 9pt; vertical-align: top; }
+          .data-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          .data-table th, .data-table td { border: 1px solid #94a3b8; padding: 6px 8px; font-size: 8.5pt; text-align: left; vertical-align: top; }
+          .data-table th { background-color: #f1f5f9; font-weight: bold; color: #0f766e; }
+          .section-title { background-color: #0f766e; color: white; padding: 6px 10px; font-weight: bold; font-size: 10pt; margin-top: 15px; margin-bottom: 8px; page-break-after: avoid; border-radius: 3px; }
+          .box { border: 1px solid #cbd5e1; padding: 8px 12px; background-color: #f8fafc; margin-bottom: 10px; border-radius: 4px; font-size: 9pt; }
+          .page-break { page-break-before: always; }
+          .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+          .stat-card { border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 4px; background: #f8fafc; font-size: 8.5pt; }
+          .stat-card strong { display: block; font-size: 11pt; color: #0f766e; margin-top: 2px; }
+          .badge { display: inline-block; padding: 2px 6px; font-size: 7.5pt; font-weight: bold; border-radius: 4px; border: 1px solid; }
+          .badge-as { background-color: #f3e8ff; color: #6b21a8; border-color: #d8b4fe; }
+          .badge-for { background-color: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+          .badge-of { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+          .badge-mahir { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+          .badge-cakap { background-color: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+          .badge-cukup { background-color: #fef3c7; color: #92400e; border-color: #fde68a; }
+          .badge-bimbingan { background-color: #ffe4e6; color: #9f1239; border-color: #fecdd3; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">${currentRubrik.judulRubrik}</div>
+          <div class="subtitle">${currentRubrik.subJudul || 'Pedoman Penilaian Otentik (Assessment as, for, & of Learning)'}</div>
+          <div style="font-weight: bold; font-size: 10pt; margin-top: 4px;">${identitas.namaSekolah || ''}</div>
+        </div>
+
+        <table class="meta-table">
+          <tr>
+            <td width="50%"><strong>Mata Pelajaran:</strong> ${currentRubrik.mataPelajaran || identitas.mataPelajaran}</td>
+            <td width="50%"><strong>Kelas / Fase:</strong> ${currentRubrik.faseKelas || identitas.faseKelas}</td>
+          </tr>
+          <tr>
+            <td><strong>Topik Pembelajaran:</strong> ${currentRubrik.lingkupMateri || tujuanDanDpl.lingkupMateri}</td>
+            <td><strong>Semester / TA:</strong> ${identitas.semesterTahun || ''}</td>
+          </tr>
+        </table>
+
+        <div class="box">
+          <strong>PETUNJUK PENGGUNAAN RUBRIK:</strong>
+          <ul style="margin-top: 4px; margin-bottom: 0; padding-left: 20px;">
+            ${(currentRubrik.petunjukPenggunaan || []).map(p => `<li>${p}</li>`).join('')}
+          </ul>
+        </div>
+
+        <!-- I. ASSESSMENT AS LEARNING -->
+        <div class="section-title">I. ${currentRubrik.assessmentAsLearning.kategori} - ${currentRubrik.assessmentAsLearning.subJudul}</div>
+        <table class="meta-table" style="margin-bottom: 8px;">
+          <tr>
+            <td width="50%"><strong>Tujuan Fokus:</strong> ${currentRubrik.assessmentAsLearning.tujuanFokus}</td>
+            <td width="50%"><strong>Teknik / Instrumen:</strong> ${currentRubrik.assessmentAsLearning.teknikInstrumen}</td>
+          </tr>
+        </table>
+        <table class="data-table">
+          <thead>
+            <tr style="background-color: #f1f5f9;">
+              <th style="width: 20%;">Aspek Penilaian</th>
+              <th style="width: 20%; background-color: #ffe4e6; color: #9f1239;">Perlu Bimbingan (Skor 1)</th>
+              <th style="width: 20%; background-color: #fef3c7; color: #92400e;">Cukup (Skor 2)</th>
+              <th style="width: 20%; background-color: #d1fae5; color: #065f46;">Layak (Skor 3)</th>
+              <th style="width: 20%; background-color: #dbeafe; color: #1e40af;">Mahir (Skor 4)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${currentRubrik.assessmentAsLearning.tabelRubrik.map(item => `
+              <tr>
+                <td><strong>${item.aspekPenilaian}</strong></td>
+                <td>${item.perluBimbingan}</td>
+                <td>${item.cukup}</td>
+                <td>${item.layak}</td>
+                <td>${item.mahir}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <p style="font-size: 8.5pt; font-style: italic; margin-top: -5px; color: #475569;"><strong>Pedoman Skor:</strong> ${currentRubrik.assessmentAsLearning.pedomanPenskoran}</p>
+
+        <div class="page-break"></div>
+
+        <!-- II. ASSESSMENT FOR LEARNING -->
+        <div class="section-title" style="margin-top: 0;">II. ${currentRubrik.assessmentForLearning.kategori} - ${currentRubrik.assessmentForLearning.subJudul}</div>
+        <table class="meta-table" style="margin-bottom: 8px;">
+          <tr>
+            <td width="50%"><strong>Tujuan Fokus:</strong> ${currentRubrik.assessmentForLearning.tujuanFokus}</td>
+            <td width="50%"><strong>Teknik / Instrumen:</strong> ${currentRubrik.assessmentForLearning.teknikInstrumen}</td>
+          </tr>
+        </table>
+        <table class="data-table">
+          <thead>
+            <tr style="background-color: #f1f5f9;">
+              <th style="width: 20%;">Aspek Penilaian</th>
+              <th style="width: 20%; background-color: #ffe4e6; color: #9f1239;">Perlu Bimbingan (Skor 1)</th>
+              <th style="width: 20%; background-color: #fef3c7; color: #92400e;">Cukup (Skor 2)</th>
+              <th style="width: 20%; background-color: #d1fae5; color: #065f46;">Layak (Skor 3)</th>
+              <th style="width: 20%; background-color: #dbeafe; color: #1e40af;">Mahir (Skor 4)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${currentRubrik.assessmentForLearning.tabelRubrik.map(item => `
+              <tr>
+                <td><strong>${item.aspekPenilaian}</strong></td>
+                <td>${item.perluBimbingan}</td>
+                <td>${item.cukup}</td>
+                <td>${item.layak}</td>
+                <td>${item.mahir}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <p style="font-size: 8.5pt; font-style: italic; margin-top: -5px; color: #475569;"><strong>Pedoman Skor:</strong> ${currentRubrik.assessmentForLearning.pedomanPenskoran}</p>
+
+        <!-- III. ASSESSMENT OF LEARNING -->
+        <div class="section-title">III. ${currentRubrik.assessmentOfLearning.kategori} - ${currentRubrik.assessmentOfLearning.subJudul}</div>
+        <table class="meta-table" style="margin-bottom: 8px;">
+          <tr>
+            <td width="50%"><strong>Tujuan Fokus:</strong> ${currentRubrik.assessmentOfLearning.tujuanFokus}</td>
+            <td width="50%"><strong>Teknik / Instrumen:</strong> ${currentRubrik.assessmentOfLearning.teknikInstrumen}</td>
+          </tr>
+        </table>
+        <table class="data-table">
+          <thead>
+            <tr style="background-color: #f1f5f9;">
+              <th style="width: 20%;">Aspek Penilaian</th>
+              <th style="width: 20%; background-color: #ffe4e6; color: #9f1239;">Perlu Bimbingan (Skor 1)</th>
+              <th style="width: 20%; background-color: #fef3c7; color: #92400e;">Cukup (Skor 2)</th>
+              <th style="width: 20%; background-color: #d1fae5; color: #065f46;">Layak (Skor 3)</th>
+              <th style="width: 20%; background-color: #dbeafe; color: #1e40af;">Mahir (Skor 4)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${currentRubrik.assessmentOfLearning.tabelRubrik.map(item => `
+              <tr>
+                <td><strong>${item.aspekPenilaian}</strong></td>
+                <td>${item.perluBimbingan}</td>
+                <td>${item.cukup}</td>
+                <td>${item.layak}</td>
+                <td>${item.mahir}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <p style="font-size: 8.5pt; font-style: italic; margin-top: -5px; color: #475569;"><strong>Pedoman Skor:</strong> ${currentRubrik.assessmentOfLearning.pedomanPenskoran}</p>
+
+        <div class="page-break"></div>
+
+        <!-- IV. LEMBAR REKAPITULASI NILAI SISWA -->
+        <div class="section-title" style="margin-top: 0;">IV. LEMBAR PENILAIAN & REKAPITULASI NILAI SISWA</div>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            Total Siswa:
+            <strong>${totalSiswa} Siswa</strong>
+          </div>
+          <div class="stat-card">
+            Rata-rata Nilai Kelas:
+            <strong>${classAverageNilai} / 100</strong>
+          </div>
+          <div class="stat-card">
+            Total Max Skor:
+            <strong>${totalMaxSkor} Poin</strong>
+          </div>
+          <div class="stat-card">
+            Tanggal Penilaian:
+            <strong>${lembarData.tanggalPenilaian || new Date().toISOString().split('T')[0]}</strong>
+          </div>
+        </div>
+
+        <p><strong>Catatan Umum Pelaksanaan / Kelas:</strong> ${lembarData.catatanUmumKelas || '-'}</p>
+
+        <table class="data-table" style="width: 100%;">
+          <thead>
+            <tr style="background-color: #0f172a; color: white;">
+              <th style="width: 3%; text-align: center; background-color: #0f172a; color: white;">No</th>
+              <th style="width: 17%; background-color: #0f172a; color: white;">Nama Siswa</th>
+              
+              <!-- As Learning Column Headers -->
+              ${currentRubrik.assessmentAsLearning.tabelRubrik.map((_, i) => `
+                <th style="text-align: center; background-color: #581c87; color: white; width: 4%;" title="${currentRubrik.assessmentAsLearning.tabelRubrik[i].aspekPenilaian}">A${i+1}</th>
+              `).join('')}
+
+              <!-- For Learning Column Headers -->
+              ${currentRubrik.assessmentForLearning.tabelRubrik.map((_, i) => `
+                <th style="text-align: center; background-color: #0369a1; color: white; width: 4%;" title="${currentRubrik.assessmentForLearning.tabelRubrik[i].aspekPenilaian}">F${i+1}</th>
+              `).join('')}
+
+              <!-- Of Learning Column Headers -->
+              ${currentRubrik.assessmentOfLearning.tabelRubrik.map((_, i) => `
+                <th style="text-align: center; background-color: #047857; color: white; width: 4%;" title="${currentRubrik.assessmentOfLearning.tabelRubrik[i].aspekPenilaian}">O${i+1}</th>
+              `).join('')}
+
+              <th style="text-align: center; background-color: #b45309; color: white; width: 8%;">Total Skor</th>
+              <th style="text-align: center; background-color: #15803d; color: white; width: 8%;">Nilai (100)</th>
+              <th style="text-align: center; background-color: #334155; color: white; width: 10%;">Predikat</th>
+              <th style="background-color: #1e293b; color: white; width: 20%;">Catatan Guru</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lembarData.daftarSiswa.map((siswa, rowIdx) => {
+              const skorAsArr = siswa.skorAs || Array(numAspekAs).fill(3);
+              const skorForArr = siswa.skorFor || Array(numAspekFor).fill(3);
+              const skorOfArr = siswa.skorOf || Array(numAspekOf).fill(3);
+
+              const totAs = skorAsArr.reduce((a, b) => a + (Number(b) || 0), 0);
+              const totFor = skorForArr.reduce((a, b) => a + (Number(b) || 0), 0);
+              const totOf = skorOfArr.reduce((a, b) => a + (Number(b) || 0), 0);
+              
+              const grandTotal = totAs + totFor + totOf;
+              const finalNilai = totalMaxSkor > 0 ? Math.round((grandTotal / totalMaxSkor) * 100) : 0;
+              const pred = getPredikatInfo(finalNilai);
+
+              return `
+                <tr>
+                  <td style="text-align: center; font-weight: bold; color: #475569;">${rowIdx + 1}</td>
+                  <td>
+                    <strong style="color: #0f172a; font-size: 8.5pt;">${siswa.namaSiswa}</strong>
+                    ${siswa.nisn ? `<br/><span style="font-size: 7.2pt; font-family: monospace; color: #64748b;">NISN: ${siswa.nisn}</span>` : ''}
+                  </td>
+                  
+                  <!-- Skor As -->
+                  ${skorAsArr.map(val => `<td style="text-align: center; font-weight: bold; background-color: #faf5ff;">${val}</td>`).join('')}
+                  
+                  <!-- Skor For -->
+                  ${skorForArr.map(val => `<td style="text-align: center; font-weight: bold; background-color: #f0f9ff;">${val}</td>`).join('')}
+                  
+                  <!-- Skor Of -->
+                  ${skorOfArr.map(val => `<td style="text-align: center; font-weight: bold; background-color: #ecfdf5;">${val}</td>`).join('')}
+                  
+                  <td style="text-align: center; font-weight: bold; background-color: #fffbeb;">${grandTotal} <span style="font-size: 7pt; color: #92400e; font-weight: normal;">/ ${totalMaxSkor}</span></td>
+                  <td style="text-align: center; font-weight: 900; font-size: 9.5pt; color: #065f46; background-color: #f0fdf4;">${finalNilai}</td>
+                  <td style="text-align: center;">
+                    <span class="badge ${finalNilai >= 85 ? 'badge-mahir' : finalNilai >= 75 ? 'badge-cakap' : finalNilai >= 65 ? 'badge-cukup' : 'badge-bimbingan'}">
+                      ${pred.label.split(' ')[0]}
+                    </span>
+                  </td>
+                  <td style="font-size: 7.5pt; color: #334155;">${siswa.catatanGuru || '-'}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+
+        <!-- SIGNATURE SECTION -->
+        <table style="width: 100%; margin-top: 40px; page-break-inside: avoid; border: none;">
+          <tr style="border: none;">
+            <td width="50%" style="border: none; padding: 0;">
+              <p style="margin: 0; font-size: 9pt; color: #475569;">Mengetahui,</p>
+              <p style="margin: 0; font-weight: bold; font-size: 9.5pt; color: #1e293b; margin-bottom: 50px;">Kepala Sekolah</p>
+              <p style="margin: 0; font-weight: bold; text-decoration: underline; color: #1e293b;">${identitas.namaKepsek || '_________________________'}</p>
+              <p style="margin: 0; font-size: 8.5pt; color: #475569;">NIP. ${identitas.nipKepsek || '...........................................'}</p>
+            </td>
+            <td width="50%" style="border: none; padding: 0; text-align: right;">
+              <p style="margin: 0; font-size: 9pt; color: #475569;">${identitas.kotaKabupaten || 'Indonesia'}, ${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
+              <p style="margin: 0; font-weight: bold; font-size: 9.5pt; color: #1e293b; margin-bottom: 50px;">Guru Kelas</p>
+              <p style="margin: 0; font-weight: bold; text-decoration: underline; color: #1e293b;">${identitas.namaGuru || '_________________________'}</p>
+              <p style="margin: 0; font-size: 8.5pt; color: #475569;">NIP. ${identitas.nipGuru || '...........................................'}</p>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    // Strategy 1: Open popup window directly
+    try {
+      const printWin = window.open('', '_blank', 'width=1100,height=850');
+      if (printWin) {
+        printWin.document.open();
+        printWin.document.write(htmlContent);
+        printWin.document.close();
+        printWin.focus();
+        setTimeout(() => {
+          try {
+            printWin.print();
+          } catch (err) {
+            console.warn('Popup print command error:', err);
+          }
+        }, 350);
+        return;
+      }
+    } catch (e) {
+      console.warn('Window open blocked, falling back to Blob URL or iframe:', e);
+    }
+
+    // Strategy 2: Blob URL window opening
+    try {
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const printWin = window.open(url, '_blank');
+      if (printWin) {
+        printWin.onload = () => {
+          printWin.focus();
+          printWin.print();
+        };
+        setTimeout(() => {
+          try {
+            printWin.focus();
+            printWin.print();
+          } catch (e) {}
+        }, 500);
+        return;
+      }
+    } catch (e) {
+      console.warn('Blob print error:', e);
+    }
+
+    // Strategy 3: Hidden iframe in body
+    try {
+      let existingIframe = document.getElementById('rubrik-print-frame') as HTMLIFrameElement | null;
+      if (existingIframe && existingIframe.parentNode) {
+        existingIframe.parentNode.removeChild(existingIframe);
+      }
+
+      const printIframe = document.createElement('iframe');
+      printIframe.id = 'rubrik-print-frame';
+      printIframe.style.position = 'fixed';
+      printIframe.style.right = '0';
+      printIframe.style.bottom = '0';
+      printIframe.style.width = '1px';
+      printIframe.style.height = '1px';
+      printIframe.style.opacity = '0.01';
+      printIframe.style.pointerEvents = 'none';
+      document.body.appendChild(printIframe);
+
+      const frameDoc = printIframe.contentWindow?.document || printIframe.contentDocument;
+      if (frameDoc) {
+        frameDoc.open();
+        frameDoc.write(htmlContent);
+        frameDoc.close();
+        setTimeout(() => {
+          printIframe.contentWindow?.focus();
+          printIframe.contentWindow?.print();
+        }, 400);
+      }
+    } catch (err) {
+      console.error('All print strategies failed, falling back to window.print():', err);
+      window.print();
+    }
   };
 
   const handleTriggerGenerate = async () => {
