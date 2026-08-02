@@ -1335,6 +1335,25 @@ app.post(["/api/licensing/status", "/licensing/status"], (req, res) => {
   }
 });
 
+// Register or update trial user from client
+app.post(["/api/licensing/trial/register", "/licensing/trial/register"], (req, res) => {
+  try {
+    const { id, remaining_trials, created_at, last_active, ip } = req.body || {};
+    if (!id) {
+      return res.status(400).json({ success: false, error: "Missing trial user id" });
+    }
+    const user = LicensingDB.registerOrUpdateTrialUser(id, {
+      remaining_trials: remaining_trials !== undefined ? remaining_trials : 5,
+      created_at: created_at || new Date().toISOString(),
+      last_active: last_active || new Date().toISOString(),
+      ip: ip || "127.0.0.1"
+    });
+    res.json({ success: true, user });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Admin Authentication Helper
 const checkAdminAuth = (givenPw: any): boolean => {
   const expected = (process.env.ADMIN_PASSWORD || "sekarmelati").trim().toLowerCase();

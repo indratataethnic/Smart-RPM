@@ -254,6 +254,30 @@ export const LicensingDB = {
     return user;
   },
 
+  registerOrUpdateTrialUser(id: string, data: Partial<TrialUser>): TrialUser {
+    const db = loadDB();
+    let user = db.trial_users.find((u) => u.id === id);
+    if (!user) {
+      user = {
+        id,
+        remaining_trials: data.remaining_trials !== undefined ? data.remaining_trials : 5,
+        created_at: data.created_at || new Date().toISOString(),
+        last_active: data.last_active || new Date().toISOString(),
+        ip: data.ip || "127.0.0.1",
+      };
+      db.trial_users.push(user);
+      saveDB(db);
+    } else {
+      if (data.remaining_trials !== undefined) {
+        user.remaining_trials = data.remaining_trials;
+      }
+      user.last_active = data.last_active || new Date().toISOString();
+      if (data.ip) user.ip = data.ip;
+      saveDB(db);
+    }
+    return user;
+  },
+
   decrementTrial(id: string): boolean {
     const db = loadDB();
     const idx = db.trial_users.findIndex((u) => u.id === id);

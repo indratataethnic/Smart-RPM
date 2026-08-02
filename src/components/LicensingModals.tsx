@@ -201,6 +201,14 @@ export function getOrRegisterLocalTrialUser(fingerprint: string): number {
   }
   
   localStorage.setItem('rpm_trial_count', String(existing.remaining_trials));
+
+  // Sync to server backend
+  fetch('/api/licensing/trial/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(existing)
+  }).catch(() => {});
+
   return existing.remaining_trials;
 }
 
@@ -230,6 +238,14 @@ export function decrementLocalTrial(fingerprint: string): number {
   localStorage.setItem('rpm_trial_count', String(existing.remaining_trials));
   
   addLocalLog('TRIAL_USED', `Trial digunakan (${fingerprint.substring(0, 14)}...). Sisa kuota gratis: ${existing.remaining_trials} kali`);
+
+  // Sync to server backend
+  fetch('/api/licensing/trial/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(existing)
+  }).catch(() => {});
+
   return existing.remaining_trials;
 }
 
@@ -672,12 +688,26 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
       if (res.ok && data && data.success) {
         setStats(data.stats);
         setCodes(data.codes);
-        setTrialUsers(data.trialUsers);
+        
+        // Merge server trial users with local trial users
+        const localTrials = getLocalTrialUsers();
+        const mergedTrialsMap = new Map();
+        [...(data.trialUsers || []), ...localTrials].forEach(u => {
+          if (u && u.id) {
+            const existing = mergedTrialsMap.get(u.id);
+            if (!existing || new Date(u.last_active || 0) > new Date(existing.last_active || 0)) {
+              mergedTrialsMap.set(u.id, u);
+            }
+          }
+        });
+        const mergedTrials = Array.from(mergedTrialsMap.values());
+
+        setTrialUsers(mergedTrials);
         setLogs(data.logs);
         serverSuccess = true;
 
         saveLocalCodes(data.codes);
-        saveLocalTrialUsers(data.trialUsers);
+        saveLocalTrialUsers(mergedTrials);
       }
     } catch (err) {
       console.warn('Unable to fetch admin dashboard from server, switching to local database:', err);
