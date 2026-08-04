@@ -46,38 +46,67 @@ const generateLocalCpTpFallback = (cpText: string, subject: string): { tp: strin
     };
   }
 
-  const cleanText = cpText.replace(/[\n\r]/g, " ").replace(/\s+/g, " ").trim();
-  
-  let extractedMateri = "";
-  const patterns = [
-    /(?:tentang|materi|konsep|topik|memahami|menganalisis)\s+([A-Za-z0-9\s]{4,35})(?:\s+dan\s+([A-Za-z0-9\s]{4,35}))?(?:\.|\,|$|\s+sesuai|\s+pada)/i,
-    /([A-Za-z0-9\s]{4,30})\s+(?:melalui|dengan|dalam|pada|untuk)/i
+  let dynamicText = cpText.trim();
+  let matchesPattern = true;
+
+  const patternsToRemove = [
+    /^(?:pada\s+)?akhir\s+fase\s+[a-f](?:\s*,\s*|\s+)/i,
+    /^peserta\s+didik\s+/i,
+    /^siswa\s+/i,
+    /^mampu\s+/i,
+    /^dapat\s+/i,
+    /^bisa\s+/i,
+    /^memahami\s+/i,
+    /^mengidentifikasi\s+/i,
+    /^mendemonstrasikan\s+/i,
+    /^mendeskripsikan\s+/i,
+    /^menganalisis\s+/i,
+    /^menjelaskan\s+/i,
+    /^menerapkan\s+/i,
+    /^mempraktikkan\s+/i,
+    /^mengeksplorasi\s+/i,
+    /^tentang\s+/i,
+    /^materi\s+/i,
+    /^mengenal\s+/i,
+    /^mengetahui\s+/i,
+    /^belajar\s+/i,
+    /^konsep\s+/i,
+    /^dan\s+/i,
+    /^serta\s+/i,
   ];
 
-  for (const pattern of patterns) {
-    const match = cleanText.match(pattern);
-    if (match && match[1]) {
-      let candidate = match[1].trim();
-      if (candidate.toLowerCase().length > 3 && !["peserta", "didik", "siswa", "yang", "pada"].includes(candidate.toLowerCase())) {
-        extractedMateri = candidate;
-        break;
-      }
+  while (matchesPattern) {
+    const beforeLength = dynamicText.length;
+    for (const pattern of patternsToRemove) {
+      dynamicText = dynamicText.replace(pattern, "").trim();
+    }
+    if (dynamicText.length === beforeLength) {
+      matchesPattern = false;
     }
   }
 
-  if (!extractedMateri) {
-    const words = cleanText.split(" ").filter(w => w.length > 3);
-    if (words.length > 2) {
-      extractedMateri = words.slice(0, 3).join(" ");
-    } else {
-      extractedMateri = subject || "Materi Inti";
-    }
+  let extractedMateri = dynamicText.trim();
+
+  if (extractedMateri.length > 3) {
+    extractedMateri = extractedMateri
+      .toLowerCase()
+      .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
+      .trim();
+  } else {
+    extractedMateri = subject || "Materi Utama";
   }
 
-  extractedMateri = extractedMateri
-    .toLowerCase()
-    .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
-    .trim();
+  // Double check for leftover common words
+  const lowerExtracted = extractedMateri.toLowerCase();
+  if (
+    lowerExtracted === "peserta didik" ||
+    lowerExtracted === "siswa" ||
+    lowerExtracted === "mampu" ||
+    lowerExtracted === "dapat" ||
+    lowerExtracted.length <= 3
+  ) {
+    extractedMateri = subject || "Materi Utama";
+  }
 
   const tp = `1. Peserta didik dapat memahami dan menjelaskan konsep utama tentang ${extractedMateri} secara kritis.
 2. Peserta didik dapat mengaplikasikan pemahaman ${extractedMateri} untuk menyelesaikan masalah kontekstual secara kolaboratif.
