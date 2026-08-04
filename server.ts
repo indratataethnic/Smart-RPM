@@ -90,6 +90,82 @@ function getGeminiClient() {
   });
 }
 
+// Helper to clean JSON string from markdown blocks and parse it safely
+function cleanAndParseJson(text: string): any {
+  if (!text) return {};
+  let cleaned = text.trim();
+  
+  // Remove markdown code blocks if present
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/, "").trim();
+  }
+  
+  try {
+    return JSON.parse(cleaned);
+  } catch (err: any) {
+    // Try to extract JSON structure
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch (nestedErr: any) {
+        throw new Error(`Gagal memparsing JSON dari respon AI: ${nestedErr.message || nestedErr}`);
+      }
+    }
+    throw err;
+  }
+}
+
+// Smart fallback analyzer for CP and TP when Gemini API fails
+function extractMateriAndTpFromCp(cpText: string, subject: string): { tp: string; lingkupMateri: string } {
+  if (!cpText || !cpText.trim()) {
+    const s = subject || "Mata Pelajaran";
+    return {
+      tp: `1. Peserta didik dapat menjelaskan konsep dasar ${s} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${s} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${s} secara kritis dan kolaboratif.`,
+      lingkupMateri: s
+    };
+  }
+
+  const cleanText = cpText.replace(/[\n\r]/g, " ").replace(/\s+/g, " ").trim();
+  
+  let extractedMateri = "";
+  const patterns = [
+    /(?:tentang|materi|konsep|topik|memahami|menganalisis)\s+([A-Za-z0-9\s]{4,35})(?:\s+dan\s+([A-Za-z0-9\s]{4,35}))?(?:\.|\,|$|\s+sesuai|\s+pada)/i,
+    /([A-Za-z0-9\s]{4,30})\s+(?:melalui|dengan|dalam|pada|untuk)/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = cleanText.match(pattern);
+    if (match && match[1]) {
+      let candidate = match[1].trim();
+      if (candidate.toLowerCase().length > 3 && !["peserta", "didik", "siswa", "yang", "pada"].includes(candidate.toLowerCase())) {
+        extractedMateri = candidate;
+        break;
+      }
+    }
+  }
+
+  if (!extractedMateri) {
+    const words = cleanText.split(" ").filter(w => w.length > 3);
+    if (words.length > 2) {
+      extractedMateri = words.slice(0, 3).join(" ");
+    } else {
+      extractedMateri = subject || "Materi Inti";
+    }
+  }
+
+  extractedMateri = extractedMateri
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
+    .trim();
+
+  const tp = `1. Peserta didik dapat menjelaskan dan memahami konsep utama tentang ${extractedMateri} secara mendalam.
+2. Peserta didik dapat mengaplikasikan pemahaman mengenai ${extractedMateri} dalam situasi nyata sehari-hari.
+3. Peserta didik dapat merefleksikan proses pembelajaran ${extractedMateri} secara kritis dan kolaboratif.`;
+
+  return { tp, lingkupMateri: extractedMateri };
+}
+
 // Helper for Gemini API calls with exponential backoff & model fallback
 async function callGeminiWithRetry(
   ai: GoogleGenAI,
@@ -352,16 +428,16 @@ Keluarkan dalam format JSON valid (maksimal 3 items di setiap array):
       });
 
       const text = response.text || "{}";
-      const parsed = JSON.parse(text);
+      const parsed = cleanAndParseJson(text);
       return res.json({ success: true, data: parsed });
     } catch (apiError: any) {
       console.warn("Gemini API fallback triggered for /api/recommend-fields:", apiError?.message);
       if (fieldType === "cp_tp") {
-        const defaultMateri = lingkupMateri || `${mataPelajaran || 'Topik Pembelajaran'}`;
+        const fallbackCpTpResult = extractMateriAndTpFromCp(capaianPembelajaran, mataPelajaran);
         const fallbackCpTp = {
-          cp: `Peserta didik mampu memahami dan menganalisis konsep ${defaultMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`,
-          tp: `1. Peserta didik dapat menjelaskan konsep dasar ${defaultMateri} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${defaultMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${defaultMateri} secara kritis dan kolaboratif.`,
-          lingkupMateri: defaultMateri
+          cp: capaianPembelajaran || `Peserta didik mampu memahami dan menganalisis konsep ${fallbackCpTpResult.lingkupMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`,
+          tp: fallbackCpTpResult.tp,
+          lingkupMateri: fallbackCpTpResult.lingkupMateri
         };
         return res.json({ success: true, data: fallbackCpTp, isFallback: true });
       } else {
@@ -380,14 +456,14 @@ Keluarkan dalam format JSON valid (maksimal 3 items di setiap array):
     }
   } catch (error: any) {
     console.error("Error in /api/recommend-fields:", error);
-    const defaultMateri = req.body?.lingkupMateri || `${req.body?.mataPelajaran || 'Topik Pembelajaran'}`;
     if (req.body?.fieldType === "cp_tp") {
+      const fallbackCpTpResult = extractMateriAndTpFromCp(req.body?.capaianPembelajaran, req.body?.mataPelajaran);
       return res.json({
         success: true,
         data: {
-          cp: `Peserta didik mampu memahami dan menganalisis konsep ${defaultMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`,
-          tp: `1. Peserta didik dapat menjelaskan konsep dasar ${defaultMateri} secara tepat dan mendalam.\n2. Peserta didik dapat mengaplikasikan pemahaman ${defaultMateri} dalam situasi kontekstual sehari-hari.\n3. Peserta didik dapat merefleksikan dan menyimpulkan proses pembelajaran ${defaultMateri} secara kritis dan kolaboratif.`,
-          lingkupMateri: defaultMateri
+          cp: req.body?.capaianPembelajaran || `Peserta didik mampu memahami dan menganalisis konsep ${fallbackCpTpResult.lingkupMateri}, mengidentifikasi keterkaitan antar elemen, serta mengaplikasikan pemahaman tersebut dalam menyelesaikan masalah kontekstual sesuai standar Capaian Pembelajaran BSKAP terbaru Kurikulum Merdeka.`,
+          tp: fallbackCpTpResult.tp,
+          lingkupMateri: fallbackCpTpResult.lingkupMateri
         },
         isFallback: true
       });
@@ -984,7 +1060,7 @@ Keluarkan hasil akhir HANYA dalam JSON valid dengan struktur persis sama dengan 
     });
 
     const text = response.text || "{}";
-    const updatedPlan = JSON.parse(text);
+    const updatedPlan = cleanAndParseJson(text);
     res.json({ success: true, lessonPlan: updatedPlan });
   } catch (error: any) {
     console.error("Error in /api/refine-lesson-plan:", error);
@@ -1150,7 +1226,7 @@ Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
     });
 
     const text = response.text || "{}";
-    const lkpdData = JSON.parse(text);
+    const lkpdData = cleanAndParseJson(text);
     res.json({ success: true, lkpd: lkpdData });
   } catch (error: any) {
     console.error("Error in /api/generate-lkpd:", error);
@@ -1417,7 +1493,7 @@ Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
     });
 
     const text = response.text || "{}";
-    const rubrikData = JSON.parse(text);
+    const rubrikData = cleanAndParseJson(text);
     res.json({ success: true, rubrik: rubrikData });
   } catch (error: any) {
     console.error("Error in /api/generate-rubrik:", error);
