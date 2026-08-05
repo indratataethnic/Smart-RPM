@@ -77,7 +77,7 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
           {/* Quick Subject Chips */}
           <div className="flex flex-wrap gap-1.5 mt-1">
             <span className="text-[11px] text-slate-400 font-medium self-center mr-1">Rekomendasi Cepat:</span>
-            {MATA_PELAJARAN_POPULER.slice(0, 8).map((subject) => (
+            {MATA_PELAJARAN_POPULER.slice(0, 11).map((subject) => (
               <button
                 key={subject}
                 type="button"
