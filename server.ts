@@ -207,17 +207,17 @@ async function callGeminiWithRetry(
   const modelsToTry = [
     params.preferredModel || "gemini-3.6-flash",
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-2.5-flash",
     "gemini-flash-latest",
-    "gemini-3.1-flash-lite"
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-3.1-pro-preview"
   ];
   // Filter unique
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
   let lastError: any = null;
 
   for (const model of uniqueModels) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const response = await ai.models.generateContent({
           model,
@@ -250,8 +250,12 @@ async function callGeminiWithRetry(
           errStr.includes("high demand") ||
           errStr.includes("overloaded");
 
-        if (isTransient && attempt === 1) {
-          await new Promise((res) => setTimeout(res, 500));
+        if (isTransient) {
+          if (attempt < 3) {
+            await new Promise((res) => setTimeout(res, attempt * 800));
+          } else {
+            break;
+          }
         } else {
           break;
         }
@@ -274,16 +278,16 @@ async function* streamGeminiWithRetry(
   const modelsToTry = [
     params.preferredModel || "gemini-3.6-flash",
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-2.5-flash",
     "gemini-flash-latest",
-    "gemini-3.1-flash-lite"
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-3.1-pro-preview"
   ];
   const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
   let lastError: any = null;
 
   for (const model of uniqueModels) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const responseStream = await ai.models.generateContentStream({
           model,
@@ -320,8 +324,12 @@ async function* streamGeminiWithRetry(
           errStr.includes("high demand") ||
           errStr.includes("overloaded");
 
-        if (isTransient && attempt === 1) {
-          await new Promise((res) => setTimeout(res, 500));
+        if (isTransient) {
+          if (attempt < 3) {
+            await new Promise((res) => setTimeout(res, attempt * 800));
+          } else {
+            break;
+          }
         } else {
           break;
         }
@@ -566,15 +574,29 @@ function createFallbackLessonPlan(formData: any) {
       pendahuluan: {
         alokasiWaktu: "15 Menit",
         aktivitas: [
-          "Guru membuka pembelajaran dengan salam, berdoa bersama, dan menyapa siswa.",
-          "Guru menyampaikan tujuan pembelajaran dan memberikan motivasi awal.",
-          "Guru melakukan apersepsi dan tes diagnostik singkat terkait topik " + lm + "."
+          "1. Orientasi",
+          "Guru dan murid berdoa",
+          "Murid disiapkan secara fisik maupun psikis untuk mengikuti pembelajaran.",
+          "Guru menyapa sekaligus memberikan dorongan kepada murid di kelas agar bersemangat pada saat mengikuti pelajaran melalui apersepsi yang dapat membangkitkan semangat belajar murid.",
+          "Guru mengecek kehadiran murid di kelas dan memberikan penguatan terhadap aktivitas pembuka tersebut dengan mengaitkannya dengan penanaman karakter murid.",
+          "Guru memulai dengan menayangkan video singkat atau audio tentang " + lm + ".",
+          "Guru mengajukan pertanyaan pemantik:",
+          "Contoh 1: Menurut kalian, mengapa " + lm + " penting dalam kehidupan kita sehari-hari?",
+          "Contoh 2: Pernahkah kalian menemukan fenomena " + lm + " di sekitar rumah atau sekolah?",
+          "Contoh 3: Apa yang terjadi apabila kita belum memahami " + lm + " dengan baik?",
+          "Murid diminta berbagi pengalaman mereka terkait " + lm + ".",
+          "2. Merumuskan Masalah",
+          "Guru menyampaikan tujuan pembelajaran: " + tp,
+          "Guru mengarahkan murid untuk berdiskusi mengenai:",
+          "Contoh 1: Konsep dasar dan aplikasi " + lm + " dalam kehidupan nyata",
+          "Contoh 2: Tantangan utama dan fenomena unik seputar " + lm,
+          "Contoh 3: Solusi terbaik untuk memecahkan masalah kontekstual " + lm
         ]
       },
       kegiatanInti: [
         {
           tahapLabel: "MEMAHAMI",
-          subJudul: "Memahami Konsep & Eksplorasi Makna (Understanding)",
+          subJudul: "3. Memahami Konsep & Eksplorasi Makna (Understanding)",
           prinsipMendalamLabel: "Berpusat pada Murid & Meaningful Learning",
           alokasiWaktu: "25 Menit",
           aktivitasGuru: [
@@ -591,13 +613,13 @@ function createFallbackLessonPlan(formData: any) {
         },
         {
           tahapLabel: "MENGAPLIKASI",
-          subJudul: "Mengaplikasikan Konsep pada Konteks Nyata (Application)",
+          subJudul: "4. Mengaplikasikan Konsep pada Konteks Nyata (Application)",
           prinsipMendalamLabel: "Autentik, Kolaboratif & Problem Solving",
           alokasiWaktu: "35 Menit",
           aktivitasGuru: [
-            "Guru membagikan Lembar Kerja Peserta Didik (LKPD) berbasis studi kasus/masalah nyata.",
+            "Guru membagikan Lembar Kerja Murid (LKPD) berbasis studi kasus/masalah nyata.",
             "Guru memandu proses kerja kelompok dan memberikan arahan scaffolding.",
-            "Guru mengobservasi kolaborasi dan sikap bernalar kritis antar siswa."
+            "Guru mengobservasi kolaborasi dan sikap bernalar kritis antar murid."
           ],
           aktivitasMurid: [
             "Murid bekerja sama menyelesaikan tugas atau masalah dalam LKPD.",
@@ -608,7 +630,7 @@ function createFallbackLessonPlan(formData: any) {
         },
         {
           tahapLabel: "MEREFLEKSI",
-          subJudul: "Merefleksikan Pembelajaran & Evaluasi Diri (Reflection)",
+          subJudul: "5. Merefleksikan Pembelajaran & Evaluasi Diri (Reflection)",
           prinsipMendalamLabel: "Metakognisi, Feedback Loop & Self Assessment",
           alokasiWaktu: "15 Menit",
           aktivitasGuru: [
@@ -625,11 +647,12 @@ function createFallbackLessonPlan(formData: any) {
         }
       ],
       penutup: {
-        alokasiWaktu: "10 Menit",
+        alokasiWaktu: "15 Menit",
         aktivitas: [
-          "Guru membimbing murid menyimpulkan seluruh rangkaian aktivitas " + lm + ".",
-          "Guru memberikan umpan balik apresiatif dan penugasan tindak lanjut.",
-          "Pembelajaran ditutup dengan doa bersama dan salam penutup."
+          "6. Tindak Lanjut",
+          "Guru memberikan umpan balik apresiatif, penguatan karakter, serta penugasan tindak lanjut.",
+          "Catatan untuk Pertemuan Berikutnya:",
+          "Jika waktu tidak mencukupi, eksplorasi lebih mendalam bisa dilanjutkan di pertemuan berikutnya dengan kegiatan seperti: Contoh 1: Presentasi lanjutan & pameran karya kelompok " + lm + ", Contoh 2: Pendalaman materi kontekstual dan asesmen harian."
         ]
       }
     },
@@ -794,7 +817,45 @@ PERSYARATAN WAJIB DOKUMEN RENCANA PEMBELAJARAN MENDALAM:
    - Assessment for Learning (Asesmen selama proses - observasi, umpan balik & penugasan)
    - Assessment of Learning (Asesmen akhir - tes tertulis, produk/proyek sumatif)
    Untuk setiap kategori di atas, wajib sertakan atribut: "bentukPenilaian", "teknikPenilaian", dan "instrumenPenilaian".
-5. Berikan Lampiran LKPD ringkas, Bahan Ajar ringkas, dan Rubrik Penilaian.
+7. Berikan Lampiran LKPD ringkas, Bahan Ajar ringkas (dengan referensi Buku BSKAP Kemendikdasmen https://buku.kemendikdasmen.go.id/), dan Rubrik Penilaian.
+
+8. ATURAN KHUSUS WAJIB MODEL RPM (PEMBELAJARAN MENDALAM):
+   a) PENESUAIAN MATERI & TP: Seluruh aktivitas, asesmen, dan soal-soal latihan HARUS 100% SESUAI DENGAN Tujuan Pembelajaran (TP): "${formData.tujuanPembelajaran}" dan Lingkup Materi: "${formData.lingkupMateri}".
+   b) TINGKAT BAHASA RAMAH ANAK: Bahasa yang digunakan HARUS komunikatif, ramah anak, mudah dipahami murid, dan sesuai jenjang usia (${formData.faseKelas || 'Fase/Kelas'}). JANGAN menggunakan bahasa atau pertanyaan yang terlalu sulit/abstrak.
+   c) ISTILAH PENYEBUTAN: Gunakan kata "murid" (BUKAN "peserta didik" ATAU "siswa") di seluruh aktivitas, instruksi, dan uraian RPM.
+   d) DILARANG MENGGUNAKAN TANDA DASH/STRIP ("-"): JANGAN menggunakan tanda "-" di awal kalimat atau item aktivitas. Tuliskan dalam bentuk kalimat/poin berseri yang rapi tanpa tanda "-".
+   e) STRUKTUR PENDAHULUAN/AWAL (BERKESAN DAN BERMAKNA): Pada "kegiatanPembelajaran.pendahuluan.aktivitas", KAMU WAJIB MENYUSUN ISI SECARA LENGKAP MENGIKUTI SUB-STRUKTUR TEPAT SEPERTI BERIKUT (TANPA TANDA STRIP/DASH "-"):
+      1. Orientasi
+      Guru dan murid berdoa
+      Murid disiapkan secara fisik maupun psikis untuk mengikuti pembelajaran.
+      Guru menyapa sekaligus memberikan dorongan kepada murid di kelas agar bersemangat pada saat mengikuti pelajaran melalui apersepsi yang dapat membangkitkan semangat belajar murid.
+      Guru mengecek kehadiran murid di kelas dan memberikan penguatan terhadap aktivitas pembuka tersebut dengan mengaitkannya dengan penanaman karakter murid.
+      Guru memulai dengan menayangkan video singkat atau audio tentang ${formData.lingkupMateri}.
+      Guru mengajukan pertanyaan pemantik:
+      Contoh 1: [Pertanyaan pemantik konkret 1 yang relevan]
+      Contoh 2: [Pertanyaan pemantik konkret 2]
+      Contoh 3: [Pertanyaan pemantik konkret 3]
+      Murid diminta berbagi pengalaman mereka terkait ${formData.lingkupMateri}.
+
+      2. Merumuskan Masalah
+      Guru menyampaikan tujuan pembelajaran: ${formData.tujuanPembelajaran}
+      Guru mengarahkan murid untuk berdiskusi mengenai:
+      Contoh 1: [Topik/Isu diskusi awal 1]
+      Contoh 2: [Topik/Isu diskusi awal 2]
+      Contoh 3: [Topik/Isu diskusi awal 3]
+
+   f) STRUKTUR KEGIATAN INTI (BERMAKNA DAN MENGGEMBIRAKAN):
+      3. Memahami
+      4. Mengaplikasi
+      5. Merefleksi
+
+   g) STRUKTUR PENUTUP (BERKESADARAN DAN BERMAKNA):
+      6. Tindak Lanjut
+      Guru memberikan umpan balik apresiatif, penguatan, dan penugasan tindak lanjut.
+      Catatan untuk Pertemuan Berikutnya:
+      Jika waktu tidak mencukupi, eksplorasi lebih mendalam bisa dilanjutkan di pertemuan berikutnya dengan kegiatan seperti:
+      Contoh 1: [Contoh kegiatan eksplorasi lanjutan 1]
+      Contoh 2: [Contoh kegiatan eksplorasi lanjutan 2]
 
 Keluarkan dalam format JSON struktur persis berikut:
 {
@@ -838,15 +899,29 @@ Keluarkan dalam format JSON struktur persis berikut:
     "pendahuluan": {
       "alokasiWaktu": "15 Menit",
       "aktivitas": [
-        "Pengondisian kelas, doa, dan apersepsi...",
-        "Penyampaian tujuan pembelajaran dan motivasi...",
-        "Asesmen diagnostik singkat untuk mengukur pengetahuan awal..."
+        "1. Orientasi",
+        "Guru dan murid berdoa",
+        "Murid disiapkan secara fisik maupun psikis untuk mengikuti pembelajaran.",
+        "Guru menyapa sekaligus memberikan dorongan kepada murid di kelas agar bersemangat pada saat mengikuti pelajaran melalui apersepsi yang dapat membangkitkan semangat belajar murid.",
+        "Guru mengecek kehadiran murid di kelas dan memberikan penguatan terhadap aktivitas pembuka tersebut dengan mengaitkannya dengan penanaman karakter murid.",
+        "Guru memulai dengan menayangkan video singkat atau audio tentang ${formData.lingkupMateri}.",
+        "Guru mengajukan pertanyaan pemantik:",
+        "Contoh 1: [Tuliskan contoh pertanyaan pemantik 1]",
+        "Contoh 2: [Tuliskan contoh pertanyaan pemantik 2]",
+        "Contoh 3: [Tuliskan contoh pertanyaan pemantik 3]",
+        "murid diminta berbagi pengalaman mereka terkait ${formData.lingkupMateri}.",
+        "2. Merumuskan Masalah",
+        "Guru menyampaikan tujuan pembelajaran: ${formData.tujuanPembelajaran}",
+        "Guru mengarahkan murid untuk berdiskusi mengenai:",
+        "Contoh 1: [Topik/Isu diskusi awal 1]",
+        "Contoh 2: [Topik/Isu diskusi awal 2]",
+        "Contoh 3: [Topik/Isu diskusi awal 3]"
       ]
     },
     "kegiatanInti": [
       {
         "tahapLabel": "MEMAHAMI",
-        "subJudul": "Memahami Konsep & Eksplorasi Makna (Understanding)",
+        "subJudul": "3. Memahami",
         "prinsipMendalamLabel": "Berpusat pada Murid & Meaningful Learning",
         "alokasiWaktu": "25 Menit",
         "aktivitasGuru": [
@@ -860,11 +935,11 @@ Keluarkan dalam format JSON struktur persis berikut:
           "Murid menyampaikan pendapat awal dan bertanya jawab dengan guru...",
           "Murid merumuskan pemahaman awal tentang materi..."
         ],
-        "poinUtama": ["Mengeksplorasi konsep dasar melalui media digital...", "Menjawab pertanyaan pemantik..."]
+        "poinUtama": ["Mengeksplorasi konsep dasar...", "Menjawab pertanyaan pemantik..."]
       },
       {
         "tahapLabel": "MENGAPLIKASI",
-        "subJudul": "Mengaplikasikan Konsep pada Konteks Nyata (Application)",
+        "subJudul": "4. Mengaplikasi",
         "prinsipMendalamLabel": "Autentik, Kolaboratif & Problem Solving",
         "alokasiWaktu": "35 Menit",
         "aktivitasGuru": [
@@ -882,28 +957,29 @@ Keluarkan dalam format JSON struktur persis berikut:
       },
       {
         "tahapLabel": "MEREFLEKSI",
-        "subJudul": "Merefleksikan Pembelajaran & Evaluasi Diri (Reflection)",
+        "subJudul": "5. Merefleksi",
         "prinsipMendalamLabel": "Metakognisi, Feedback Loop & Self Assessment",
         "alokasiWaktu": "15 Menit",
         "aktivitasGuru": [
-          "Guru memfasilitasi sesi presentasi / pameran karya kelompok...",
-          "Guru memberikan umpan balik (feedback) yang membangun...",
-          "Guru memandu refleksi metakognitif siswa..."
+          "Guru memfasilitasi presentasi kelompok dan memberikan umpan balik konstruktif...",
+          "Guru memandu refleksi diri murid mengenai proses dan manfaat pembelajaran...",
+          "Guru bersama murid menyimpulkan poin pembelajaran..."
         ],
         "aktivitasMurid": [
-          "Murid mempresentasikan hasil karya dan menanggapi pertanyaan...",
-          "Murid melakukan refleksi diri (apa yang dipahami dan hambatan)...",
-          "Murid memberikan penilaian antarteman atau umpan balik positif..."
+          "Murid mempresentasikan hasil kerja / jawaban LKPD...",
+          "Murid melakukan refleksi metakognitif (apa yang dipahami dan hambatan)...",
+          "Murid memberikan apresiasi kepada sesama teman kelompok..."
         ],
-        "poinUtama": ["Mengidentifikasi apa yang sudah dipahami dan hal yang perlu ditingkatkan...", "Menyampaikan pemaknaan belajar..."]
+        "poinUtama": ["Presentasi & umpan balik...", "Refleksi metakognitif mandiri..."]
       }
     ],
     "penutup": {
-      "alokasiWaktu": "10 Menit",
+      "alokasiWaktu": "15 Menit",
       "aktivitas": [
-        "Menyimpulkan poin-poin utama pembelajaran bersama murid...",
-        "Refleksi singkat dan apresiasi terhadap kinerja siswa...",
-        "Informasi kegiatan pembelajaran berikutnya dan doa penutup."
+        "6. Tindak Lanjut",
+        "Guru memberikan umpan balik apresiatif, penguatan karakter, serta penugasan tindak lanjut.",
+        "Catatan untuk Pertemuan Berikutnya:",
+        "Jika waktu tidak mencukupi, eksplorasi lebih mendalam bisa dilanjutkan di pertemuan berikutnya dengan kegiatan seperti: (Berikan Contoh 1: [Kegiatan Lanjutan 1], Contoh 2: [Kegiatan Lanjutan 2])"
       ]
     }
   },
@@ -1615,6 +1691,155 @@ Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
       }
     };
     return res.json({ success: true, rubrik: fallbackRubrik, isFallback: true });
+  }
+});
+
+// API Generate Detailed Bahan Ajar / Rangkuman Bacaan Guru & Siswa with AI
+app.post("/api/generate-bahan-ajar", async (req, res) => {
+  try {
+    const { planData, customInstruction } = req.body;
+    const ai = getGeminiClient();
+
+    const mataPelajaran = planData?.identitas?.mataPelajaran || "Mata Pelajaran";
+    const faseKelas = planData?.identitas?.faseKelas || "Fase / Kelas";
+    const topik = planData?.tujuanDanDpl?.lingkupMateri || "Materi Pembelajaran";
+    const tp = planData?.tujuanDanDpl?.tujuanPembelajaran || "";
+    const cp = planData?.tujuanDanDpl?.capaianPembelajaran || "";
+
+    const prompt = `Kamu adalah pakar pengembang Bahan Ajar Kurikulum Merdeka Kementerian Pendidikan Dasar dan Menengah (Kemendikdasmen) Indonesia.
+Buatkan DOKUMEN RANGKUMAN BAHAN BACAAN GURU & PESERTA DIDIK yang sangat komprehensif, menarik, kontekstual, ramah anak, dan mudah dipahami.
+
+DATAPEMBELAJARAN:
+- Mata Pelajaran: ${mataPelajaran}
+- Fase / Kelas: ${faseKelas}
+- Topik / Lingkup Materi: ${topik}
+- Tujuan Pembelajaran: ${tp}
+- Capaian Pembelajaran: ${cp}
+${customInstruction ? `- Catatan Khusus Guru: ${customInstruction}` : ''}
+
+PRINSIP WAJIB:
+1. PENESUAIAN MATERI & TP: Seluruh rangkuman dan poin pembahasan HARUS 100% fokus pada '${topik}' dan '${tp}'.
+2. TINGKAT BAHASA RAMAH ANAK: Bahasa yang digunakan HARUS komunikatif, ramah anak, mudah dipahami siswa, dan sesuai jenjang usia (${faseKelas}). JANGAN menggunakan bahasa yang terlalu sulit atau abstrak.
+3. REFERENSI RESMI KEMENDIKDASMEN: Rujuklah referensi utama dari Buku Teks Utama BSKAP Kemendikdasmen Kurikulum Merdeka (https://buku.kemendikdasmen.go.id/) serta sumber-sumber resmi terpercaya.
+
+Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
+{
+  "judulBahanAjar": "RANGKUMAN BAHAN BACAAN GURU & PESERTA DIDIK - ${topik.toUpperCase()}",
+  "subJudul": "Bahan Ajar & Referensi Pembelajaran Kurikulum Merdeka",
+  "referensiUtama": "Buku Teks Utama Kurikulum Merdeka BSKAP Kemendikdasmen (https://buku.kemendikdasmen.go.id/)",
+  "rangkumanMateriSiswa": {
+    "judulMateri": "${topik}",
+    "konsepKunci": [
+      "Konsep Kunci 1...",
+      "Konsep Kunci 2...",
+      "Konsep Kunci 3..."
+    ],
+    "penjelasanRingkas": "Uraian materi yang komunikatif, menarik, dan mudah dipahami siswa kelas ${faseKelas}...",
+    "contohKontekstual": [
+      "Contoh penerapan sehari-hari 1...",
+      "Contoh penerapan sehari-hari 2..."
+    ]
+  },
+  "panduanGuru": {
+    "catatanPedagogis": "Catatan esensial untuk guru saat menyampaikan materi kepada siswa...",
+    "miskonsepsiUmum": [
+      "Miskonsepsi siswa dan pelurusannya 1...",
+      "Miskonsepsi 2..."
+    ]
+  },
+  "glosarium": [
+    {"istilah": "Istilah 1", "arti": "Arti sederhana istilah 1..."},
+    {"istilah": "Istilah 2", "arti": "Arti sederhana istilah 2..."}
+  ],
+  "daftarPustaka": [
+    "Buku Teks Utama ${mataPelajaran} Kelas ${faseKelas}, BSKAP Kementerian Pendidikan Dasar dan Menengah (https://buku.kemendikdasmen.go.id/)",
+    "Buku Panduan Guru ${mataPelajaran} Kelas ${faseKelas}, BSKAP Kemendikdasmen",
+    "Panduan Pembelajaran dan Asesmen Kurikulum Merdeka, Kemendikdasmen RI"
+  ]
+}`;
+
+    const response = await callGeminiWithRetry(ai, {
+      preferredModel: "gemini-3.6-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.5,
+      },
+    });
+
+    const text = response.text || "{}";
+    const bahanAjarData = cleanAndParseJson(text);
+
+    const textSummary = `RANGKUMAN BAHAN BACAAN GURU & PESERTA DIDIK
+Topik: ${topik} | Kelas/Fase: ${faseKelas}
+Referensi Resmi: Buku Teks Utama Kemendikdasmen (https://buku.kemendikdasmen.go.id/)
+
+1. KONSEP KUNCI MATERI:
+${(bahanAjarData?.rangkumanMateriSiswa?.konsepKunci || []).map((k: string) => `   - ${k}`).join('\n')}
+
+2. PENJELASAN RINGKAS MATERI:
+${bahanAjarData?.rangkumanMateriSiswa?.penjelasanRingkas || ''}
+
+3. CONTOH KONTEKSTUAL SEHARI-HARI:
+${(bahanAjarData?.rangkumanMateriSiswa?.contohKontekstual || []).map((c: string) => `   - ${c}`).join('\n')}
+
+4. CATATAN PEDAGOGIS GURU & MISKONSEPSI:
+   - Catatan Guru: ${bahanAjarData?.panduanGuru?.catatanPedagogis || ''}
+   - Miskonsepsi & Pelurusan: ${(bahanAjarData?.panduanGuru?.miskonsepsiUmum || []).join('; ')}
+
+5. GLOSARIUM SINGKAT:
+${(bahanAjarData?.glosarium || []).map((g: any) => `   - ${g.istilah}: ${g.arti}`).join('\n')}
+
+6. DAFTAR PUSTAKA:
+${(bahanAjarData?.daftarPustaka || []).map((d: string) => `   - ${d}`).join('\n')}`;
+
+    bahanAjarData.ringkasanTeks = textSummary;
+
+    res.json({ success: true, bahanAjar: bahanAjarData });
+  } catch (error: any) {
+    console.error("Error in /api/generate-bahan-ajar:", error);
+    const planData = req.body?.planData || {};
+    const mp = planData?.identitas?.mataPelajaran || "Mata Pelajaran";
+    const fk = planData?.identitas?.faseKelas || "Fase / Kelas";
+    const topik = planData?.tujuanDanDpl?.lingkupMateri || "Materi Pembelajaran";
+    const tp = planData?.tujuanDanDpl?.tujuanPembelajaran || "";
+
+    const fallbackBahanAjar = {
+      judulBahanAjar: `RANGKUMAN BAHAN BACAAN GURU & PESERTA DIDIK - ${topik.toUpperCase()}`,
+      subJudul: `Bahan Ajar & Referensi Pembelajaran Kurikulum Merdeka (${mp} - ${fk})`,
+      referensiUtama: "Buku Teks Utama Kurikulum Merdeka BSKAP Kemendikdasmen (https://buku.kemendikdasmen.go.id/)",
+      rangkumanMateriSiswa: {
+        judulMateri: topik,
+        konsepKunci: [
+          `Pengertian dan hakikat utama dari ${topik}`,
+          `Keterkaitan ${topik} dengan kehidupan sehari-hari peserta didik`,
+          `Penerapan dan manfaat mempelajari ${topik}`
+        ],
+        penjelasanRingkas: `Materi ${topik} merupakan bagian penting dalam pembelajaran ${mp} di ${fk}. Melalui materi ini, peserta didik diajak untuk memahami konsep dasar secara mendalam, mengenali berbagai contoh di lingkungan sekitar, serta mampu mengaplikasikan pemahaman tersebut untuk memecahkan masalah kontekstual secara kritis dan kolaboratif. ${tp ? `Tujuan utamanya adalah agar ${tp.toLowerCase()}` : ''}`,
+        contohKontekstual: [
+          `Penerapan konsep ${topik} dalam kehidupan sehari-hari di rumah dan sekolah.`,
+          `Pengamatan fenomena lingkungan sekitar yang berkaitan langsung dengan ${topik}.`
+        ]
+      },
+      panduanGuru: {
+        catatanPedagogis: `Guru hendaknya mengawali pembelajaran ${topik} dengan menghadirkan media konkrit, pertanyaan pemantik, serta contoh nyata yang dekat dengan dunia anak. Berikan bimbingan dan penguatan positif.`,
+        miskonsepsiUmum: [
+          `Siswa menganggap ${topik} hanya sebatas hafalan teori. Pelurusan: Hubungkan langsung dengan pengalaman kontekstual siswa.`,
+          `Siswa ragu mengemukakan pendapat. Pelurusan: Ciptakan suasana kelas yang ramah dan inklusif.`
+        ]
+      },
+      glosarium: [
+        { istilah: topik, arti: `Gagasan atau topik utama yang dipelajari pada modul ini.` },
+        { istilah: "Kontekstual", arti: "Dapat dihubungkan langsung dengan situasi kehidupan nyata peserta didik sehari-hari." },
+        { istilah: "Refleksi", arti: "Proses merenungkan dan menyimpulkan apa yang telah dipelajari serta manfaatnya." }
+      ],
+      daftarPustaka: [
+        `Buku Teks Utama ${mp} ${fk}, Kementerian Pendidikan Dasar dan Menengah (https://buku.kemendikdasmen.go.id/)`,
+        `Buku Panduan Guru ${mp} ${fk}, BSKAP Kemendikdasmen`,
+        `Panduan Pembelajaran dan Asesmen Kurikulum Merdeka, Kemendikdasmen RI`
+      ]
+    };
+    return res.json({ success: true, bahanAjar: fallbackBahanAjar, isFallback: true });
   }
 });
 

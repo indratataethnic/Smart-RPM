@@ -19,11 +19,14 @@ import {
   Plus,
   Trash2,
   RotateCcw,
+  ExternalLink,
+  Lightbulb,
 } from 'lucide-react';
-import { LessonPlanOutput, KKTPData, LKPDData, RubrikPenilaianData, JurnalHarianGuru, JurnalHarianEntry, normalizeAsesmen, AsesmenItem } from '../types';
+import { LessonPlanOutput, KKTPData, LKPDData, RubrikPenilaianData, BahanAjarData, JurnalHarianGuru, JurnalHarianEntry, normalizeAsesmen, AsesmenItem } from '../types';
 import { LKPDModal } from './LKPDModal';
 import { JurnalHarianModal } from './JurnalHarianModal';
 import { RubrikModal, getDefaultRubrikData } from './RubrikModal';
+import { BahanAjarModal } from './BahanAjarModal';
 
 export const getDefaultJurnalHarian = (p: LessonPlanOutput): JurnalHarianGuru => {
   if (p.jurnalHarian && Array.isArray(p.jurnalHarian.entries) && p.jurnalHarian.entries.length > 0) {
@@ -94,11 +97,13 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
   const [editedPlan, setEditedPlan] = useState<LessonPlanOutput>(plan);
   const [saveToast, setSaveToast] = useState(false);
 
-  // LKPD AI, Rubrik Penilaian AI, & Jurnal Harian State
+  // LKPD AI, Rubrik Penilaian AI, Bahan Ajar AI & Jurnal Harian State
   const [isLkpdModalOpen, setIsLkpdModalOpen] = useState(false);
   const [isGeneratingLkpd, setIsGeneratingLkpd] = useState(false);
   const [isRubrikModalOpen, setIsRubrikModalOpen] = useState(false);
   const [isGeneratingRubrik, setIsGeneratingRubrik] = useState(false);
+  const [isBahanAjarModalOpen, setIsBahanAjarModalOpen] = useState(false);
+  const [isGeneratingBahanAjar, setIsGeneratingBahanAjar] = useState(false);
   const [isJurnalModalOpen, setIsJurnalModalOpen] = useState(false);
 
   const handleSaveRubrik = (newRubrik: RubrikPenilaianData) => {
@@ -338,6 +343,121 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
       lampiran: {
         ...(isEditing ? editedPlan : plan).lampiran,
         lkpdStructured: newLkpdData,
+      },
+    };
+    if (isEditing) {
+      setEditedPlan(updated);
+    }
+    if (onUpdatePlan) {
+      onUpdatePlan(updated);
+    }
+  };
+
+  const createLocalBahanAjarFallback = (planData: LessonPlanOutput): BahanAjarData => {
+    const mp = planData.identitas?.mataPelajaran || 'Mata Pelajaran';
+    const fk = planData.identitas?.faseKelas || 'Fase / Kelas';
+    const lm = planData.tujuanDanDpl?.lingkupMateri || 'Materi Pembelajaran';
+    const tp = planData.tujuanDanDpl?.tujuanPembelajaran || '';
+
+    return {
+      judulBahanAjar: `RANGKUMAN BAHAN BACAAN GURU & PESERTA DIDIK - ${lm.toUpperCase()}`,
+      subJudul: `Bahan Ajar & Referensi Pembelajaran Kurikulum Merdeka (${mp} - ${fk})`,
+      referensiUtama: 'Buku Teks Utama Kurikulum Merdeka BSKAP Kemendikdasmen (https://buku.kemendikdasmen.go.id/)',
+      rangkumanMateriSiswa: {
+        judulMateri: lm,
+        konsepKunci: [
+          `Pengertian dan hakikat utama dari ${lm}`,
+          `Keterkaitan ${lm} dengan kehidupan sehari-hari peserta didik`,
+          `Penerapan dan manfaat mempelajari ${lm}`
+        ],
+        penjelasanRingkas: `Materi ${lm} merupakan bagian penting dalam pembelajaran ${mp} di ${fk}. Melalui materi ini, peserta didik diajak untuk memahami konsep dasar secara mendalam, mengenali berbagai contoh di lingkungan sekitar, serta mampu mengaplikasikan pemahaman tersebut untuk memecahkan masalah kontekstual secara kritis dan kolaboratif. ${tp ? `Tujuan utamanya adalah agar ${tp.toLowerCase()}` : ''}`,
+        contohKontekstual: [
+          `Penerapan konsep ${lm} dalam kehidupan sehari-hari di rumah dan sekolah.`,
+          `Pengamatan fenomena lingkungan sekitar yang berkaitan langsung dengan ${lm}.`
+        ]
+      },
+      panduanGuru: {
+        catatanPedagogis: `Guru hendaknya mengawali pembelajaran ${lm} dengan menghadirkan media konkrit, pertanyaan pemantik, serta contoh nyata yang dekat dengan dunia anak. Berikan bimbingan dan penguatan positif.`,
+        miskonsepsiUmum: [
+          `Siswa menganggap ${lm} hanya sebatas hafalan teori. Pelurusan: Hubungkan langsung dengan pengalaman kontekstual siswa.`,
+          `Siswa ragu mengemukakan pendapat. Pelurusan: Ciptakan suasana kelas yang ramah dan inklusif.`
+        ]
+      },
+      glosarium: [
+        { istilah: lm, arti: `Gagasan atau topik utama yang dipelajari pada modul ini.` },
+        { istilah: 'Kontekstual', arti: 'Dapat dihubungkan langsung dengan situasi kehidupan nyata peserta didik sehari-hari.' },
+        { istilah: 'Refleksi', arti: 'Proses merenungkan dan menyimpulkan apa yang telah dipelajari serta manfaatnya.' }
+      ],
+      daftarPustaka: [
+        `Buku Teks Utama ${mp} ${fk}, Kementerian Pendidikan Dasar dan Menengah (https://buku.kemendikdasmen.go.id/)`,
+        `Buku Panduan Guru ${mp} ${fk}, BSKAP Kemendikdasmen`,
+        `Panduan Pembelajaran dan Asesmen Kurikulum Merdeka, Kemendikdasmen RI`
+      ]
+    };
+  };
+
+  const handleGenerateBahanAjar = async (customInstruction?: string) => {
+    try {
+      setIsGeneratingBahanAjar(true);
+      const res = await fetch('/api/generate-bahan-ajar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planData: isEditing ? editedPlan : plan,
+          customInstruction,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data.success && data.bahanAjar) {
+        const updated = {
+          ...(isEditing ? editedPlan : plan),
+          lampiran: {
+            ...(isEditing ? editedPlan : plan).lampiran,
+            bahanAjarStructured: data.bahanAjar,
+            bahanAjar: data.bahanAjar.ringkasanTeks || (isEditing ? editedPlan : plan).lampiran.bahanAjar,
+          },
+        };
+        if (isEditing) {
+          setEditedPlan(updated);
+        }
+        if (onUpdatePlan) {
+          onUpdatePlan(updated);
+        }
+      } else {
+        throw new Error(data.error || 'Gagal membuat Bahan Ajar');
+      }
+    } catch (err: any) {
+      console.warn('Error generating Bahan Ajar, running local smart fallback compiler:', err);
+      const localData = createLocalBahanAjarFallback(isEditing ? editedPlan : plan);
+      const updated = {
+        ...(isEditing ? editedPlan : plan),
+        lampiran: {
+          ...(isEditing ? editedPlan : plan).lampiran,
+          bahanAjarStructured: localData,
+        },
+      };
+      if (isEditing) {
+        setEditedPlan(updated);
+      }
+      if (onUpdatePlan) {
+        onUpdatePlan(updated);
+      }
+    } finally {
+      setIsGeneratingBahanAjar(false);
+    }
+  };
+
+  const handleSaveBahanAjar = (newData: BahanAjarData) => {
+    const updated = {
+      ...(isEditing ? editedPlan : plan),
+      lampiran: {
+        ...(isEditing ? editedPlan : plan).lampiran,
+        bahanAjarStructured: newData,
       },
     };
     if (isEditing) {
@@ -944,13 +1064,21 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
       <table class="grid-table" style="margin-bottom: 16px;">
         <tr>
           <td class="bg-label" style="background-color: #e2e8f0; color: #0f172a;">
-            PENDAHULUAN (Alokasi Waktu: ${kegiatanPembelajaran.pendahuluan.alokasiWaktu})
+            PENDAHULUAN / AWAL (Alokasi Waktu: ${kegiatanPembelajaran.pendahuluan.alokasiWaktu})
           </td>
         </tr>
         <tr>
           <td>
-            <ul style="margin: 0; padding-left: 18px;">
-              ${(kegiatanPembelajaran.pendahuluan.aktivitas || []).map((act) => `<li style="margin-bottom: 3px;">${act}</li>`).join('')}
+            <ul style="margin: 0; padding-left: 18px; list-style-type: none;">
+              ${(kegiatanPembelajaran.pendahuluan.aktivitas || []).map((act) => {
+                const clean = act.replace(/^[*\-\u2022]\s*/, '').trim();
+                const upper = clean.toUpperCase();
+                const isHead = upper.startsWith('1. ORIENTASI') || upper.startsWith('2. MERUMUSKAN MASALAH');
+                if (isHead) {
+                  return `<li style="margin-top: 8px; margin-bottom: 4px; font-weight: bold; color: #0f766e;">${clean}</li>`;
+                }
+                return `<li style="margin-bottom: 3px; padding-left: 8px;">• ${clean}</li>`;
+              }).join('')}
             </ul>
           </td>
         </tr>
@@ -1017,13 +1145,21 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
       <table class="grid-table" style="margin-bottom: 16px;">
         <tr>
           <td class="bg-label" style="background-color: #e2e8f0; color: #0f172a;">
-            PENUTUP & TIE-UP (Alokasi Waktu: ${kegiatanPembelajaran.penutup.alokasiWaktu})
+            PENUTUP (Alokasi Waktu: ${kegiatanPembelajaran.penutup.alokasiWaktu})
           </td>
         </tr>
         <tr>
           <td>
-            <ul style="margin: 0; padding-left: 18px;">
-              ${(kegiatanPembelajaran.penutup.aktivitas || []).map((act) => `<li style="margin-bottom: 3px;">${act}</li>`).join('')}
+            <ul style="margin: 0; padding-left: 18px; list-style-type: none;">
+              ${(kegiatanPembelajaran.penutup.aktivitas || []).map((act) => {
+                const clean = act.replace(/^[*\-\u2022]\s*/, '').trim();
+                const upper = clean.toUpperCase();
+                const isHead = upper.startsWith('5. TINDAK LANJUT') || upper.startsWith('6. TINDAK LANJUT') || upper.startsWith('5. REFLEKSI');
+                if (isHead) {
+                  return `<li style="margin-top: 8px; margin-bottom: 4px; font-weight: bold; color: #0f766e;">${clean}</li>`;
+                }
+                return `<li style="margin-bottom: 3px; padding-left: 8px;">• ${clean}</li>`;
+              }).join('')}
             </ul>
           </td>
         </tr>
@@ -1980,7 +2116,7 @@ ${formatActivityText(k.aktivitasMurid)}
               <div className="flex items-center justify-between gap-2 mb-2">
                 <h3 className="font-bold text-slate-900 text-xs sm:text-sm uppercase tracking-wide flex items-center gap-2">
                   <span className="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-xs font-bold">
-                    PENDAHULUAN
+                    PENDAHULUAN / AWAL (BERKESAN & BERMAKNA)
                   </span>
                   {!isEditing && (
                     <span className="text-xs text-slate-500 font-normal">
@@ -2011,7 +2147,7 @@ ${formatActivityText(k.aktivitasMurid)}
               </div>
               {isEditing ? (
                 <textarea
-                  rows={3}
+                  rows={4}
                   className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs"
                   placeholder="Isi satu langkah per baris..."
                   value={editedPlan.kegiatanPembelajaran.pendahuluan.aktivitas.join('\n')}
@@ -2029,10 +2165,40 @@ ${formatActivityText(k.aktivitasMurid)}
                   }
                 />
               ) : (
-                <ul className="list-disc list-inside space-y-1.5 text-xs sm:text-sm text-slate-700">
-                  {activePlan.kegiatanPembelajaran.pendahuluan.aktivitas.map((act, i) => (
-                    <li key={i} className="leading-relaxed">{act}</li>
-                  ))}
+                <ul className="space-y-2 text-xs sm:text-sm text-slate-700">
+                  {activePlan.kegiatanPembelajaran.pendahuluan.aktivitas.map((act, i) => {
+                    const cleanAct = act.replace(/^[*\-\u2022]\s*/, '').trim();
+                    const actUpper = cleanAct.toUpperCase();
+                    const isHeading = actUpper.startsWith('1. ORIENTASI') || actUpper.startsWith('2. MERUMUSKAN MASALAH') || actUpper.includes('ORIENTASI:') || actUpper.includes('MERUMUSKAN MASALAH:');
+                    const isIntroPemantik = cleanAct.toLowerCase().includes('guru mengajukan');
+                    const isPemantik = !isIntroPemantik && (cleanAct.includes('?') || (cleanAct.toLowerCase().includes('pemantik') && !cleanAct.toLowerCase().includes('guru mengajukan')));
+
+                    if (isHeading) {
+                      return (
+                        <li key={i} className="font-bold text-teal-900 bg-teal-100/80 border border-teal-200 rounded-md px-2.5 py-1 text-xs uppercase tracking-wide mt-3 list-none">
+                          {cleanAct}
+                        </li>
+                      );
+                    }
+
+                    return (
+                      <li key={i} className={`leading-relaxed ${isPemantik ? 'bg-amber-50/90 border border-amber-200/90 rounded-lg p-3 text-amber-950 font-medium shadow-xs list-none' : 'list-disc list-inside ml-2'}`}>
+                        {isPemantik ? (
+                          <div className="flex items-start gap-2">
+                            <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-bold text-amber-900 block text-xs mb-0.5 flex items-center gap-1">
+                                <span>💡 Pertanyaan Pemantik / Apersepsi:</span>
+                              </span>
+                              <span>{cleanAct}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span>{cleanAct}</span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -2178,7 +2344,7 @@ ${formatActivityText(k.aktivitasMurid)}
               <div className="flex items-center justify-between gap-2 mb-2">
                 <h3 className="font-bold text-slate-900 text-xs sm:text-sm uppercase tracking-wide flex items-center gap-2">
                   <span className="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-xs font-bold">
-                    PENUTUP & TIE-UP
+                    PENUTUP (BERKESADARAN & BERMAKNA)
                   </span>
                   {!isEditing && (
                     <span className="text-xs text-slate-500 font-normal">
@@ -2209,7 +2375,7 @@ ${formatActivityText(k.aktivitasMurid)}
               </div>
               {isEditing ? (
                 <textarea
-                  rows={3}
+                  rows={4}
                   className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs"
                   placeholder="Isi satu langkah per baris..."
                   value={editedPlan.kegiatanPembelajaran.penutup.aktivitas.join('\n')}
@@ -2227,10 +2393,36 @@ ${formatActivityText(k.aktivitasMurid)}
                   }
                 />
               ) : (
-                <ul className="list-disc list-inside space-y-1.5 text-xs sm:text-sm text-slate-700">
-                  {activePlan.kegiatanPembelajaran.penutup.aktivitas.map((act, i) => (
-                    <li key={i} className="leading-relaxed">{act}</li>
-                  ))}
+                <ul className="space-y-2 text-xs sm:text-sm text-slate-700">
+                  {activePlan.kegiatanPembelajaran.penutup.aktivitas.map((act, i) => {
+                    const cleanAct = act.replace(/^[*\-\u2022]\s*/, '').trim();
+                    const actUpper = cleanAct.toUpperCase();
+                    const isHeading = actUpper.startsWith('5. TINDAK LANJUT') || actUpper.startsWith('6. TINDAK LANJUT') || actUpper.includes('TINDAK LANJUT:') || actUpper.startsWith('5. REFLEKSI');
+                    const isCatatan = cleanAct.toLowerCase().includes('catatan untuk pertemuan berikutnya');
+
+                    if (isHeading) {
+                      return (
+                        <li key={i} className="font-bold text-teal-900 bg-teal-100/80 border border-teal-200 rounded-md px-2.5 py-1 text-xs uppercase tracking-wide mt-3 list-none">
+                          {cleanAct}
+                        </li>
+                      );
+                    }
+
+                    if (isCatatan) {
+                      return (
+                        <li key={i} className="bg-sky-50 border border-sky-200 rounded-lg p-3 text-sky-950 font-medium mt-3 shadow-xs list-none">
+                          <span className="font-bold text-sky-900 block text-xs mb-1">💡 Catatan untuk Pertemuan Berikutnya:</span>
+                          <span>{cleanAct.replace(/^catatan untuk pertemuan berikutnya:\s*/i, '')}</span>
+                        </li>
+                      );
+                    }
+
+                    return (
+                      <li key={i} className="leading-relaxed list-disc list-inside ml-2">
+                        {cleanAct}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -2475,12 +2667,49 @@ ${formatActivityText(k.aktivitasMurid)}
               )}
             </div>
 
-            <div className="border border-slate-200 p-3.5 rounded-xl bg-slate-50">
-              <span className="font-bold text-slate-900 block mb-1 text-xs uppercase text-teal-800 flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5" />
-                B. Rangkuman Bahan Bacaan Guru & Siswa
-              </span>
-              {isEditing ? (
+            <div className="border border-teal-200 p-4 rounded-xl bg-teal-50/40">
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-slate-900 text-xs uppercase text-teal-800 flex items-center gap-1.5">
+                    <BookOpen className="w-4 h-4 text-teal-700" />
+                    B. Rangkuman Bahan Bacaan Guru & Siswa (Kemendikdasmen)
+                  </span>
+                  <a
+                    href="https://buku.kemendikdasmen.go.id/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1"
+                  >
+                    <span>buku.kemendikdasmen.go.id</span>
+                    <ExternalLink className="w-2.5 h-2.5 text-amber-700" />
+                  </a>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsBahanAjarModalOpen(true);
+                    if (!activePlan.lampiran.bahanAjarStructured) {
+                      handleGenerateBahanAjar();
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>{activePlan.lampiran.bahanAjarStructured ? 'Buka Rangkuman Bacaan & Cetak' : 'Buat Rangkuman Bacaan AI'}</span>
+                </button>
+              </div>
+
+              {activePlan.lampiran.bahanAjarStructured ? (
+                <div className="p-3 bg-white border border-teal-200 rounded-xl space-y-2 mt-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="font-bold text-teal-900 text-xs">{activePlan.lampiran.bahanAjarStructured.judulBahanAjar}</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">✓ Referensi Kemendikdasmen Siap</span>
+                  </div>
+                  <p className="text-slate-600 text-xs line-clamp-2">
+                    {activePlan.lampiran.bahanAjarStructured.rangkumanMateriSiswa.penjelasanRingkas}
+                  </p>
+                </div>
+              ) : isEditing ? (
                 <textarea
                   rows={4}
                   className="w-full bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs"
@@ -2874,6 +3103,17 @@ ${formatActivityText(k.aktivitasMurid)}
         onSaveRubrik={handleSaveRubrik}
         onGenerateRubrik={handleGenerateRubrik}
         isGenerating={isGeneratingRubrik}
+      />
+
+      {/* RANGKUMAN BAHAN BACAAN AI MODAL */}
+      <BahanAjarModal
+        isOpen={isBahanAjarModalOpen}
+        onClose={() => setIsBahanAjarModalOpen(false)}
+        planData={activePlan}
+        bahanAjarData={activePlan.lampiran.bahanAjarStructured}
+        onSaveBahanAjar={handleSaveBahanAjar}
+        onGenerateBahanAjar={handleGenerateBahanAjar}
+        isGenerating={isGeneratingBahanAjar}
       />
     </div>
   );

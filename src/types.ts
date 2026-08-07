@@ -153,6 +153,25 @@ export interface LembarPenilaianSiswaData {
   catatanUmumKelas?: string;
 }
 
+export interface BahanAjarData {
+  judulBahanAjar: string;
+  subJudul?: string;
+  referensiUtama: string;
+  rangkumanMateriSiswa: {
+    judulMateri: string;
+    konsepKunci: string[];
+    penjelasanRingkas: string;
+    contohKontekstual: string[];
+  };
+  panduanGuru: {
+    catatanPedagogis: string;
+    miskonsepsiUmum: string[];
+  };
+  glosarium: { istilah: string; arti: string }[];
+  daftarPustaka: string[];
+  ringkasanTeks?: string;
+}
+
 export interface RubrikPenilaianData {
   judulRubrik: string;
   subJudul?: string;
@@ -232,6 +251,7 @@ export interface LessonPlanOutput {
     lkpd: string;
     lkpdStructured?: LKPDData;
     bahanAjar: string;
+    bahanAjarStructured?: BahanAjarData;
     rubrikPenilaian: string;
     rubrikStructured?: RubrikPenilaianData;
     kktp?: KKTPData | string;

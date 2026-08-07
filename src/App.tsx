@@ -162,15 +162,29 @@ const createFallbackLessonPlanClient = (data: any): LessonPlanOutput => {
       pendahuluan: {
         alokasiWaktu: "15 Menit",
         aktivitas: [
-          "Guru membuka pembelajaran dengan salam hangat, doa bersama, dan memeriksa kehadiran siswa.",
-          "Guru memberikan pertanyaan pemantik secara interaktif untuk merangsang rasa ingin tahu siswa.",
-          "Guru menyampaikan tujuan pembelajaran hari ini dan menjelaskan alur aktivitas kelompok yang akan dilakukan."
+          "1. Orientasi",
+          "Guru dan murid berdoa",
+          "Murid disiapkan secara fisik maupun psikis untuk mengikuti pembelajaran.",
+          "Guru menyapa sekaligus memberikan dorongan kepada murid di kelas agar bersemangat pada saat mengikuti pelajaran melalui apersepsi yang dapat membangkitkan semangat belajar murid.",
+          "Guru mengecek kehadiran murid di kelas dan memberikan penguatan terhadap aktivitas pembuka tersebut dengan mengaitkannya dengan penanaman karakter murid.",
+          "Guru memulai dengan menayangkan video singkat atau audio tentang " + lm + ".",
+          "Guru mengajukan pertanyaan pemantik:",
+          "Contoh 1: Menurut kalian, mengapa " + lm + " penting dalam kehidupan kita sehari-hari?",
+          "Contoh 2: Pernahkah kalian menemukan fenomena " + lm + " di sekitar rumah atau sekolah?",
+          "Contoh 3: Apa yang terjadi apabila kita belum memahami " + lm + " dengan baik?",
+          "Murid diminta berbagi pengalaman mereka terkait " + lm + ".",
+          "2. Merumuskan Masalah",
+          "Guru menyampaikan tujuan pembelajaran: " + tp,
+          "Guru mengarahkan murid untuk berdiskusi mengenai:",
+          "Contoh 1: Konsep dasar dan aplikasi " + lm + " dalam kehidupan nyata",
+          "Contoh 2: Tantangan utama dan fenomena unik seputar " + lm,
+          "Contoh 3: Solusi terbaik untuk memecahkan masalah kontekstual " + lm
         ]
       },
       kegiatanInti: [
         {
           tahapLabel: "MEMAHAMI",
-          subJudul: "Memahami Konsep & Eksplorasi Makna (Understanding)",
+          subJudul: "3. Memahami Konsep & Eksplorasi Makna (Understanding)",
           prinsipMendalamLabel: "Berpusat pada Murid & Meaningful Learning",
           alokasiWaktu: "25 Menit",
           aktivitasGuru: [
@@ -187,13 +201,13 @@ const createFallbackLessonPlanClient = (data: any): LessonPlanOutput => {
         },
         {
           tahapLabel: "MENGAPLIKASI",
-          subJudul: "Mengaplikasikan Konsep pada Konteks Nyata (Application)",
+          subJudul: "4. Mengaplikasikan Konsep pada Konteks Nyata (Application)",
           prinsipMendalamLabel: "Autentik, Kolaboratif & Problem Solving",
           alokasiWaktu: "35 Menit",
           aktivitasGuru: [
-            "Guru membagikan Lembar Kerja Peserta Didik (LKPD) berbasis studi kasus/masalah nyata.",
+            "Guru membagikan Lembar Kerja Murid (LKPD) berbasis studi kasus/masalah nyata.",
             "Guru memandu proses kerja kelompok dan memberikan arahan scaffolding.",
-            "Guru mengobservasi kolaborasi dan sikap bernalar kritis antar siswa."
+            "Guru mengobservasi kolaborasi dan sikap bernalar kritis antar murid."
           ],
           aktivitasMurid: [
             "Murid bekerja sama menyelesaikan tugas atau masalah dalam LKPD.",
@@ -204,7 +218,7 @@ const createFallbackLessonPlanClient = (data: any): LessonPlanOutput => {
         },
         {
           tahapLabel: "MEREFLEKSI",
-          subJudul: "Merefleksikan Pembelajaran & Evaluasi Diri (Reflection)",
+          subJudul: "5. Merefleksikan Pembelajaran & Evaluasi Diri (Reflection)",
           prinsipMendalamLabel: "Metakognisi, Feedback Loop & Self Assessment",
           alokasiWaktu: "15 Menit",
           aktivitasGuru: [
@@ -221,11 +235,12 @@ const createFallbackLessonPlanClient = (data: any): LessonPlanOutput => {
         }
       ],
       penutup: {
-        alokasiWaktu: "10 Menit",
+        alokasiWaktu: "15 Menit",
         aktivitas: [
-          "Guru membimbing murid menyimpulkan seluruh rangkaian aktivitas " + lm + ".",
-          "Guru memberikan umpan balik apresiatif dan penugasan tindak lanjut.",
-          "Pembelajaran ditutup dengan doa bersama dan salam penutup."
+          "6. Tindak Lanjut",
+          "Guru memberikan umpan balik apresiatif, penguatan karakter, serta penugasan tindak lanjut.",
+          "Catatan untuk Pertemuan Berikutnya:",
+          "Jika waktu tidak mencukupi, eksplorasi lebih mendalam bisa dilanjutkan di pertemuan berikutnya dengan kegiatan seperti: Contoh 1: Presentasi lanjutan & pameran karya kelompok " + lm + ", Contoh 2: Pendalaman materi kontekstual dan asesmen harian."
         ]
       }
     },
