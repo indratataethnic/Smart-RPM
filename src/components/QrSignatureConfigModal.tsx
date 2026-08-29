@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QrCode, CheckCircle2, ShieldCheck, Calendar, MapPin, Sparkles, X, Info, ExternalLink, Copy, Check, Smartphone, Maximize2, Zap, HelpCircle } from 'lucide-react';
+import { QrCode, CheckCircle2, ShieldCheck, Calendar, MapPin, Sparkles, X, Info, ExternalLink, Copy, Check, Smartphone, Maximize2, Zap, HelpCircle, GraduationCap } from 'lucide-react';
 import { QrSignatureOptions } from '../lib/qrUtils';
 import { QRCode } from './QRCodeDisplay';
 
@@ -223,6 +223,47 @@ export const QrSignatureConfigModal: React.FC<QrSignatureConfigModalProps> = ({
                       Format tanggal resmi penandatanganan dokumen RPM.
                     </p>
                   </div>
+                </div>
+
+                {/* Sebutan Jabatan Guru pada Pengesahan */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <GraduationCap className="w-3.5 h-3.5 text-teal-700" />
+                      Sebutan Jabatan Guru pada Tanda Tangan:
+                    </span>
+                    <span className="text-[10px] text-teal-700 font-normal">
+                      Contoh: Guru Kelas 4 / Guru Mata Pelajaran IPAS
+                    </span>
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={options.guruTitle || ''}
+                      onChange={(e) => onChangeOptions({ ...options, guruTitle: e.target.value })}
+                      placeholder="Contoh: Guru Kelas 4 / Guru Mata Pelajaran IPAS"
+                      className="flex-1 p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:bg-white focus:border-teal-600 outline-none"
+                    />
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onChangeOptions({ ...options, guruTitle: 'Guru Kelas' })}
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-teal-50 hover:text-teal-700 text-slate-700 rounded-lg text-[11px] font-semibold border border-slate-200 cursor-pointer transition-colors"
+                      >
+                        Guru Kelas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onChangeOptions({ ...options, guruTitle: 'Guru Mata Pelajaran' })}
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-teal-50 hover:text-teal-700 text-slate-700 rounded-lg text-[11px] font-semibold border border-slate-200 cursor-pointer transition-colors"
+                      >
+                        Guru Mapel
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Label ini akan dicantumkan tepat di atas kolom tanda tangan Guru.
+                  </p>
                 </div>
 
                 {/* QR Preview Card with Direct Test Button */}

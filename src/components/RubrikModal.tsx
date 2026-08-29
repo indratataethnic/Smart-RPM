@@ -3,7 +3,7 @@ import {
   X, Printer, Copy, Check, Sparkles, RefreshCw, Plus, Trash2, 
   Award, Eye, FileText, CheckCircle2, Edit3, HelpCircle, Layers,
   ChevronRight, Save, UserCheck, Search, Target, Users, UserPlus,
-  FileSpreadsheet, Calculator, ArrowRight, Download, Filter
+  FileSpreadsheet, Calculator, ArrowRight, Download, Filter, FileDown
 } from 'lucide-react';
 import { 
   LessonPlanOutput, 
@@ -13,6 +13,8 @@ import {
   LembarPenilaianSiswaData,
   SiswaNilaiRecord 
 } from '../types';
+import { QrSignatureOptions, determineTeacherTitle } from '../lib/qrUtils';
+import { QRCode } from './QRCodeDisplay';
 
 interface RubrikModalProps {
   isOpen: boolean;
@@ -22,6 +24,9 @@ interface RubrikModalProps {
   onSaveRubrik: (newRubrik: RubrikPenilaianData) => void;
   onGenerateRubrik: (customInstruction?: string) => Promise<void>;
   isGenerating?: boolean;
+  qrOptions?: QrSignatureOptions;
+  qrDataUrl?: string;
+  qrContent?: string;
 }
 
 export const getDefaultLembarPenilaianSiswa = (): LembarPenilaianSiswaData => ({
@@ -155,6 +160,9 @@ export const RubrikModal: React.FC<RubrikModalProps> = ({
   onSaveRubrik,
   onGenerateRubrik,
   isGenerating = false,
+  qrOptions,
+  qrDataUrl,
+  qrContent,
 }) => {
   const [activeTab, setActiveTab] = useState<'as' | 'for' | 'of' | 'lembar' | 'all'>('as');
   const [isEditing, setIsEditing] = useState(false);
@@ -168,6 +176,9 @@ export const RubrikModal: React.FC<RubrikModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
   const [showPromptInput, setShowPromptInput] = useState(false);
+
+  const teacherTitle = qrOptions?.guruTitle || determineTeacherTitle(planData.identitas);
+  const locationAndDate = `${qrOptions?.locationCity ? qrOptions.locationCity + ', ' : (planData.identitas?.kotaSekolah ? planData.identitas.kotaSekolah + ', ' : 'Disahkan di Sekolah, ')}${qrOptions?.customDate || '......................... 2026'}`;
 
   // Lembar Penilaian Helper States
   const [searchSiswa, setSearchSiswa] = useState('');
@@ -544,17 +555,33 @@ ${lembarData.daftarSiswa.map((s, idx) => {
         </table>
 
         <!-- SIGNATURE SECTION -->
-        <table style="width: 100%; margin-top: 40px; page-break-inside: avoid; border: none;">
+        <table style="width: 100%; margin-top: 30px; page-break-inside: avoid; border: none;">
           <tr style="border: none;">
-            <td width="50%" style="border: none; padding: 0;">
+            <td width="50%" style="border: none; padding: 0 10px; vertical-align: top;">
               <p style="margin: 0; font-size: 9pt; color: #475569;">Mengetahui,</p>
-              <p style="margin: 0; font-weight: bold; font-size: 9.5pt; color: #1e293b; margin-bottom: 50px;">Kepala Sekolah</p>
+              <p style="margin: 0; font-weight: bold; font-size: 9.5pt; color: #1e293b; margin-bottom: 6px;">Kepala Sekolah ${identitas.namaSekolah || ''}</p>
+              ${
+                qrOptions?.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'KEPSEK') && qrDataUrl
+                  ? `<div style="padding: 6px 0;">
+                      <img src="${qrDataUrl}" width="85" height="85" style="display: inline-block;" />
+                      <div style="font-size: 7.5pt; font-weight: bold; color: #0f766e; margin-top: 2px;">✓ Ditandatangani secara Elektronik (TTE)</div>
+                    </div>`
+                  : `<div style="height: 50px; margin-bottom: 6px;"></div>`
+              }
               <p style="margin: 0; font-weight: bold; text-decoration: underline; color: #1e293b;">${identitas.namaKepsek || '_________________________'}</p>
               <p style="margin: 0; font-size: 8.5pt; color: #475569;">NIP. ${identitas.nipKepsek || '...........................................'}</p>
             </td>
-            <td width="50%" style="border: none; padding: 0; text-align: right;">
-              <p style="margin: 0; font-size: 9pt; color: #475569;">${identitas.kotaKabupaten || 'Indonesia'}, ${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
-              <p style="margin: 0; font-weight: bold; font-size: 9.5pt; color: #1e293b; margin-bottom: 50px;">Guru Kelas</p>
+            <td width="50%" style="border: none; padding: 0 10px; text-align: right; vertical-align: top;">
+              <p style="margin: 0; font-size: 9pt; color: #475569;">${locationAndDate}</p>
+              <p style="margin: 0; font-weight: bold; font-size: 9.5pt; color: #1e293b; margin-bottom: 6px;">${teacherTitle}</p>
+              ${
+                qrOptions?.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'GURU') && qrDataUrl
+                  ? `<div style="padding: 6px 0;">
+                      <img src="${qrDataUrl}" width="85" height="85" style="display: inline-block;" />
+                      <div style="font-size: 7.5pt; font-weight: bold; color: #0f766e; margin-top: 2px;">✓ Ditandatangani secara Elektronik (TTE)</div>
+                    </div>`
+                  : `<div style="height: 50px; margin-bottom: 6px;"></div>`
+              }
               <p style="margin: 0; font-weight: bold; text-decoration: underline; color: #1e293b;">${identitas.namaGuru || '_________________________'}</p>
               <p style="margin: 0; font-size: 8.5pt; color: #475569;">NIP. ${identitas.nipGuru || '...........................................'}</p>
             </td>
@@ -1594,7 +1621,7 @@ ${lembarData.daftarSiswa.map((s, idx) => {
         </div>
 
         {/* MODAL BODY CONTENT */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-100 print:bg-white print:p-0 print:overflow-visible">
+        <div id="printable-rubrik-document" className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-100 print:bg-white print:p-0 print:overflow-visible">
           {/* Header Identitas Cetak */}
           <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs mb-6 print:border-none print:shadow-none print:p-0 print:mb-4">
             <div className="text-center border-b-2 border-slate-900 pb-4 mb-4">
@@ -1659,21 +1686,55 @@ ${lembarData.daftarSiswa.map((s, idx) => {
 
           {(activeTab === 'lembar' || activeTab === 'all') && renderLembarPenilaianSiswa()}
 
-          {/* SIGNATURE BLOCK FOR PRINT */}
+          {/* SIGNATURE BLOCK FOR PRINT & DISPLAY */}
           <div className="mt-8 pt-6 border-t-2 border-slate-300 text-xs print:break-inside-avoid">
             <div className="grid grid-cols-2 gap-8 text-center">
               <div>
                 <p className="text-slate-600 mb-1">Mengetahui,</p>
                 <p className="font-bold text-slate-900">Kepala Sekolah {planData.identitas.namaSekolah}</p>
-                <div className="h-16" />
+                {qrOptions?.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'KEPSEK') && qrContent ? (
+                  <div className="my-2 flex flex-col items-center justify-center">
+                    <div className="p-2 bg-white rounded-xl border border-teal-200 shadow-xs inline-block">
+                      <QRCode
+                        value={qrContent}
+                        size={qrOptions.qrSize === 'LARGE' ? 95 : 75}
+                        level={qrOptions.qrLevel || 'M'}
+                        marginSize={3}
+                        className="rounded-lg"
+                      />
+                    </div>
+                    <span className="text-[10px] text-teal-800 font-bold mt-1 tracking-tight">
+                      ✓ Ditandatangani secara Elektronik (TTE)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="h-16" />
+                )}
                 <p className="font-bold text-slate-900 underline">{planData.identitas.namaKepsek || '_________________________'}</p>
                 <p className="text-slate-600 text-xs">NIP. {planData.identitas.nipKepsek || '...........................................'}</p>
               </div>
 
               <div>
-                <p className="text-slate-600 mb-1">Disahkan di Sekolah, ......................... 2026</p>
-                <p className="font-bold text-slate-900">Guru Mata Pelajaran</p>
-                <div className="h-16" />
+                <p className="text-slate-600 mb-1">{locationAndDate}</p>
+                <p className="font-bold text-slate-900">{teacherTitle}</p>
+                {qrOptions?.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'GURU') && qrContent ? (
+                  <div className="my-2 flex flex-col items-center justify-center">
+                    <div className="p-2 bg-white rounded-xl border border-teal-200 shadow-xs inline-block">
+                      <QRCode
+                        value={qrContent}
+                        size={qrOptions.qrSize === 'LARGE' ? 95 : 75}
+                        level={qrOptions.qrLevel || 'M'}
+                        marginSize={3}
+                        className="rounded-lg"
+                      />
+                    </div>
+                    <span className="text-[10px] text-teal-800 font-bold mt-1 tracking-tight">
+                      ✓ Ditandatangani secara Elektronik (TTE)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="h-16" />
+                )}
                 <p className="font-bold text-slate-900 underline">{planData.identitas.namaGuru || '_________________________'}</p>
                 <p className="text-slate-600 text-xs">NIP. {planData.identitas.nipGuru || '...........................................'}</p>
               </div>

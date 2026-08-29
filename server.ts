@@ -543,6 +543,8 @@ function createFallbackLessonPlan(formData: any) {
       nipKepsek: data.nipKepsek || "-",
       namaSekolah: data.namaSekolah || "Sekolah Dasar Negeri",
       kotaSekolah: data.kotaSekolah || data.identitas?.kotaSekolah || "",
+      peranGuru: data.peranGuru || data.identitas?.peranGuru,
+      labelPeranGuru: data.labelPeranGuru || data.identitas?.labelPeranGuru,
       mataPelajaran: mp,
       fase: data.fase || "Fase A",
       kelas: data.kelas || "Kelas 1",
@@ -1117,11 +1119,21 @@ Keluarkan dalam format JSON struktur persis berikut:
 
       try {
         const parsedPlan = JSON.parse(accumulatedText);
+        if (parsedPlan && parsedPlan.identitas) {
+          if (formData?.peranGuru) parsedPlan.identitas.peranGuru = formData.peranGuru;
+          if (formData?.labelPeranGuru) parsedPlan.identitas.labelPeranGuru = formData.labelPeranGuru;
+          if (formData?.kotaSekolah && !parsedPlan.identitas.kotaSekolah) parsedPlan.identitas.kotaSekolah = formData.kotaSekolah;
+        }
         res.write(`data: ${JSON.stringify({ type: 'done', lessonPlan: parsedPlan })}\n\n`);
       } catch (parseErr) {
         const jsonMatch = accumulatedText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsedPlan = JSON.parse(jsonMatch[0]);
+          if (parsedPlan && parsedPlan.identitas) {
+            if (formData?.peranGuru) parsedPlan.identitas.peranGuru = formData.peranGuru;
+            if (formData?.labelPeranGuru) parsedPlan.identitas.labelPeranGuru = formData.labelPeranGuru;
+            if (formData?.kotaSekolah && !parsedPlan.identitas.kotaSekolah) parsedPlan.identitas.kotaSekolah = formData.kotaSekolah;
+          }
           res.write(`data: ${JSON.stringify({ type: 'done', lessonPlan: parsedPlan })}\n\n`);
         } else {
           throw new Error("Format JSON dari AI tidak valid");

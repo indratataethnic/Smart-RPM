@@ -14,7 +14,10 @@
     display: none !important;
   }
   #printable-rpm-document,
-  #printable-lkpd-document {
+  #printable-lkpd-document,
+  #printable-rubrik-document,
+  #printable-jurnal-document,
+  #printable-bahanajar-document {
     padding: 0 !important;
     margin: 0 !important;
     max-width: none !important;

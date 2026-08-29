@@ -6,6 +6,8 @@ export interface LessonFormData {
   nipKepsek: string;
   namaSekolah: string;
   kotaSekolah?: string;
+  peranGuru?: 'GURU_KELAS' | 'GURU_MAPEL' | 'CUSTOM';
+  labelPeranGuru?: string;
   fase: string;
   kelas: string;
   faseKelas: string;
@@ -200,6 +202,8 @@ export interface LessonPlanOutput {
     nipKepsek: string;
     namaSekolah: string;
     kotaSekolah?: string;
+    peranGuru?: 'GURU_KELAS' | 'GURU_MAPEL' | 'CUSTOM';
+    labelPeranGuru?: string;
     mataPelajaran: string;
     fase?: string;
     kelas?: string;

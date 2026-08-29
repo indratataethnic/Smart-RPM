@@ -13,6 +13,7 @@ interface DecodedVerificationData {
   mapel: string;
   faseKelas: string;
   guru: string;
+  guruTitle?: string;
   nipGuru: string;
   kepsek: string;
   nipKepsek: string;
@@ -111,6 +112,7 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ code, onBack
           mapel: parsed.mapel || parsed.m || 'Mata Pelajaran',
           faseKelas: parsed.faseKelas || parsed.f || 'Fase B / Kelas 4',
           guru: parsed.guru || parsed.g || 'Guru Mata Pelajaran',
+          guruTitle: parsed.guruTitle || parsed.gt || '',
           nipGuru: parsed.nipGuru || parsed.ng || '-',
           kepsek: parsed.kepsek || parsed.k || 'Kepala Sekolah',
           nipKepsek: parsed.nipKepsek || parsed.nk || '-',
@@ -262,10 +264,12 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ code, onBack
                 </div>
               </div>
 
-              {/* Guru Mata Pelajaran */}
+              {/* Guru Mata Pelajaran / Guru Kelas */}
               <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2 shadow-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-teal-800 uppercase">2. Guru Pengampu (Penyusun)</span>
+                  <span className="text-[11px] font-bold text-teal-800 uppercase">
+                    2. {data.guruTitle || 'Guru Pengampu'} (Penyusun)
+                  </span>
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 </div>
                 <div>

@@ -130,6 +130,8 @@ const createFallbackLessonPlanClient = (data: any): LessonPlanOutput => {
       nipKepsek: data.nipKepsek || "-",
       namaSekolah: data.namaSekolah || "Sekolah Dasar Negeri",
       kotaSekolah: data.kotaSekolah || data.identitas?.kotaSekolah || "",
+      peranGuru: data.peranGuru || data.identitas?.peranGuru,
+      labelPeranGuru: data.labelPeranGuru || data.identitas?.labelPeranGuru,
       mataPelajaran: mp,
       fase: data.fase || "Fase B",
       kelas: data.kelas || "Kelas 4",

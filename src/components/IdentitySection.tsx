@@ -10,6 +10,17 @@ interface IdentitySectionProps {
 
 export const IdentitySection: React.FC<IdentitySectionProps> = ({ formData, onChange }) => {
   const kelasOptions = getKelasOptions(formData.fase || 'Fase B');
+
+  // Smart detected role recommendation
+  const rawKelas = formData.kelas || '';
+  const cleanKelas = rawKelas.replace(/^Kelas\s*/i, '').trim();
+  const fase = formData.fase || formData.faseKelas || '';
+  const isSD = /Fase\s*[ABC]\b/i.test(fase) || /Kelas\s*[1-6]\b/i.test(rawKelas) || /Kelas\s*[1-6]\b/i.test(fase);
+  const mapel = formData.mataPelajaran || '';
+  const isSpecializedSD = /(PJOK|Penjas|Pendidikan Jasmani|Olahraga|Agama|PAI|PAK|Pendidikan Agama|Bahasa Inggris|English)/i.test(mapel);
+  const recommendedRole: 'GURU_KELAS' | 'GURU_MAPEL' = (isSD && !isSpecializedSD) ? 'GURU_KELAS' : 'GURU_MAPEL';
+  const effectiveRole = formData.peranGuru || recommendedRole;
+
   return (
     <div id="section-identity" className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
       <div className="flex items-center gap-2.5 mb-5 border-b border-slate-100 pb-3">
@@ -95,6 +106,101 @@ export const IdentitySection: React.FC<IdentitySectionProps> = ({ formData, onCh
             placeholder="Isikan NIP guru pengampu (contoh: 19900515 201801 1 002 / -)..."
             className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
           />
+        </div>
+
+        {/* Jabatan Pengesahan Guru (Guru Kelas vs Guru Mapel) */}
+        <div className="md:col-span-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+            <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <GraduationCap className="w-4 h-4 text-teal-700" />
+              Sebutan Jabatan Guru pada Pengesahan / Tanda Tangan:
+            </label>
+            <span className="text-[11px] text-teal-700 font-medium">
+              Standar: {effectiveRole === 'GURU_KELAS' ? `Guru Kelas ${cleanKelas || '(Kelas)'}` : `Guru Mata Pelajaran ${mapel || '(Mapel)'}`}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <label
+              className={`flex items-start gap-2 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                effectiveRole === 'GURU_KELAS'
+                  ? 'bg-teal-50/80 border-teal-600 ring-1 ring-teal-500/30 text-teal-950 font-bold'
+                  : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+              }`}
+            >
+              <input
+                type="radio"
+                name="peranGuru"
+                value="GURU_KELAS"
+                checked={effectiveRole === 'GURU_KELAS'}
+                onChange={onChange}
+                className="mt-0.5 text-teal-600 focus:ring-teal-500"
+              />
+              <div className="text-xs">
+                <span className="block font-semibold">Guru Kelas</span>
+                <span className="text-[10px] text-slate-500 font-normal">
+                  {cleanKelas ? `Guru Kelas ${cleanKelas}` : 'Khusus SD / Guru Tematik'}
+                </span>
+              </div>
+            </label>
+
+            <label
+              className={`flex items-start gap-2 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                effectiveRole === 'GURU_MAPEL'
+                  ? 'bg-teal-50/80 border-teal-600 ring-1 ring-teal-500/30 text-teal-950 font-bold'
+                  : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+              }`}
+            >
+              <input
+                type="radio"
+                name="peranGuru"
+                value="GURU_MAPEL"
+                checked={effectiveRole === 'GURU_MAPEL'}
+                onChange={onChange}
+                className="mt-0.5 text-teal-600 focus:ring-teal-500"
+              />
+              <div className="text-xs">
+                <span className="block font-semibold">Guru Mata Pelajaran</span>
+                <span className="text-[10px] text-slate-500 font-normal">
+                  {mapel ? `Guru Mapel ${mapel}` : 'SMP, SMA, SMK / Mapel Khusus'}
+                </span>
+              </div>
+            </label>
+
+            <label
+              className={`flex items-start gap-2 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                effectiveRole === 'CUSTOM'
+                  ? 'bg-teal-50/80 border-teal-600 ring-1 ring-teal-500/30 text-teal-950 font-bold'
+                  : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+              }`}
+            >
+              <input
+                type="radio"
+                name="peranGuru"
+                value="CUSTOM"
+                checked={effectiveRole === 'CUSTOM'}
+                onChange={onChange}
+                className="mt-0.5 text-teal-600 focus:ring-teal-500"
+              />
+              <div className="text-xs">
+                <span className="block font-semibold">Kustom Manual</span>
+                <span className="text-[10px] text-slate-500 font-normal">Tulis teks jabatan bebas</span>
+              </div>
+            </label>
+          </div>
+
+          {effectiveRole === 'CUSTOM' && (
+            <div className="mt-2.5 pt-2 border-t border-slate-200">
+              <input
+                type="text"
+                name="labelPeranGuru"
+                value={formData.labelPeranGuru || ''}
+                onChange={onChange}
+                placeholder="Contoh: Guru Pembimbing Khusus / Guru BK / Pendidik..."
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-xs text-slate-800 outline-none"
+              />
+            </div>
+          )}
         </div>
 
         {/* Nama Kepsek (dibawah Nama Guru) */}

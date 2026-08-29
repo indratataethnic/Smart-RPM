@@ -32,7 +32,7 @@ import { RubrikModal, getDefaultRubrikData } from './RubrikModal';
 import { BahanAjarModal } from './BahanAjarModal';
 import { QrSignatureConfigModal } from './QrSignatureConfigModal';
 import { QRCode } from './QRCodeDisplay';
-import { QrSignatureOptions, getDefaultSignatureDate, generateQrContent, generateQrDataUrl, extractCityFromSchool } from '../lib/qrUtils';
+import { QrSignatureOptions, getDefaultSignatureDate, generateQrContent, generateQrDataUrl, extractCityFromSchool, determineTeacherTitle } from '../lib/qrUtils';
 
 
 export const getDefaultJurnalHarian = (p: LessonPlanOutput): JurnalHarianGuru => {
@@ -117,6 +117,7 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
   const initialCity = (plan.identitas?.kotaSekolah && plan.identitas.kotaSekolah.trim()) 
     ? plan.identitas.kotaSekolah.trim() 
     : extractCityFromSchool(plan.identitas?.namaSekolah);
+  const initialGuruTitle = determineTeacherTitle(plan.identitas);
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrOptions, setQrOptions] = useState<QrSignatureOptions>({
@@ -126,27 +127,56 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
     customDate: getDefaultSignatureDate(),
     qrType: 'URL',
     qrSize: 'LARGE',
+    guruTitle: initialGuruTitle,
   });
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [qrContent, setQrContent] = useState<string>('');
   const [verificationUrl, setVerificationUrl] = useState<string>('');
 
-  // Sync city when plan or editedPlan identity changes
+  // Sync city & guru title when plan or editedPlan identity changes
   useEffect(() => {
     const currentIdentitas = (isEditing ? editedPlan : plan).identitas;
     const currentCity = (currentIdentitas?.kotaSekolah && currentIdentitas.kotaSekolah.trim())
       ? currentIdentitas.kotaSekolah.trim()
       : extractCityFromSchool(currentIdentitas?.namaSekolah);
+    const currentGuruTitle = determineTeacherTitle(currentIdentitas);
 
-    if (currentCity && currentCity !== 'Disahkan di Sekolah') {
-      setQrOptions((prev) => {
-        if (!prev.locationCity || prev.locationCity === 'Disahkan di Sekolah') {
-          return { ...prev, locationCity: currentCity };
+    setQrOptions((prev) => {
+      let changed = false;
+      let newCity = prev.locationCity;
+      let newTitle = prev.guruTitle;
+
+      if ((!prev.locationCity || prev.locationCity === 'Disahkan di Sekolah') && currentCity && currentCity !== 'Disahkan di Sekolah') {
+        newCity = currentCity;
+        changed = true;
+      }
+
+      if (!prev.guruTitle || prev.guruTitle === 'Guru Mata Pelajaran' || prev.guruTitle === 'Guru Kelas') {
+        if (currentGuruTitle && currentGuruTitle !== prev.guruTitle) {
+          newTitle = currentGuruTitle;
+          changed = true;
         }
-        return prev;
-      });
-    }
-  }, [plan.identitas?.kotaSekolah, plan.identitas?.namaSekolah, editedPlan?.identitas?.kotaSekolah, editedPlan?.identitas?.namaSekolah, isEditing]);
+      }
+
+      return changed ? { ...prev, locationCity: newCity, guruTitle: newTitle } : prev;
+    });
+  }, [
+    plan.identitas?.kotaSekolah,
+    plan.identitas?.namaSekolah,
+    plan.identitas?.peranGuru,
+    plan.identitas?.labelPeranGuru,
+    plan.identitas?.fase,
+    plan.identitas?.kelas,
+    plan.identitas?.mataPelajaran,
+    editedPlan?.identitas?.kotaSekolah,
+    editedPlan?.identitas?.namaSekolah,
+    editedPlan?.identitas?.peranGuru,
+    editedPlan?.identitas?.labelPeranGuru,
+    editedPlan?.identitas?.fase,
+    editedPlan?.identitas?.kelas,
+    editedPlan?.identitas?.mataPelajaran,
+    isEditing,
+  ]);
 
   useEffect(() => {
     const activePlan = isEditing ? editedPlan : plan;
@@ -1374,7 +1404,7 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
           </td>
           <td width="50%" style="vertical-align: top; padding: 0 10px;">
             <p style="margin-bottom: 4px;">${qrOptions.locationCity ? qrOptions.locationCity + ', ' : 'Disahkan di Sekolah, '}${qrOptions.customDate || '......................... 2026'}</p>
-            <p style="font-weight: bold;">Guru Mata Pelajaran</p>
+            <p style="font-weight: bold;">${qrOptions.guruTitle || determineTeacherTitle(identitas)}</p>
             ${
               qrOptions.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'GURU') && qrDataUrl
                 ? `<div style="padding: 6px 0;">
@@ -3185,7 +3215,9 @@ ${formatActivityText(k.aktivitasMurid)}
                 {qrOptions.locationCity ? `${qrOptions.locationCity}, ` : 'Disahkan di Sekolah, '}
                 {qrOptions.customDate || '......................... 2026'}
               </p>
-              <p className="font-bold text-slate-900">Guru Mata Pelajaran</p>
+              <p className="font-bold text-slate-900">
+                {qrOptions.guruTitle || determineTeacherTitle(activePlan.identitas)}
+              </p>
 
               {qrOptions.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'GURU') && qrContent ? (
                 <div className="my-2 flex flex-col items-center justify-center">
@@ -3243,6 +3275,9 @@ ${formatActivityText(k.aktivitasMurid)}
         planData={activePlan}
         jurnalData={activePlan.jurnalHarian || getDefaultJurnalHarian(activePlan)}
         onSaveJurnal={handleSaveJurnal}
+        qrOptions={qrOptions}
+        qrDataUrl={qrDataUrl}
+        qrContent={qrContent}
       />
 
       {/* RUBRIK PENILAIAN AI MODAL */}
@@ -3254,6 +3289,9 @@ ${formatActivityText(k.aktivitasMurid)}
         onSaveRubrik={handleSaveRubrik}
         onGenerateRubrik={handleGenerateRubrik}
         isGenerating={isGeneratingRubrik}
+        qrOptions={qrOptions}
+        qrDataUrl={qrDataUrl}
+        qrContent={qrContent}
       />
 
       {/* RANGKUMAN BAHAN BACAAN AI MODAL */}

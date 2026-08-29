@@ -14,6 +14,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { JurnalHarianGuru, JurnalHarianEntry, LessonPlanOutput } from '../types';
+import { QrSignatureOptions, determineTeacherTitle } from '../lib/qrUtils';
+import { QRCode } from './QRCodeDisplay';
 
 interface JurnalHarianModalProps {
   isOpen: boolean;
@@ -21,6 +23,9 @@ interface JurnalHarianModalProps {
   planData: LessonPlanOutput;
   jurnalData: JurnalHarianGuru;
   onSaveJurnal: (newJurnal: JurnalHarianGuru) => void;
+  qrOptions?: QrSignatureOptions;
+  qrDataUrl?: string;
+  qrContent?: string;
 }
 
 export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
@@ -29,10 +34,16 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
   planData,
   jurnalData,
   onSaveJurnal,
+  qrOptions,
+  qrDataUrl,
+  qrContent,
 }) => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [editableJurnal, setEditableJurnal] = useState<JurnalHarianGuru>(jurnalData);
+
+  const teacherTitle = qrOptions?.guruTitle || determineTeacherTitle(planData.identitas);
+  const locationAndDate = `${qrOptions?.locationCity ? qrOptions.locationCity + ', ' : (planData.identitas?.kotaSekolah ? planData.identitas.kotaSekolah + ', ' : 'Disahkan di Sekolah, ')}${qrOptions?.customDate || '......................... 2026'}`;
 
   React.useEffect(() => {
     setEditableJurnal(jurnalData);
@@ -154,18 +165,32 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
         <!-- SIGNATURES -->
         <table class="signature-table">
           <tr>
-            <td width="50%">
+            <td width="50%" style="vertical-align: top;">
               <p style="margin-bottom: 4px;">Mengetahui,</p>
-              <p style="font-weight: bold; margin-top: 0;">Kepala Sekolah ${identitas.namaSekolah}</p>
-              <div style="height: 50px; border-bottom: 1px dashed #cbd5e1; margin: 10px 40px;"></div>
-              <p style="font-weight: bold; text-decoration: underline; margin-bottom: 2px;">${identitas.namaKepsek || '_________________________'}</p>
+              <p style="font-weight: bold; margin-top: 0; margin-bottom: 4px;">Kepala Sekolah ${identitas.namaSekolah || ''}</p>
+              ${
+                qrOptions?.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'KEPSEK') && qrDataUrl
+                  ? `<div style="padding: 4px 0;">
+                      <img src="${qrDataUrl}" width="80" height="80" style="display: inline-block;" />
+                      <div style="font-size: 7.5pt; font-weight: bold; color: #0f766e; margin-top: 2px;">✓ Ditandatangani secara Elektronik (TTE)</div>
+                    </div>`
+                  : `<div style="height: 50px; border-bottom: 1px dashed #cbd5e1; margin: 10px 40px;"></div>`
+              }
+              <p style="font-weight: bold; text-decoration: underline; margin-bottom: 2px; margin-top: 4px;">${identitas.namaKepsek || '_________________________'}</p>
               <p style="font-size: 8.5pt; color: #64748b; margin-top: 0;">NIP. ${identitas.nipKepsek || '...........................................'}</p>
             </td>
-            <td width="50%">
-              <p style="margin-bottom: 4px;">Guru Mata Pelajaran,</p>
-              <p style="font-weight: bold; margin-top: 0;">${identitas.namaSekolah}</p>
-              <div style="height: 50px; border-bottom: 1px dashed #cbd5e1; margin: 10px 40px;"></div>
-              <p style="font-weight: bold; text-decoration: underline; margin-bottom: 2px;">${identitas.namaGuru || '_________________________'}</p>
+            <td width="50%" style="vertical-align: top;">
+              <p style="margin-bottom: 4px;">${locationAndDate}</p>
+              <p style="font-weight: bold; margin-top: 0; margin-bottom: 4px;">${teacherTitle}</p>
+              ${
+                qrOptions?.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'GURU') && qrDataUrl
+                  ? `<div style="padding: 4px 0;">
+                      <img src="${qrDataUrl}" width="80" height="80" style="display: inline-block;" />
+                      <div style="font-size: 7.5pt; font-weight: bold; color: #0f766e; margin-top: 2px;">✓ Ditandatangani secara Elektronik (TTE)</div>
+                    </div>`
+                  : `<div style="height: 50px; border-bottom: 1px dashed #cbd5e1; margin: 10px 40px;"></div>`
+              }
+              <p style="font-weight: bold; text-decoration: underline; margin-bottom: 2px; margin-top: 4px;">${identitas.namaGuru || '_________________________'}</p>
               <p style="font-size: 8.5pt; color: #64748b; margin-top: 0;">NIP. ${identitas.nipGuru || '...........................................'}</p>
             </td>
           </tr>
@@ -323,18 +348,32 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
         <!-- SIGNATURES -->
         <table class="signature-table">
           <tr>
-            <td width="50%">
+            <td width="50%" style="vertical-align: top;">
               <p style="margin-bottom: 4px;">Mengetahui,</p>
-              <p style="font-weight: bold; margin-top: 0;">Kepala Sekolah ${identitas.namaSekolah}</p>
-              <div style="height: 50px; border-bottom: 1px dashed #cbd5e1; margin: 10px 40px;"></div>
-              <p style="font-weight: bold; text-decoration: underline; margin-bottom: 2px;">${identitas.namaKepsek || '_________________________'}</p>
+              <p style="font-weight: bold; margin-top: 0; margin-bottom: 4px;">Kepala Sekolah ${identitas.namaSekolah || ''}</p>
+              ${
+                qrOptions?.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'KEPSEK') && qrDataUrl
+                  ? `<div style="padding: 4px 0;">
+                      <img src="${qrDataUrl}" width="80" height="80" style="display: inline-block;" />
+                      <div style="font-size: 7.5pt; font-weight: bold; color: #0f766e; margin-top: 2px;">✓ Ditandatangani secara Elektronik (TTE)</div>
+                    </div>`
+                  : `<div style="height: 50px; border-bottom: 1px dashed #cbd5e1; margin: 10px 40px;"></div>`
+              }
+              <p style="font-weight: bold; text-decoration: underline; margin-bottom: 2px; margin-top: 4px;">${identitas.namaKepsek || '_________________________'}</p>
               <p style="font-size: 8.5pt; color: #64748b; margin-top: 0;">NIP. ${identitas.nipKepsek || '...........................................'}</p>
             </td>
-            <td width="50%">
-              <p style="margin-bottom: 4px;">Guru Mata Pelajaran,</p>
-              <p style="font-weight: bold; margin-top: 0;">${identitas.namaSekolah}</p>
-              <div style="height: 50px; border-bottom: 1px dashed #cbd5e1; margin: 10px 40px;"></div>
-              <p style="font-weight: bold; text-decoration: underline; margin-bottom: 2px;">${identitas.namaGuru || '_________________________'}</p>
+            <td width="50%" style="vertical-align: top;">
+              <p style="margin-bottom: 4px;">${locationAndDate}</p>
+              <p style="font-weight: bold; margin-top: 0; margin-bottom: 4px;">${teacherTitle}</p>
+              ${
+                qrOptions?.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'GURU') && qrDataUrl
+                  ? `<div style="padding: 4px 0;">
+                      <img src="${qrDataUrl}" width="80" height="80" style="display: inline-block;" />
+                      <div style="font-size: 7.5pt; font-weight: bold; color: #0f766e; margin-top: 2px;">✓ Ditandatangani secara Elektronik (TTE)</div>
+                    </div>`
+                  : `<div style="height: 50px; border-bottom: 1px dashed #cbd5e1; margin: 10px 40px;"></div>`
+              }
+              <p style="font-weight: bold; text-decoration: underline; margin-bottom: 2px; margin-top: 4px;">${identitas.namaGuru || '_________________________'}</p>
               <p style="font-size: 8.5pt; color: #64748b; margin-top: 0;">NIP. ${identitas.nipGuru || '...........................................'}</p>
             </td>
           </tr>
@@ -486,7 +525,7 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
 
         {/* MAIN BODY DOCUMENT AREA */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-50">
-          <div className="bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-slate-200 max-w-5xl mx-auto font-sans text-slate-800 text-xs sm:text-sm leading-relaxed">
+          <div id="printable-jurnal-document" className="bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-slate-200 max-w-5xl mx-auto font-sans text-slate-800 text-xs sm:text-sm leading-relaxed">
             
             {/* KOP HEADER JURNAL */}
             <div className="border-b-2 border-teal-800 pb-4 mb-6 text-center">
@@ -681,25 +720,60 @@ export const JurnalHarianModal: React.FC<JurnalHarianModalProps> = ({
             <div className="pt-4 border-t border-slate-200 mt-6">
               <h3 className="text-xs font-bold text-teal-900 mb-3 uppercase tracking-wide flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-teal-700" />
-                Kolom Paraf & Verifikasi Jurnal Harian Guru:
+                Kolom Pengesahan & Verifikasi Jurnal Harian Guru:
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-center text-xs">
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
                   <p className="font-bold text-slate-800">Mengetahui & Memverifikasi,</p>
                   <p className="text-slate-600 font-semibold">Kepala Sekolah {identitas.namaSekolah}</p>
-                  <div className="h-16 border-b border-dashed border-slate-300 mx-8 my-3 flex items-center justify-center">
-                    <span className="text-[10px] text-slate-400 italic">( Tanda Tangan & Stempel )</span>
-                  </div>
+                  {qrOptions?.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'KEPSEK') && qrContent ? (
+                    <div className="my-2 flex flex-col items-center justify-center">
+                      <div className="p-2 bg-white rounded-xl border border-teal-200 shadow-xs inline-block">
+                        <QRCode
+                          value={qrContent}
+                          size={qrOptions.qrSize === 'LARGE' ? 90 : 70}
+                          level={qrOptions.qrLevel || 'M'}
+                          marginSize={2}
+                          className="rounded-lg"
+                        />
+                      </div>
+                      <span className="text-[10px] text-teal-800 font-bold mt-1 tracking-tight">
+                        ✓ Ditandatangani secara Elektronik (TTE)
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="h-16 border-b border-dashed border-slate-300 mx-8 my-3 flex items-center justify-center">
+                      <span className="text-[10px] text-slate-400 italic">( Tanda Tangan & Stempel )</span>
+                    </div>
+                  )}
                   <p className="font-bold text-slate-900 underline">{identitas.namaKepsek || '_________________________'}</p>
                   <p className="text-slate-500 text-[11px]">NIP. {identitas.nipKepsek || '...........................................'}</p>
                 </div>
 
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                  <p className="text-slate-600 text-[11px] mb-0.5">{locationAndDate}</p>
                   <p className="font-bold text-slate-800">Pembuat Jurnal Harian,</p>
-                  <p className="text-slate-600 font-semibold">Guru Mata Pelajaran</p>
-                  <div className="h-16 border-b border-dashed border-slate-300 mx-8 my-3 flex items-center justify-center">
-                    <span className="text-[10px] text-slate-400 italic">( Paraf / Tanda Tangan Guru )</span>
-                  </div>
+                  <p className="text-slate-700 font-semibold">{teacherTitle}</p>
+                  {qrOptions?.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'GURU') && qrContent ? (
+                    <div className="my-2 flex flex-col items-center justify-center">
+                      <div className="p-2 bg-white rounded-xl border border-teal-200 shadow-xs inline-block">
+                        <QRCode
+                          value={qrContent}
+                          size={qrOptions.qrSize === 'LARGE' ? 90 : 70}
+                          level={qrOptions.qrLevel || 'M'}
+                          marginSize={2}
+                          className="rounded-lg"
+                        />
+                      </div>
+                      <span className="text-[10px] text-teal-800 font-bold mt-1 tracking-tight">
+                        ✓ Ditandatangani secara Elektronik (TTE)
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="h-16 border-b border-dashed border-slate-300 mx-8 my-3 flex items-center justify-center">
+                      <span className="text-[10px] text-slate-400 italic">( Paraf / Tanda Tangan Guru )</span>
+                    </div>
+                  )}
                   <p className="font-bold text-slate-900 underline">{identitas.namaGuru || '_________________________'}</p>
                   <p className="text-slate-500 text-[11px]">NIP. {identitas.nipGuru || '...........................................'}</p>
                 </div>

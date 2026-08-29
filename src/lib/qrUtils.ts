@@ -9,7 +9,53 @@ export interface QrSignatureOptions {
   qrType: 'URL' | 'TEXT'; // URL ke portal verifikasi atau Teks ringkasan langsung
   qrSize: 'NORMAL' | 'LARGE'; // Ukuran tampilan QR
   qrLevel?: 'L' | 'M' | 'Q' | 'H'; // Tingkat toleransi koreksi kesalahan (M = standar optimal kamera HP)
+  guruTitle?: string; // misal "Guru Kelas 4" atau "Guru Mata Pelajaran IPAS"
 }
+
+/**
+ * Intelligent helper to determine whether the teacher title should be "Guru Kelas [Kelas]" or "Guru Mata Pelajaran [Mapel]"
+ */
+export const determineTeacherTitle = (identitas?: {
+  peranGuru?: string;
+  labelPeranGuru?: string;
+  fase?: string;
+  kelas?: string;
+  faseKelas?: string;
+  mataPelajaran?: string;
+}): string => {
+  if (!identitas) return 'Guru Mata Pelajaran';
+
+  // If explicitly custom label is set
+  if (identitas.labelPeranGuru && identitas.labelPeranGuru.trim()) {
+    return identitas.labelPeranGuru.trim();
+  }
+
+  const role = identitas.peranGuru;
+  const rawKelas = identitas.kelas || '';
+  const cleanKelas = rawKelas.replace(/^Kelas\s*/i, '').trim(); // e.g. "4", "1", "IV"
+  const mapel = identitas.mataPelajaran || '';
+
+  if (role === 'GURU_KELAS') {
+    return cleanKelas ? `Guru Kelas ${cleanKelas}` : 'Guru Kelas';
+  }
+  if (role === 'GURU_MAPEL') {
+    return mapel ? `Guru Mata Pelajaran ${mapel}` : 'Guru Mata Pelajaran';
+  }
+
+  // Automatic heuristic:
+  // Check if SD phase (Fase A, B, C or Kelas 1-6)
+  const fase = identitas.fase || identitas.faseKelas || '';
+  const isSD = /Fase\s*[ABC]\b/i.test(fase) || /Kelas\s*[1-6]\b/i.test(rawKelas) || /Kelas\s*[1-6]\b/i.test(fase);
+
+  // Specialized SD subjects that typically have Guru Mata Pelajaran
+  const isSpecializedSD = /(PJOK|Penjas|Pendidikan Jasmani|Olahraga|Agama|PAI|PAK|Pendidikan Agama|Bahasa Inggris|English)/i.test(mapel);
+
+  if (isSD && !isSpecializedSD) {
+    return cleanKelas ? `Guru Kelas ${cleanKelas}` : 'Guru Kelas';
+  }
+
+  return mapel ? `Guru Mata Pelajaran ${mapel}` : 'Guru Mata Pelajaran';
+};
 
 /**
  * Intelligent helper to extract city/region name from school string if not explicitly given
@@ -91,13 +137,14 @@ export const generateQrContent = (
 
   if (options.qrType === 'TEXT') {
     // Mode Teks Ringkas Berformat: Sangat cepat terbaca oleh semua kamera HP tanpa internet
+    const guruLabel = options.guruTitle || determineTeacherTitle(plan.identitas);
     const textLines = [
       '★ VERIFIKASI RESMI DOKUMEN TTE ★',
       `ID: ${docId}`,
       `Dokumen: RPM ${plan.identitas?.mataPelajaran || 'Mapel'}`,
       `Kelas: ${plan.identitas?.faseKelas || '-'}`,
       `Sekolah: ${plan.identitas?.namaSekolah || '-'}`,
-      `Guru: ${plan.identitas?.namaGuru || '-'}`,
+      `${guruLabel}: ${plan.identitas?.namaGuru || '-'}`,
       `Kepsek: ${plan.identitas?.namaKepsek || '-'}`,
       `Disahkan: ${dateStr}`,
       `Status: TERVERIFIKASI ASLI & SAH`,
@@ -113,6 +160,7 @@ export const generateQrContent = (
     m: (plan.identitas?.mataPelajaran || '').trim(),
     f: (plan.identitas?.faseKelas || '').trim(),
     g: (plan.identitas?.namaGuru || '').trim(),
+    gt: (options.guruTitle || determineTeacherTitle(plan.identitas)).trim(),
     ng: (plan.identitas?.nipGuru || '').trim(),
     k: (plan.identitas?.namaKepsek || '').trim(),
     nk: (plan.identitas?.nipKepsek || '').trim(),

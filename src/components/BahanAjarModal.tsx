@@ -13,7 +13,8 @@ import {
   RefreshCw,
   FileText,
   Lightbulb,
-  Info
+  Info,
+  FileDown
 } from 'lucide-react';
 import { BahanAjarData, LessonPlanOutput } from '../types';
 
@@ -104,8 +105,201 @@ export const BahanAjarModal: React.FC<BahanAjarModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const buildBahanAjarHtml = (data: BahanAjarData): string => {
+    const { identitas, tujuanDanDpl } = planData;
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset='utf-8'>
+        <title>${data.judulBahanAjar}</title>
+        <style>
+          @page { size: A4 portrait; margin: 15mm; }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10.5pt; line-height: 1.5; color: #1e293b; margin: 0; padding: 15px; }
+          .header { text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 10px; margin-bottom: 15px; }
+          .title { font-size: 13.5pt; font-weight: bold; color: #0f766e; text-transform: uppercase; }
+          .subtitle { font-size: 10.5pt; font-style: italic; color: #475569; }
+          .meta-table, .data-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          .meta-table td { padding: 4px 6px; font-size: 9.5pt; vertical-align: top; }
+          .section-title { background-color: #0f766e; color: white; padding: 6px 10px; font-weight: bold; font-size: 10.5pt; margin-top: 15px; margin-bottom: 8px; page-break-after: avoid; border-radius: 3px; }
+          .box { border: 1px solid #cbd5e1; padding: 10px 12px; background-color: #f8fafc; margin-bottom: 10px; border-radius: 4px; font-size: 10pt; }
+          .box-warning { border: 1px solid #fde68a; padding: 10px 12px; background-color: #fffbeb; margin-bottom: 10px; border-radius: 4px; font-size: 10pt; }
+          .glosarium-item { margin-bottom: 6px; }
+          .glosarium-term { font-weight: bold; color: #0f766e; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">${data.judulBahanAjar}</div>
+          <div class="subtitle">${data.subJudul || 'Bahan Bacaan Siswa & Panduan Pedagogis Guru - Kurikulum Merdeka'}</div>
+          <div style="font-weight: bold; font-size: 10pt; margin-top: 4px; color: #0f766e;">${identitas.namaSekolah || ''}</div>
+          <div style="font-size: 8.5pt; color: #64748b; margin-top: 2px;">Referensi Resmi: ${data.referensiUtama}</div>
+        </div>
+
+        <table class="meta-table">
+          <tr>
+            <td width="50%"><strong>Mata Pelajaran:</strong> ${identitas.mataPelajaran}</td>
+            <td width="50%"><strong>Kelas / Fase:</strong> ${identitas.faseKelas}</td>
+          </tr>
+          <tr>
+            <td><strong>Topik Pembelajaran:</strong> ${tujuanDanDpl.lingkupMateri}</td>
+            <td><strong>Semester / TA:</strong> ${identitas.semesterTahun || '2025/2026'}</td>
+          </tr>
+        </table>
+
+        <!-- I. KONSEP KUNCI -->
+        <div class="section-title">I. KONSEP KUNCI MATERI</div>
+        <div class="box">
+          <ol style="margin: 0; padding-left: 20px;">
+            ${data.rangkumanMateriSiswa.konsepKunci.map((k) => `<li style="margin-bottom: 4px;"><strong>${k}</strong></li>`).join('')}
+          </ol>
+        </div>
+
+        <!-- II. PENJELASAN RINGKAS MATERI -->
+        <div class="section-title">II. PENJELASAN RINGKAS MATERI PEMBELAJARAN</div>
+        <div class="box" style="white-space: pre-line; line-height: 1.6;">
+          ${data.rangkumanMateriSiswa.penjelasanRingkas}
+        </div>
+
+        <!-- III. CONTOH KONTEKSTUAL -->
+        <div class="section-title">III. CONTOH KONTEKSTUAL & PENERAPAN SEHARI-HARI</div>
+        <div class="box">
+          <ul style="margin: 0; padding-left: 20px;">
+            ${data.rangkumanMateriSiswa.contohKontekstual.map((c) => `<li style="margin-bottom: 4px;">${c}</li>`).join('')}
+          </ul>
+        </div>
+
+        <!-- IV. PANDUAN PEDAGOGIS GURU -->
+        <div class="section-title">IV. PANDUAN PEDAGOGIS GURU & ANTISIPASI MISKONSEPSI</div>
+        <div class="box">
+          <p style="margin-top: 0; margin-bottom: 6px;"><strong>Catatan Pedagogis Guru:</strong></p>
+          <p style="margin-top: 0; margin-bottom: 10px; font-style: italic;">${data.panduanGuru.catatanPedagogis}</p>
+          
+          <p style="margin-top: 0; margin-bottom: 6px;"><strong>Miskonsepsi Umum yang Sering Muncul & Solusi:</strong></p>
+          <ol style="margin: 0; padding-left: 20px;">
+            ${data.panduanGuru.miskonsepsiUmum.map((m) => `<li style="margin-bottom: 4px;">${m}</li>`).join('')}
+          </ol>
+        </div>
+
+        <!-- V. GLOSARIUM -->
+        <div class="section-title">V. GLOSARIUM & KATA KUNCI</div>
+        <div class="box">
+          ${data.glosarium.map((g) => `<div class="glosarium-item"><span class="glosarium-term">${g.istilah}:</span> ${g.arti}</div>`).join('')}
+        </div>
+
+        <!-- VI. DAFTAR PUSTAKA -->
+        <div class="section-title">VI. DAFTAR PUSTAKA & SUMBER REFERENSI</div>
+        <div class="box">
+          <ol style="margin: 0; padding-left: 20px;">
+            ${data.daftarPustaka.map((d) => `<li style="margin-bottom: 4px;">${d}</li>`).join('')}
+          </ol>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
   const handlePrint = () => {
-    window.print();
+    if (!currentData) return;
+    const htmlContent = buildBahanAjarHtml(currentData);
+
+    // Strategy 1: Open popup window directly
+    try {
+      const printWin = window.open('', '_blank', 'width=950,height=850');
+      if (printWin) {
+        printWin.document.open();
+        printWin.document.write(htmlContent);
+        printWin.document.close();
+        printWin.focus();
+        setTimeout(() => {
+          try {
+            printWin.print();
+          } catch (err) {
+            console.warn('Popup print command error:', err);
+          }
+        }, 350);
+        return;
+      }
+    } catch (e) {
+      console.warn('Window open blocked, falling back to Blob URL or iframe:', e);
+    }
+
+    // Strategy 2: Blob URL window opening
+    try {
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const printWin = window.open(url, '_blank');
+      if (printWin) {
+        printWin.onload = () => {
+          printWin.focus();
+          printWin.print();
+        };
+        setTimeout(() => {
+          try {
+            printWin.focus();
+            printWin.print();
+          } catch (e) {}
+        }, 500);
+        return;
+      }
+    } catch (e) {
+      console.warn('Blob print error:', e);
+    }
+
+    // Strategy 3: Hidden iframe in body
+    try {
+      let existingIframe = document.getElementById('bahanajar-print-frame') as HTMLIFrameElement | null;
+      if (existingIframe && existingIframe.parentNode) {
+        existingIframe.parentNode.removeChild(existingIframe);
+      }
+
+      const printIframe = document.createElement('iframe');
+      printIframe.id = 'bahanajar-print-frame';
+      printIframe.style.position = 'fixed';
+      printIframe.style.right = '0';
+      printIframe.style.bottom = '0';
+      printIframe.style.width = '1px';
+      printIframe.style.height = '1px';
+      printIframe.style.opacity = '0.01';
+      printIframe.style.pointerEvents = 'none';
+      document.body.appendChild(printIframe);
+
+      const frameDoc = printIframe.contentWindow?.document || printIframe.contentDocument;
+      if (frameDoc) {
+        frameDoc.open();
+        frameDoc.write(htmlContent);
+        frameDoc.close();
+        setTimeout(() => {
+          printIframe.contentWindow?.focus();
+          printIframe.contentWindow?.print();
+        }, 400);
+      }
+    } catch (err) {
+      console.error('All print strategies failed, falling back to window.print():', err);
+      window.print();
+    }
+  };
+
+  const handleDownloadWord = () => {
+    if (!currentData) return;
+    const htmlContent = buildBahanAjarHtml(currentData);
+    const blob = new Blob(['\ufeff', htmlContent], {
+      type: 'application/msword',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Bahan_Ajar_${(planData.identitas.mataPelajaran || 'Materi').replace(/[^a-zA-Z0-9]/g, '_')}_${(planData.identitas.faseKelas || 'Kelas').replace(/[^a-zA-Z0-9]/g, '_')}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleSave = () => {
@@ -193,6 +387,15 @@ export const BahanAjarModal: React.FC<BahanAjarModalProps> = ({
             </button>
 
             <button
+              onClick={handleDownloadWord}
+              className="px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white rounded-lg font-medium flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              title="Unduh format Microsoft Word (.doc)"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span>Unduh Word (.doc)</span>
+            </button>
+
+            <button
               onClick={handlePrint}
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-medium flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
             >
@@ -243,7 +446,7 @@ export const BahanAjarModal: React.FC<BahanAjarModalProps> = ({
         )}
 
         {/* Modal Scrollable Body */}
-        <div className="p-4 sm:p-8 overflow-y-auto flex-1 space-y-6 print:p-0 print:overflow-visible text-slate-800 text-xs sm:text-sm">
+        <div id="printable-bahanajar-document" className="p-4 sm:p-8 overflow-y-auto flex-1 space-y-6 print:p-0 print:overflow-visible text-slate-800 text-xs sm:text-sm">
           {isGenerating ? (
             <div className="py-20 text-center space-y-4">
               <RefreshCw className="w-10 h-10 text-teal-600 animate-spin mx-auto" />
