@@ -28,8 +28,37 @@ import {
   ExternalLink,
   ShieldCheck,
   Gift,
-  ArrowRight
+  ArrowRight,
+  Instagram
 } from 'lucide-react';
+
+export function getInstagramChannelUrl(): string {
+  try {
+    const url = localStorage.getItem('rpm_instagram_channel_url');
+    if (url && url.trim().startsWith('http')) return url.trim();
+  } catch (e) {}
+  return 'https://ig.me/j/AbY39TrKAANngL3j/';
+}
+
+export function saveInstagramChannelUrl(url: string) {
+  try {
+    localStorage.setItem('rpm_instagram_channel_url', url.trim());
+  } catch (e) {}
+}
+
+export function getLynkCheckoutUrl(): string {
+  try {
+    const url = localStorage.getItem('rpm_lynk_checkout_url');
+    if (url && url.trim().startsWith('http')) return url.trim();
+  } catch (e) {}
+  return 'https://lynk.id/indratata/3wo67k5xykd7/checkout';
+}
+
+export function saveLynkCheckoutUrl(url: string) {
+  try {
+    localStorage.setItem('rpm_lynk_checkout_url', url.trim());
+  } catch (e) {}
+}
 
 // Get or Generate Fingerprint
 export function getOrGenerateFingerprint(): string {
@@ -460,24 +489,38 @@ export function TrialExhaustedModal({ isOpen, onClose, onOpenCodeModal }: TrialE
             Anda telah menggunakan seluruh kuota gratis (5 kali pembuatan). Silakan masukkan Kode Akses agar dapat melanjutkan menggunakan SMART RPM (Rencana Pembelajaran Mendalam).
           </p>
           
-          <div className="bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200/70 rounded-xl p-4 mb-6 text-left shadow-sm">
-            <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5 mb-1">
+          <div className="bg-gradient-to-br from-slate-50 to-teal-50/50 border border-teal-200/70 rounded-xl p-4 mb-6 text-left shadow-sm space-y-3">
+            <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5">
               <ShoppingBag size={14} className="text-teal-600" />
-              Beli Kode Akses Otomatis via Lynk.id:
+              Belum Memiliki Kode Akses? Pilih 2 Cara Berlangganan:
             </span>
-            <p className="text-xs text-slate-600 mb-3 leading-relaxed">
-              Dapatkan Kode Akses instan dengan pembayaran otomatis (QRIS, GoPay, OVO, ShopeePay, Transfer Bank).
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Dapatkan Kode Akses instan dengan 2 opsi berlangganan resmi di bawah ini:
             </p>
-            <a 
-              href="https://lynk.id/indratata/3wo67k5xykd7/checkout" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold rounded-lg shadow-md shadow-teal-600/20 text-xs transition-all active:scale-[0.98]"
-            >
-              <ShoppingBag size={14} />
-              <span>Beli Kode Akses Instan (Lynk.id)</span>
-              <ExternalLink size={12} className="opacity-80" />
-            </a>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              <a 
+                href={getLynkCheckoutUrl()} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold rounded-lg shadow-md shadow-teal-600/20 text-xs transition-all active:scale-[0.98] text-center"
+              >
+                <ShoppingBag size={14} className="shrink-0" />
+                <span className="truncate">Opsi 1: Via Lynk.id</span>
+                <ExternalLink size={12} className="opacity-80 shrink-0" />
+              </a>
+
+              <a 
+                href={getInstagramChannelUrl()} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-95 text-white font-extrabold rounded-lg shadow-md shadow-pink-600/20 text-xs transition-all active:scale-[0.98] text-center"
+              >
+                <Instagram size={14} className="shrink-0" />
+                <span className="truncate">Opsi 2: Saluran IG</span>
+                <ExternalLink size={12} className="opacity-80 shrink-0" />
+              </a>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -637,24 +680,38 @@ export function EnterAccessCodeModal({ isOpen, onClose, currentCode, onCodeActiv
             Masukkan Kode Akses yang diberikan oleh Admin untuk mengaktifkan generator Rencana Pembelajaran Mendalam (RPM) tanpa batasan kuota.
           </p>
 
-          <div className="bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200/70 rounded-xl p-3.5 mb-5 text-left">
-            <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5 mb-1">
+          <div className="bg-gradient-to-br from-slate-50 to-teal-50/50 border border-teal-200/70 rounded-xl p-3.5 mb-5 text-left space-y-2.5">
+            <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5">
               <ShoppingBag size={14} className="text-teal-600" />
-              Belum Memiliki Kode Akses?
+              Belum Memiliki Kode Akses? Pilih 2 Cara Berlangganan:
             </span>
-            <p className="text-xs text-slate-600 mb-2.5 leading-relaxed">
-              Dapatkan Kode Akses resmi secara instan dengan pembayaran otomatis Lynk.id (QRIS / E-Wallet / Transfer):
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Dapatkan Kode Akses instan dengan 2 opsi berlangganan resmi berikut:
             </p>
-            <a 
-              href="https://lynk.id/indratata/3wo67k5xykd7/checkout" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold rounded-lg shadow-sm text-xs transition-all active:scale-[0.98]"
-            >
-              <ShoppingBag size={14} />
-              <span>Beli Kode Akses via Lynk.id</span>
-              <ExternalLink size={12} className="opacity-80" />
-            </a>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <a 
+                href={getLynkCheckoutUrl()} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold rounded-lg shadow-sm text-xs transition-all active:scale-[0.98] text-center"
+              >
+                <ShoppingBag size={14} className="shrink-0" />
+                <span className="truncate">Opsi 1: Via Lynk.id</span>
+                <ExternalLink size={12} className="opacity-80 shrink-0" />
+              </a>
+
+              <a 
+                href={getInstagramChannelUrl()} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-95 text-white font-extrabold rounded-lg shadow-sm text-xs transition-all active:scale-[0.98] text-center"
+              >
+                <Instagram size={14} className="shrink-0" />
+                <span className="truncate">Opsi 2: Saluran IG</span>
+                <ExternalLink size={12} className="opacity-80 shrink-0" />
+              </a>
+            </div>
           </div>
 
           <div className="mb-4">
@@ -768,6 +825,25 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   const [editingCodeId, setEditingCodeId] = useState<string | null>(null);
   const [editingNotesText, setEditingNotesText] = useState('');
   const [syncTrialsStatus, setSyncTrialsStatus] = useState<string | null>(null);
+
+  // Editable Subscription URLs
+  const [adminIgChannelUrl, setAdminIgChannelUrl] = useState(() => getInstagramChannelUrl());
+  const [adminLynkCheckoutUrl, setAdminLynkCheckoutUrl] = useState(() => getLynkCheckoutUrl());
+  const [saveLinksStatus, setSaveLinksStatus] = useState<string | null>(null);
+
+  const handleSaveIgChannelUrl = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveInstagramChannelUrl(adminIgChannelUrl);
+    setSaveLinksStatus('Tautan Saluran Instagram Berlangganan berhasil disimpan!');
+    setTimeout(() => setSaveLinksStatus(null), 4000);
+  };
+
+  const handleSaveLynkCheckoutUrl = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveLynkCheckoutUrl(adminLynkCheckoutUrl);
+    setSaveLinksStatus('Tautan Checkout Toko Lynk.id berhasil disimpan!');
+    setTimeout(() => setSaveLinksStatus(null), 4000);
+  };
 
   const handleSyncCodesToSheet = () => {
     try {
@@ -2153,24 +2229,65 @@ function doGet(e) {
                     </div>
                   )}
 
-                  {/* TAB 6: LYNK.ID INTEGRATION */}
+                  {/* TAB 6: LYNK.ID & INSTAGRAM CHANNEL INTEGRATION */}
                   {activeTab === 'lynk' && (
                     <div className="space-y-6">
-                      <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-4">
+                      <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-5">
                         <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
                           <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
                             <ShoppingBag size={24} />
                           </div>
                           <div>
-                            <h4 className="font-bold text-gray-800 text-base">Integrasi Penjualan Lynk.id</h4>
-                            <p className="text-xs text-gray-500">Kelola tautan toko checkout dan URL klaim otomatis untuk pembeli dari Lynk.id</p>
+                            <h4 className="font-bold text-gray-800 text-base">Tautan Penjualan & Saluran Instagram</h4>
+                            <p className="text-xs text-gray-500">Kelola tautan berlangganan (Lynk.id & Saluran IG) serta URL klaim otomatis pembeli</p>
                           </div>
                         </div>
 
-                        {/* Item 1: Checkout Link */}
-                        <div className="space-y-2 bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl">
-                          <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider">
-                            1. Tautan Checkout Toko Lynk.id Anda
+                        {saveLinksStatus && (
+                          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold">
+                            ✅ {saveLinksStatus}
+                          </div>
+                        )}
+
+                        {/* Item 1: Instagram Channel Subscription Link */}
+                        <form onSubmit={handleSaveIgChannelUrl} className="space-y-2 bg-pink-50/60 border border-pink-100 p-4 rounded-xl">
+                          <label className="block text-xs font-bold text-pink-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <Instagram size={15} className="text-pink-600" />
+                            1. Tautan Saluran Instagram Berlangganan
+                          </label>
+                          <p className="text-xs text-pink-700 leading-relaxed">
+                            Tautan ini akan terbuka saat pengguna menekan tombol <strong>"Opsi 2: Saluran IG"</strong> pada modal aktivasi kode akses & kuota habis. Anda bisa mengganti URL ini kapan saja:
+                          </p>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={adminIgChannelUrl}
+                              onChange={(e) => setAdminIgChannelUrl(e.target.value)}
+                              placeholder="https://ig.me/j/..."
+                              className="flex-1 bg-white px-3 py-2 border border-pink-300 rounded-lg text-xs font-mono text-pink-950 focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                            />
+                            <button
+                              type="submit"
+                              className="px-4 py-2 bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5 shrink-0"
+                            >
+                              <Check size={14} /> Simpan Tautan IG
+                            </button>
+                            <a
+                              href={adminIgChannelUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-2 bg-white border border-pink-300 hover:bg-pink-50 text-pink-700 font-semibold text-xs rounded-lg flex items-center gap-1 shrink-0"
+                            >
+                              <ExternalLink size={14} /> Uji Buka
+                            </a>
+                          </div>
+                        </form>
+
+                        {/* Item 2: Lynk.id Checkout Link */}
+                        <form onSubmit={handleSaveLynkCheckoutUrl} className="space-y-2 bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl">
+                          <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <ShoppingBag size={15} className="text-emerald-600" />
+                            2. Tautan Checkout Toko Lynk.id Anda
                           </label>
                           <p className="text-xs text-emerald-700 leading-relaxed">
                             Tautan ini ditampilkan kepada pengguna trial pada modal aktivasi & kuota habis agar guru dapat melakukan pembelian instan via QRIS / E-Wallet / Bank:
@@ -2178,34 +2295,32 @@ function doGet(e) {
                           <div className="flex gap-2">
                             <input
                               type="text"
-                              readOnly
-                              value="https://lynk.id/indratata/3wo67k5xykd7/checkout"
-                              className="flex-1 bg-white px-3 py-2 border border-emerald-300 rounded-lg text-xs font-mono text-emerald-900 select-all"
+                              value={adminLynkCheckoutUrl}
+                              onChange={(e) => setAdminLynkCheckoutUrl(e.target.value)}
+                              placeholder="https://lynk.id/..."
+                              className="flex-1 bg-white px-3 py-2 border border-emerald-300 rounded-lg text-xs font-mono text-emerald-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                             />
                             <button
-                              onClick={() => {
-                                navigator.clipboard.writeText('https://lynk.id/indratata/3wo67k5xykd7/checkout');
-                                alert('Tautan checkout Lynk.id berhasil disalin!');
-                              }}
+                              type="submit"
                               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5 shrink-0"
                             >
-                              <Copy size={14} /> Salin
+                              <Check size={14} /> Simpan Tautan Lynk
                             </button>
                             <a
-                              href="https://lynk.id/indratata/3wo67k5xykd7/checkout"
+                              href={adminLynkCheckoutUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="px-3 py-2 bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-700 font-semibold text-xs rounded-lg flex items-center gap-1 shrink-0"
                             >
-                              <ExternalLink size={14} /> Buka Toko
+                              <ExternalLink size={14} /> Uji Buka
                             </a>
                           </div>
-                        </div>
+                        </form>
 
-                        {/* Item 2: Redirect Link for Lynk.id */}
+                        {/* Item 3: Redirect Link for Lynk.id */}
                         <div className="space-y-2 bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
                           <label className="block text-xs font-bold text-blue-900 uppercase tracking-wider">
-                            2. Tautan Pengalihan (Redirect / Thank You Page Link) untuk Produk Lynk.id
+                            3. Tautan Pengalihan (Redirect / Thank You Page Link) untuk Produk Lynk.id
                           </label>
                           <p className="text-xs text-blue-700 leading-relaxed">
                             Tempelkan tautan ini di dashboard Lynk.id Anda pada pengaturan produk digital menu <strong>"Link Terima Kasih Pembayaran / Redirect Link"</strong>. Pembeli yang baru saja membayar di Lynk.id akan otomatis diarahkan ke URL ini untuk menerima Kode Akses resminya:
@@ -2230,7 +2345,7 @@ function doGet(e) {
                           </div>
                         </div>
 
-                        {/* Item 3: Test Claim */}
+                        {/* Item 4: Test Claim */}
                         <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-center justify-between gap-4">
                           <div>
                             <span className="text-xs font-bold text-slate-800 block">Uji Coba Tampilan Klaim Kode Akses Pembeli</span>
