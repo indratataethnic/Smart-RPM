@@ -2078,6 +2078,8 @@ app.post(["/api/licensing/admin/code/create", "/licensing/admin/code/create"], (
       created_by: "Admin",
       notes: notes || (type === "PERMANENT" ? "Akses Permanen Sekolah" : `Akses Bulanan ${month}/${year}`)
     });
+
+    LicensingDB.syncCodeToGoogleSheet(created);
     
     res.json({ success: true, code: created });
   } catch (err: any) {
