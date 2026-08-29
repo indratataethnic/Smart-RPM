@@ -255,6 +255,20 @@ export function syncCodeToGoogleSheet(codeObj: {
   try {
     const webhookUrl = getGoogleSheetWebhookUrl();
 
+    let formattedValidUntil = '1 Bulan (Aktif 30 Hari)';
+    if (codeObj.valid_until) {
+      try {
+        const d = new Date(codeObj.valid_until);
+        if (!isNaN(d.getTime())) {
+          formattedValidUntil = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        } else {
+          formattedValidUntil = codeObj.valid_until;
+        }
+      } catch (e) {
+        formattedValidUntil = codeObj.valid_until;
+      }
+    }
+
     const payload = {
       timestamp: new Date().toISOString(),
       activity_type: 'LYNK_ID_PURCHASE',
@@ -266,10 +280,10 @@ export function syncCodeToGoogleSheet(codeObj: {
       type: codeObj.type || 'MONTHLY',
       status: codeObj.status || 'ACTIVE',
       valid_from: codeObj.valid_from || new Date().toISOString(),
-      valid_until: codeObj.valid_until || '1 Bulan',
+      valid_until: formattedValidUntil,
       notes: codeObj.notes || 'Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)',
       created_by: codeObj.created_by || 'Lynk.id Checkout Auto-Claim',
-      details: `[LYNK.ID AUTO-CLAIM] Kode Akses Baru Lynk.id: ${codeObj.code} (${codeObj.type || 'MONTHLY'}) - Berlaku s/d: ${codeObj.valid_until ? new Date(codeObj.valid_until).toLocaleDateString('id-ID') : '1 Bulan'} - Catatan: ${codeObj.notes || '-'}`
+      details: `[LYNK.ID AUTO-CLAIM] Kode Akses Baru Lynk.id: ${codeObj.code} (${codeObj.type || 'MONTHLY'}) - Masa Aktif s/d: ${formattedValidUntil} - Catatan: ${codeObj.notes || '-'}`
     };
 
     // 1. Direct browser fetch
@@ -2520,13 +2534,15 @@ export function TrialConfirmationModal({ isOpen, onClose, onConfirm, onOpenCodeM
 // -------------------------------------------------------------
 // 5. LYNK.ID AUTO-CLAIM CODE MODAL
 // -------------------------------------------------------------
-export function claimLocalLynkCode(): { code: string; type: string; valid_until: string; notes: string } {
-  const existingClaim = localStorage.getItem('rpm_claimed_lynk_code');
-  if (existingClaim) {
-    try {
-      const parsed = JSON.parse(existingClaim);
-      if (parsed && parsed.code) return parsed;
-    } catch (e) {}
+export function claimLocalLynkCode(forceNew: boolean = false): { code: string; type: string; valid_until: string; notes: string } {
+  if (!forceNew) {
+    const existingClaim = localStorage.getItem('rpm_claimed_lynk_code');
+    if (existingClaim) {
+      try {
+        const parsed = JSON.parse(existingClaim);
+        if (parsed && parsed.code) return parsed;
+      } catch (e) {}
+    }
   }
 
   const suffix = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -2647,6 +2663,49 @@ export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: Claim
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleGenerateNewCode = async () => {
+    setIsLoading(true);
+    setCopied(false);
+    setActivatedSuccess(false);
+    try {
+      const fp = getOrGenerateFingerprint();
+      let serverRes: any = null;
+      try {
+        const res = await fetch('/api/licensing/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fingerprint: fp, forceNew: true })
+        });
+        if (res.ok) {
+          serverRes = await res.json();
+        }
+      } catch (err) {}
+
+      if (serverRes && serverRes.success && serverRes.code) {
+        setClaimedCode(serverRes.code);
+        setValidUntil(serverRes.valid_until);
+        syncCodeToGoogleSheet({
+          code: serverRes.code,
+          type: serverRes.type || 'MONTHLY',
+          status: 'ACTIVE',
+          valid_until: serverRes.valid_until,
+          created_by: 'Lynk.id Checkout Auto-Claim',
+          notes: serverRes.notes || 'Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)'
+        });
+      } else {
+        const localClaim = claimLocalLynkCode(true);
+        setClaimedCode(localClaim.code);
+        setValidUntil(localClaim.valid_until);
+      }
+    } catch (e) {
+      const localClaim = claimLocalLynkCode(true);
+      setClaimedCode(localClaim.code);
+      setValidUntil(localClaim.valid_until);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleActivateNow = async () => {
     if (!claimedCode) return;
     setIsActivating(true);
@@ -2730,6 +2789,18 @@ export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: Claim
                     ✓ Masa Aktif: {new Date(validUntil).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} (1 Bulan)
                   </span>
                 )}
+                
+                <div className="mt-3 pt-2 border-t border-slate-200/80">
+                  <button
+                    type="button"
+                    onClick={handleGenerateNewCode}
+                    className="text-[11px] font-bold text-teal-700 hover:text-teal-900 hover:underline inline-flex items-center gap-1.5 transition-all bg-teal-50 hover:bg-teal-100 px-3 py-1 rounded-lg border border-teal-200/60"
+                    title="Klik jika Anda melakukan pembelian ulang di Lynk.id untuk mendapatkan kode baru"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Beli Lagi? Generate Kode Baru
+                  </button>
+                </div>
               </div>
 
               {/* Action Buttons */}

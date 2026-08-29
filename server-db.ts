@@ -175,6 +175,10 @@ export const LicensingDB = {
         return;
       }
 
+      const formattedValidUntil = codeObj.valid_until
+        ? `${new Date(codeObj.valid_until).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}`
+        : "1 Bulan (Aktif 30 Hari)";
+
       const payload = {
         timestamp: new Date().toISOString(),
         activity_type: "LYNK_ID_PURCHASE",
@@ -186,10 +190,10 @@ export const LicensingDB = {
         type: codeObj.type || "MONTHLY",
         status: codeObj.status || "ACTIVE",
         valid_from: codeObj.valid_from || new Date().toISOString(),
-        valid_until: codeObj.valid_until || "1 Bulan",
+        valid_until: formattedValidUntil,
         notes: codeObj.notes || "Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)",
         created_by: codeObj.created_by || "Lynk.id Checkout Auto-Claim",
-        details: `[LYNK.ID AUTO-CLAIM] Kode Akses Baru Lynk.id: ${codeObj.code} (${codeObj.type || "MONTHLY"}) - Berlaku s/d: ${codeObj.valid_until ? new Date(codeObj.valid_until).toLocaleDateString("id-ID") : "1 Bulan"}`
+        details: `[LYNK.ID AUTO-CLAIM] Kode Akses Baru Lynk.id: ${codeObj.code} (${codeObj.type || "MONTHLY"}) - Masa Aktif s/d: ${formattedValidUntil}`
       };
 
       fetch(webhookUrl, {
