@@ -2540,7 +2540,12 @@ export function claimLocalLynkCode(forceNew: boolean = false): { code: string; t
     if (existingClaim) {
       try {
         const parsed = JSON.parse(existingClaim);
-        if (parsed && parsed.code) return parsed;
+        if (parsed && parsed.code) {
+          const isExpired = parsed.valid_until ? new Date(parsed.valid_until).getTime() <= Date.now() : false;
+          if (!isExpired) {
+            return parsed;
+          }
+        }
       } catch (e) {}
     }
   }
@@ -2611,13 +2616,33 @@ export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: Claim
     const processClaim = async () => {
       try {
         const fp = getOrGenerateFingerprint();
+
+        // 1. Check if user has an existing claim that is STILL VALID
+        const existingClaimStr = localStorage.getItem('rpm_claimed_lynk_code');
+        if (existingClaimStr) {
+          try {
+            const parsed = JSON.parse(existingClaimStr);
+            if (parsed && parsed.code) {
+              const isExpired = parsed.valid_until ? new Date(parsed.valid_until).getTime() <= Date.now() : false;
+              if (!isExpired) {
+                // Existing claim is still active, show it directly
+                setClaimedCode(parsed.code);
+                setValidUntil(parsed.valid_until);
+                setIsLoading(false);
+                return;
+              }
+            }
+          } catch (e) {}
+        }
+
+        // 2. If no existing claim OR existing claim HAS EXPIRED, generate brand new code automatically!
         let serverRes: any = null;
 
         try {
           const res = await fetch('/api/licensing/claim', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fingerprint: fp })
+            body: JSON.stringify({ fingerprint: fp, forceNew: true })
           });
           if (res.ok) {
             serverRes = await res.json();
@@ -2629,6 +2654,14 @@ export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: Claim
         if (serverRes && serverRes.success && serverRes.code) {
           setClaimedCode(serverRes.code);
           setValidUntil(serverRes.valid_until);
+          try {
+            localStorage.setItem('rpm_claimed_lynk_code', JSON.stringify({
+              code: serverRes.code,
+              type: serverRes.type || 'MONTHLY',
+              valid_until: serverRes.valid_until,
+              notes: serverRes.notes
+            }));
+          } catch (e) {}
           syncCodeToGoogleSheet({
             code: serverRes.code,
             type: serverRes.type || 'MONTHLY',
@@ -2638,12 +2671,12 @@ export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: Claim
             notes: serverRes.notes || 'Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)'
           });
         } else {
-          const localClaim = claimLocalLynkCode();
+          const localClaim = claimLocalLynkCode(true);
           setClaimedCode(localClaim.code);
           setValidUntil(localClaim.valid_until);
         }
       } catch (e) {
-        const localClaim = claimLocalLynkCode();
+        const localClaim = claimLocalLynkCode(true);
         setClaimedCode(localClaim.code);
         setValidUntil(localClaim.valid_until);
       } finally {
@@ -2661,49 +2694,6 @@ export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: Claim
     navigator.clipboard.writeText(claimedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleGenerateNewCode = async () => {
-    setIsLoading(true);
-    setCopied(false);
-    setActivatedSuccess(false);
-    try {
-      const fp = getOrGenerateFingerprint();
-      let serverRes: any = null;
-      try {
-        const res = await fetch('/api/licensing/claim', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fingerprint: fp, forceNew: true })
-        });
-        if (res.ok) {
-          serverRes = await res.json();
-        }
-      } catch (err) {}
-
-      if (serverRes && serverRes.success && serverRes.code) {
-        setClaimedCode(serverRes.code);
-        setValidUntil(serverRes.valid_until);
-        syncCodeToGoogleSheet({
-          code: serverRes.code,
-          type: serverRes.type || 'MONTHLY',
-          status: 'ACTIVE',
-          valid_until: serverRes.valid_until,
-          created_by: 'Lynk.id Checkout Auto-Claim',
-          notes: serverRes.notes || 'Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)'
-        });
-      } else {
-        const localClaim = claimLocalLynkCode(true);
-        setClaimedCode(localClaim.code);
-        setValidUntil(localClaim.valid_until);
-      }
-    } catch (e) {
-      const localClaim = claimLocalLynkCode(true);
-      setClaimedCode(localClaim.code);
-      setValidUntil(localClaim.valid_until);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleActivateNow = async () => {
@@ -2789,18 +2779,6 @@ export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: Claim
                     ✓ Masa Aktif: {new Date(validUntil).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} (1 Bulan)
                   </span>
                 )}
-                
-                <div className="mt-3 pt-2 border-t border-slate-200/80">
-                  <button
-                    type="button"
-                    onClick={handleGenerateNewCode}
-                    className="text-[11px] font-bold text-teal-700 hover:text-teal-900 hover:underline inline-flex items-center gap-1.5 transition-all bg-teal-50 hover:bg-teal-100 px-3 py-1 rounded-lg border border-teal-200/60"
-                    title="Klik jika Anda melakukan pembelian ulang di Lynk.id untuk mendapatkan kode baru"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Beli Lagi? Generate Kode Baru
-                  </button>
-                </div>
               </div>
 
               {/* Action Buttons */}
