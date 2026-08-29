@@ -191,6 +191,44 @@ export function syncToGoogleSheet(payload: any) {
   } catch (e) {}
 }
 
+export function syncCodeToGoogleSheet(codeObj: {
+  code: string;
+  type?: string;
+  status?: string;
+  valid_from?: string;
+  valid_until?: string | null;
+  created_at?: string;
+  created_by?: string;
+  notes?: string;
+}) {
+  try {
+    const webhookUrl = localStorage.getItem('rpm_google_sheet_webhook_url');
+    if (!webhookUrl || !webhookUrl.startsWith('http')) return;
+
+    fetch(webhookUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        timestamp: new Date().toISOString(),
+        activity_type: 'ACCESS_CODE_RECORD',
+        teacher_name: `Admin / Lynk (${codeObj.created_by || 'System'})`,
+        fingerprint: typeof localStorage !== 'undefined' ? (localStorage.getItem('rpm_user_fingerprint') || 'SERVER') : 'SERVER',
+        ip: '127.0.0.1',
+        code_used: codeObj.code,
+        code: codeObj.code,
+        type: codeObj.type || 'MONTHLY',
+        status: codeObj.status || 'ACTIVE',
+        valid_from: codeObj.valid_from || new Date().toISOString(),
+        valid_until: codeObj.valid_until || 'Selamanya',
+        notes: codeObj.notes || '',
+        created_by: codeObj.created_by || 'Admin',
+        details: `Kode Akses Tersimpan/Tergenerate: ${codeObj.code} (${codeObj.type || 'MONTHLY'}) - Berlaku s/d: ${codeObj.valid_until ? new Date(codeObj.valid_until).toLocaleDateString('id-ID') : 'Permanen'} - Catatan: ${codeObj.notes || '-'}`
+      })
+    }).catch(e => console.warn('Google Sheet code sync failed:', e));
+  } catch (e) {}
+}
+
 export function addLocalLog(type: string, details: string) {
   const logs = getLocalLogs();
   const newLog = {
@@ -527,10 +565,19 @@ export function EnterAccessCodeModal({ isOpen, onClose, currentCode, onCodeActiv
       if (isServerSuccess && serverData) {
         setSuccess(`Kode Akses Berhasil Diaktifkan! Jenis Akses: ${serverData.type === 'PERMANENT' ? 'PERMANEN (SDN Karanganyar)' : 'BULANAN (Sekolah Lain)'}`);
         localStorage.setItem('rpm_access_code', cleanCode);
+        syncToGoogleSheet({
+          timestamp: new Date().toISOString(),
+          activity_type: 'CODE_ACTIVATED',
+          teacher_name: `Guru (${(localStorage.getItem('rpm_user_fingerprint') || 'Guest').substring(0, 12)})`,
+          fingerprint: localStorage.getItem('rpm_user_fingerprint') || '-',
+          code_used: cleanCode,
+          details: `Kode Akses ${cleanCode} berhasil diaktifkan.`
+        });
         setTimeout(() => {
           onCodeActivated(cleanCode);
           onClose();
-        }, 1200);
+          window.location.reload();
+        }, 800);
       } else {
         // Fallback Local Validation
         const localCodes = getLocalCodes();
@@ -548,10 +595,19 @@ export function EnterAccessCodeModal({ isOpen, onClose, currentCode, onCodeActiv
           setSuccess(`Kode Akses Berhasil Diaktifkan! Jenis Akses: ${found.type === 'PERMANENT' ? 'PERMANEN (SDN Karanganyar)' : 'BULANAN (Sekolah Lain)'}`);
           localStorage.setItem('rpm_access_code', cleanCode);
           addLocalLog('CODE_ACTIVATED', `Kode ${cleanCode} diaktifkan oleh pengguna.`);
+          syncToGoogleSheet({
+            timestamp: new Date().toISOString(),
+            activity_type: 'CODE_ACTIVATED',
+            teacher_name: `Guru (${(localStorage.getItem('rpm_user_fingerprint') || 'Guest').substring(0, 12)})`,
+            fingerprint: localStorage.getItem('rpm_user_fingerprint') || '-',
+            code_used: cleanCode,
+            details: `Kode Akses ${cleanCode} (Lokal) berhasil diaktifkan.`
+          });
           setTimeout(() => {
             onCodeActivated(cleanCode);
             onClose();
-          }, 1200);
+            window.location.reload();
+          }, 800);
         } else {
           setError('Kode akses tidak valid. Silakan hubungi Admin untuk memperoleh kode baru.');
         }
@@ -712,6 +768,27 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   const [editingCodeId, setEditingCodeId] = useState<string | null>(null);
   const [editingNotesText, setEditingNotesText] = useState('');
   const [syncTrialsStatus, setSyncTrialsStatus] = useState<string | null>(null);
+
+  const handleSyncCodesToSheet = () => {
+    try {
+      const webhookUrl = localStorage.getItem('rpm_google_sheet_webhook_url');
+      if (!webhookUrl || !webhookUrl.startsWith('http')) {
+        alert('URL Google Spreadsheet belum disetel! Silakan atur di tab "Google Spreadsheet Sync".');
+        setActiveTab('sheets');
+        return;
+      }
+
+      const allCodes = getLocalCodes();
+      allCodes.forEach(c => {
+        syncCodeToGoogleSheet(c);
+      });
+
+      setSyncTrialsStatus(`Berhasil menyinkronkan ${allCodes.length} data Kode Akses ke Google Spreadsheet!`);
+      setTimeout(() => setSyncTrialsStatus(null), 5000);
+    } catch (e: any) {
+      alert('Gagal menyinkronkan kode ke spreadsheet: ' + e.message);
+    }
+  };
 
   const handleSyncTrialsToSheet = () => {
     try {
@@ -1050,6 +1127,15 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
         setGenerateSuccess(data.code);
         setNewCodeFormat('');
         setNewCodeNotes('');
+        const codeStr = typeof data.code === 'object' ? data.code.code : (data.code || generatedCodeStr);
+        syncCodeToGoogleSheet({
+          code: codeStr,
+          type: newCodeType,
+          status: 'ACTIVE',
+          valid_until: typeof data.code === 'object' ? data.code.valid_until : null,
+          created_by: 'Admin Panel',
+          notes: newCodeNotes || (newCodeType === 'PERMANENT' ? 'Akses Permanen' : `Kode Akses Bulan ${newCodeMonth}/${newCodeYear}`)
+        });
         fetchDashboardData();
       }
     } catch (err) {
@@ -1081,6 +1167,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
       localCodes.unshift(newCodeObj);
       saveLocalCodes(localCodes);
       addLocalLog('CODE_CREATED', `Membuat kode baru: ${generatedCodeStr}`);
+      syncCodeToGoogleSheet(newCodeObj);
 
       setGenerateSuccess(generatedCodeStr);
       setNewCodeFormat('');
@@ -1917,6 +2004,14 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                             >
                               Uji Coba Kirim Test Ping
                             </button>
+                            <button
+                              type="button"
+                              onClick={handleSyncCodesToSheet}
+                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow transition-all flex items-center gap-1.5"
+                            >
+                              <FileSpreadsheet size={14} />
+                              Sync Semua Kode Akses ke Sheet
+                            </button>
                           </div>
                         </form>
                       </div>
@@ -2292,6 +2387,7 @@ export function claimLocalLynkCode(): { code: string; type: string; valid_until:
   saveLocalCodes(localCodes);
 
   addLocalLog('VALIDATE_CODE_SUCCESS', `Pembeli mengeklaim Kode Akses baru via Lynk.id: ${code}`);
+  syncCodeToGoogleSheet(newCodeObj);
 
   const claimResult = { code, type: "MONTHLY", valid_until, notes };
   try {
@@ -2343,6 +2439,14 @@ export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: Claim
         if (serverRes && serverRes.success && serverRes.code) {
           setClaimedCode(serverRes.code);
           setValidUntil(serverRes.valid_until);
+          syncCodeToGoogleSheet({
+            code: serverRes.code,
+            type: serverRes.type || 'MONTHLY',
+            status: 'ACTIVE',
+            valid_until: serverRes.valid_until,
+            created_by: 'Lynk.id Checkout Auto-Claim',
+            notes: serverRes.notes || 'Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)'
+          });
         } else {
           const localClaim = claimLocalLynkCode();
           setClaimedCode(localClaim.code);
@@ -2374,14 +2478,23 @@ export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: Claim
     setIsActivating(true);
     localStorage.setItem('rpm_access_code', claimedCode);
     addLocalLog('CODE_ACTIVATED', `Kode ${claimedCode} diaktifkan otomatis dari Klaim Lynk.id.`);
-    
+    syncToGoogleSheet({
+      timestamp: new Date().toISOString(),
+      activity_type: 'CODE_ACTIVATED',
+      teacher_name: `Guru (${(localStorage.getItem('rpm_user_fingerprint') || 'Guest').substring(0, 12)})`,
+      fingerprint: localStorage.getItem('rpm_user_fingerprint') || '-',
+      code_used: claimedCode,
+      details: `Kode Akses ${claimedCode} diaktifkan via Lynk.id.`
+    });
+
     setTimeout(() => {
       setIsActivating(false);
       setActivatedSuccess(true);
       onCodeActivated(claimedCode);
       setTimeout(() => {
         onClose();
-      }, 1200);
+        window.location.reload();
+      }, 500);
     }, 600);
   };
 

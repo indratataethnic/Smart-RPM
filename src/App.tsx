@@ -1247,7 +1247,13 @@ export default function App() {
         isOpen={isEnterCodeModalOpen}
         onClose={() => setIsEnterCodeModalOpen(false)}
         currentCode={accessCode}
-        onCodeActivated={(code) => setAccessCode(code)}
+        onCodeActivated={(code) => {
+          setAccessCode(code);
+          fetchLicensingStatus();
+          setTimeout(() => {
+            window.location.reload();
+          }, 300);
+        }}
       />
 
       <AdminPanelModal
@@ -1271,6 +1277,9 @@ export default function App() {
         onCodeActivated={(code) => {
           setAccessCode(code);
           fetchLicensingStatus();
+          setTimeout(() => {
+            window.location.reload();
+          }, 300);
         }}
       />
     </div>
