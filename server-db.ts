@@ -208,6 +208,45 @@ export const LicensingDB = {
     }
   },
 
+  async pullCodesFromGoogleSheet(): Promise<AccessCode[]> {
+    try {
+      const webhookUrl = this.getGoogleSheetWebhookUrl();
+      if (!webhookUrl || !webhookUrl.startsWith("http")) {
+        return this.getAccessCodes();
+      }
+
+      // Try GET request with action=get_codes to Google Apps Script
+      const res = await fetch(`${webhookUrl}${webhookUrl.includes('?') ? '&' : '?'}action=get_codes`, { method: "GET" }).catch(() => null);
+      if (res && res.ok) {
+        const text = await res.text();
+        let data: any = null;
+        try { data = JSON.parse(text); } catch (e) {}
+
+        const items = Array.isArray(data) ? data : (data && Array.isArray(data.codes) ? data.codes : (data && Array.isArray(data.data) ? data.data : []));
+        
+        if (items && items.length > 0) {
+          items.forEach((item: any) => {
+            const codeStr = item.code || item.code_used || item.codeUsed;
+            if (codeStr && typeof codeStr === 'string' && codeStr.toUpperCase().startsWith('RPM')) {
+              this.syncOrRegisterAccessCode({
+                code: codeStr,
+                type: item.type === 'PERMANENT' ? 'PERMANENT' : 'MONTHLY',
+                status: item.status || 'ACTIVE',
+                valid_from: item.valid_from || new Date().toISOString(),
+                valid_until: item.valid_until || null,
+                created_by: item.created_by || 'Google Sheet Auto-Sync',
+                notes: item.notes || 'Diimpor dari Google Spreadsheet'
+              });
+            }
+          });
+        }
+      }
+    } catch (err: any) {
+      console.warn("[GoogleSheetPull] Error pulling codes from Google Sheet:", err.message);
+    }
+    return this.getAccessCodes();
+  },
+
   syncOrRegisterAccessCode(codeObj: Partial<AccessCode> & { code: string }): AccessCode {
     const existing = this.getAccessCodeByCode(codeObj.code);
     if (existing) return existing;

@@ -2006,13 +2006,14 @@ app.post(["/api/licensing/admin/login", "/licensing/admin/login"], (req, res) =>
 });
 
 // Admin Dashboard stats and logs
-app.post(["/api/licensing/admin/dashboard", "/licensing/admin/dashboard"], (req, res) => {
+app.post(["/api/licensing/admin/dashboard", "/licensing/admin/dashboard"], async (req, res) => {
   try {
     const { password } = req.body || {};
     if (!checkAdminAuth(password)) {
       return res.status(401).json({ success: false, error: "Akses ditolak (Password salah)" });
     }
     
+    await LicensingDB.pullCodesFromGoogleSheet().catch(() => {});
     const codes = LicensingDB.getAccessCodes();
     const logs = LicensingDB.getLogs();
     const trialUsers = LicensingDB.getAllTrialUsers();
@@ -2031,6 +2032,20 @@ app.post(["/api/licensing/admin/dashboard", "/licensing/admin/dashboard"], (req,
       trialUsers,
       logs
     });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin Pull Codes explicitly from Google Sheet
+app.post(["/api/licensing/admin/pull-sheet", "/licensing/admin/pull-sheet"], async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (!checkAdminAuth(password)) {
+      return res.status(401).json({ success: false, error: "Akses ditolak (Password salah)" });
+    }
+    const codes = await LicensingDB.pullCodesFromGoogleSheet();
+    res.json({ success: true, count: codes.length, codes });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

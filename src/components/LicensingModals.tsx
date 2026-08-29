@@ -879,6 +879,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   const [editingCodeId, setEditingCodeId] = useState<string | null>(null);
   const [editingNotesText, setEditingNotesText] = useState('');
   const [syncTrialsStatus, setSyncTrialsStatus] = useState<string | null>(null);
+  const [isPullingCodes, setIsPullingCodes] = useState(false);
 
   // Editable Subscription URLs
   const [adminIgChannelUrl, setAdminIgChannelUrl] = useState(() => getInstagramChannelUrl());
@@ -1002,10 +1003,96 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
     }
   };
 
-  // Auto load trials from spreadsheet when switching to trials tab
+  const handleLoadCodesFromSheet = async (isManual = true) => {
+    setIsPullingCodes(true);
+    const pw = sessionStorage.getItem('rpm_admin_pw') || '';
+    
+    let pulledCount = 0;
+
+    // 1. First attempt: Ask backend server to pull from Google Sheet
+    try {
+      const res = await fetch('/api/licensing/admin/pull-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && data.success && Array.isArray(data.codes)) {
+        pulledCount = data.codes.length;
+        setCodes(data.codes);
+        saveLocalCodes(data.codes);
+      }
+    } catch (e) {
+      console.warn('Backend pull-sheet unavailable, attempting direct fetch:', e);
+    }
+
+    // 2. Direct browser fetch fallback to Google Sheet Webhook URL
+    try {
+      const webhookUrl = getGoogleSheetWebhookUrl();
+      if (webhookUrl && webhookUrl.startsWith('http')) {
+        const res = await fetch(`${webhookUrl}${webhookUrl.includes('?') ? '&' : '?'}action=get_codes`, { method: 'GET' }).catch(() => null);
+        if (res && res.ok) {
+          const text = await res.text();
+          let data: any = null;
+          try { data = JSON.parse(text); } catch (e) {}
+
+          const items = Array.isArray(data) 
+            ? data 
+            : (data && Array.isArray(data.codes) 
+              ? data.codes 
+              : (data && Array.isArray(data.data) ? data.data : []));
+
+          if (items && items.length > 0) {
+            const localCodes = getLocalCodes();
+            const codesMap = new Map();
+            localCodes.forEach((c: any) => codesMap.set(c.code.toUpperCase(), c));
+
+            items.forEach((item: any) => {
+              const codeStr = item.code || item.code_used || item.codeUsed;
+              if (codeStr && typeof codeStr === 'string' && codeStr.toUpperCase().startsWith('RPM')) {
+                const cleanCode = codeStr.toUpperCase().trim();
+                const existing = codesMap.get(cleanCode);
+                const codeObj = {
+                  id: existing?.id || `code-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                  code: cleanCode,
+                  type: item.type === 'PERMANENT' ? 'PERMANENT' : 'MONTHLY',
+                  status: item.status || 'ACTIVE',
+                  valid_from: item.valid_from || new Date().toISOString(),
+                  valid_until: item.valid_until || existing?.valid_until || null,
+                  created_at: item.created_at || new Date().toISOString(),
+                  created_by: item.created_by || 'Google Sheet Auto-Sync',
+                  notes: item.notes || existing?.notes || 'Diimpor dari Google Spreadsheet'
+                };
+                codesMap.set(cleanCode, codeObj);
+              }
+            });
+
+            const mergedCodes = Array.from(codesMap.values());
+            setCodes(mergedCodes);
+            saveLocalCodes(mergedCodes);
+            pulledCount = mergedCodes.length;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Direct browser fetch error:', e);
+    }
+
+    setIsPullingCodes(false);
+
+    if (isManual) {
+      alert(`🎉 Berhasil sinkronisasi! Total ${pulledCount || codes.length} Kode Akses dari Google Spreadsheet & Server siap digunakan.`);
+    }
+  };
+
+  // Auto load codes & trials from spreadsheet when switching tabs
   useEffect(() => {
-    if (isLoggedIn && activeTab === 'trials') {
-      handleLoadTrialsFromSheet(false);
+    if (isLoggedIn) {
+      if (activeTab === 'trials') {
+        handleLoadTrialsFromSheet(false);
+      } else if (activeTab === 'codes') {
+        handleLoadCodesFromSheet(false);
+      }
     }
   }, [isLoggedIn, activeTab]);
 
@@ -1783,8 +1870,17 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                             className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md text-xs placeholder-gray-400"
                           />
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-gray-500 font-semibold">Total: {codes.length} Kode</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 font-semibold mr-1">Total: {codes.length} Kode</span>
+                          <button
+                            onClick={() => handleLoadCodesFromSheet(true)}
+                            disabled={isPullingCodes}
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow-sm transition-all inline-flex items-center gap-1.5 disabled:opacity-50"
+                            title="Tarik seluruh kode akses dari Google Spreadsheet"
+                          >
+                            <RefreshCw size={13} className={isPullingCodes ? "animate-spin" : ""} />
+                            <span>{isPullingCodes ? "Menarik..." : "Tarik Data dari Google Sheet"}</span>
+                          </button>
                           <button
                             onClick={exportCodesToExcel}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium shadow-sm transition-all inline-flex items-center gap-1.5"
