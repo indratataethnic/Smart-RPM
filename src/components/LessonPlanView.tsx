@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Printer,
   FileDown,
@@ -21,12 +21,19 @@ import {
   RotateCcw,
   ExternalLink,
   Lightbulb,
+  QrCode,
+  ShieldCheck,
+  Settings2,
 } from 'lucide-react';
 import { LessonPlanOutput, KKTPData, LKPDData, RubrikPenilaianData, BahanAjarData, JurnalHarianGuru, JurnalHarianEntry, normalizeAsesmen, AsesmenItem } from '../types';
 import { LKPDModal } from './LKPDModal';
 import { JurnalHarianModal } from './JurnalHarianModal';
 import { RubrikModal, getDefaultRubrikData } from './RubrikModal';
 import { BahanAjarModal } from './BahanAjarModal';
+import { QrSignatureConfigModal } from './QrSignatureConfigModal';
+import { QRCode } from './QRCodeDisplay';
+import { QrSignatureOptions, getDefaultSignatureDate, generateQrContent, generateQrDataUrl, extractCityFromSchool } from '../lib/qrUtils';
+
 
 export const getDefaultJurnalHarian = (p: LessonPlanOutput): JurnalHarianGuru => {
   if (p.jurnalHarian && Array.isArray(p.jurnalHarian.entries) && p.jurnalHarian.entries.length > 0) {
@@ -105,6 +112,56 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
   const [isBahanAjarModalOpen, setIsBahanAjarModalOpen] = useState(false);
   const [isGeneratingBahanAjar, setIsGeneratingBahanAjar] = useState(false);
   const [isJurnalModalOpen, setIsJurnalModalOpen] = useState(false);
+
+  // QR Signature Digital (TTE) State
+  const initialCity = (plan.identitas?.kotaSekolah && plan.identitas.kotaSekolah.trim()) 
+    ? plan.identitas.kotaSekolah.trim() 
+    : extractCityFromSchool(plan.identitas?.namaSekolah);
+
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrOptions, setQrOptions] = useState<QrSignatureOptions>({
+    enabled: true,
+    signerMode: 'BOTH',
+    locationCity: initialCity,
+    customDate: getDefaultSignatureDate(),
+    qrType: 'URL',
+    qrSize: 'LARGE',
+  });
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [qrContent, setQrContent] = useState<string>('');
+  const [verificationUrl, setVerificationUrl] = useState<string>('');
+
+  // Sync city when plan or editedPlan identity changes
+  useEffect(() => {
+    const currentIdentitas = (isEditing ? editedPlan : plan).identitas;
+    const currentCity = (currentIdentitas?.kotaSekolah && currentIdentitas.kotaSekolah.trim())
+      ? currentIdentitas.kotaSekolah.trim()
+      : extractCityFromSchool(currentIdentitas?.namaSekolah);
+
+    if (currentCity && currentCity !== 'Disahkan di Sekolah') {
+      setQrOptions((prev) => {
+        if (!prev.locationCity || prev.locationCity === 'Disahkan di Sekolah') {
+          return { ...prev, locationCity: currentCity };
+        }
+        return prev;
+      });
+    }
+  }, [plan.identitas?.kotaSekolah, plan.identitas?.namaSekolah, editedPlan?.identitas?.kotaSekolah, editedPlan?.identitas?.namaSekolah, isEditing]);
+
+  useEffect(() => {
+    const activePlan = isEditing ? editedPlan : plan;
+    const { content, verificationUrl: vUrl } = generateQrContent(activePlan, qrOptions);
+    setQrContent(content);
+    if (vUrl) {
+      setVerificationUrl(vUrl);
+    } else {
+      setVerificationUrl('');
+    }
+    generateQrDataUrl(content).then((dataUrl) => {
+      setQrDataUrl(dataUrl);
+    });
+  }, [qrOptions, editedPlan, plan, isEditing]);
+
 
   const handleSaveRubrik = (newRubrik: RubrikPenilaianData) => {
     const updated = {
@@ -1301,17 +1358,31 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
       <!-- Signatures -->
       <table width="100%" style="margin-top: 36px; border-collapse: collapse; text-align: center; font-size: 9.5pt;">
         <tr>
-          <td width="50%" style="vertical-align: top;">
+          <td width="50%" style="vertical-align: top; padding: 0 10px;">
             <p style="margin-bottom: 4px;">Mengetahui,</p>
             <p style="font-weight: bold;">Kepala Sekolah ${identitas.namaSekolah}</p>
-            <div style="height: 55px;"></div>
+            ${
+              qrOptions.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'KEPSEK') && qrDataUrl
+                ? `<div style="padding: 6px 0;">
+                    <img src="${qrDataUrl}" width="${qrOptions.qrSize === 'LARGE' ? '136' : '112'}" height="${qrOptions.qrSize === 'LARGE' ? '136' : '112'}" style="display: inline-block; border: 1px solid #cbd5e1; padding: 4px; background: #ffffff; border-radius: 4px;" alt="QR TTE Kepala Sekolah" />
+                    <p style="font-size: 7.5pt; color: #0f766e; margin-top: 2px; font-weight: bold;">Telah Ditandatangani & Disahkan secara Elektronik</p>
+                  </div>`
+                : `<div style="height: 55px;"></div>`
+            }
             <p style="font-weight: bold; text-decoration: underline;">${identitas.namaKepsek || '_________________________'}</p>
             <p style="font-size: 8.5pt; color: #475569;">NIP. ${identitas.nipKepsek || '...........................................'}</p>
           </td>
-          <td width="50%" style="vertical-align: top;">
-            <p style="margin-bottom: 4px;">Disahkan di Sekolah, ......................... 2026</p>
-            <p style="font-weight: bold;">Guru</p>
-            <div style="height: 55px;"></div>
+          <td width="50%" style="vertical-align: top; padding: 0 10px;">
+            <p style="margin-bottom: 4px;">${qrOptions.locationCity ? qrOptions.locationCity + ', ' : 'Disahkan di Sekolah, '}${qrOptions.customDate || '......................... 2026'}</p>
+            <p style="font-weight: bold;">Guru Mata Pelajaran</p>
+            ${
+              qrOptions.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'GURU') && qrDataUrl
+                ? `<div style="padding: 6px 0;">
+                    <img src="${qrDataUrl}" width="${qrOptions.qrSize === 'LARGE' ? '136' : '112'}" height="${qrOptions.qrSize === 'LARGE' ? '136' : '112'}" style="display: inline-block; border: 1px solid #cbd5e1; padding: 4px; background: #ffffff; border-radius: 4px;" alt="QR TTE Guru" />
+                    <p style="font-size: 7.5pt; color: #0f766e; margin-top: 2px; font-weight: bold;">Telah Ditandatangani & Disahkan secara Elektronik</p>
+                  </div>`
+                : `<div style="height: 55px;"></div>`
+            }
             <p style="font-weight: bold; text-decoration: underline;">${identitas.namaGuru || '_________________________'}</p>
             <p style="font-size: 8.5pt; color: #475569;">NIP. ${identitas.nipGuru || '...........................................'}</p>
           </td>
@@ -1559,6 +1630,17 @@ ${formatActivityText(k.aktivitasMurid)}
           >
             <BookOpen className="w-3.5 h-3.5 text-amber-300" />
             <span>Jurnal Harian Guru</span>
+          </button>
+
+          <button
+            id="btn-open-qr-modal"
+            onClick={() => setIsQrModalOpen(true)}
+            type="button"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-700/30 hover:bg-emerald-700/50 text-emerald-300 border border-emerald-500/40 shadow-sm transition-all cursor-pointer"
+            title="Atur Tanda Tangan QR Code Digital & Pengesahan Dokumen"
+          >
+            <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Tanda Tangan QR</span>
           </button>
 
           <button
@@ -3054,25 +3136,94 @@ ${formatActivityText(k.aktivitasMurid)}
 
         {/* SIGNATURE BLOCK / LEMBAR PENGESAHAN */}
         <div className="mt-12 pt-6 border-t-2 border-slate-300 text-xs sm:text-sm print:break-inside-avoid">
+          <div className="flex items-center justify-between mb-4 print:hidden">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-teal-700" />
+              Lembar Pengesahan & Tanda Tangan Digital (TTE)
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(true)}
+              className="text-xs text-teal-700 hover:text-teal-900 font-semibold inline-flex items-center gap-1 cursor-pointer bg-teal-50 hover:bg-teal-100 px-2.5 py-1 rounded-lg border border-teal-200 transition-all"
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+              <span>Atur Format QR / Tanggal</span>
+            </button>
+          </div>
+
           <div className="grid grid-cols-2 gap-8 text-center">
             <div>
               <p className="text-slate-600 mb-1">Mengetahui,</p>
               <p className="font-bold text-slate-900">Kepala Sekolah {activePlan.identitas.namaSekolah}</p>
-              <div className="h-20" />
+              
+              {qrOptions.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'KEPSEK') && qrContent ? (
+                <div className="my-2 flex flex-col items-center justify-center">
+                  <div className="p-2.5 bg-white border border-slate-300 rounded-2xl shadow-xs inline-block">
+                    <QRCode
+                      value={qrContent}
+                      renderAs="svg"
+                      level="M"
+                      size={qrOptions.qrSize === 'LARGE' ? 136 : 112}
+                      marginSize={3}
+                      className="rounded-lg"
+                    />
+                  </div>
+                  <span className="text-[10px] text-teal-800 font-bold mt-1.5 tracking-tight">
+                    ✓ Disahkan secara Elektronik (TTE)
+                  </span>
+                </div>
+              ) : (
+                <div className="h-20" />
+              )}
+
               <p className="font-bold text-slate-900 underline">{activePlan.identitas.namaKepsek || '_________________________'}</p>
               <p className="text-slate-600 text-xs">NIP. {activePlan.identitas.nipKepsek || '...........................................'}</p>
             </div>
 
             <div>
-              <p className="text-slate-600 mb-1">Disahkan di Sekolah, ......................... 2026</p>
-              <p className="font-bold text-slate-900">Guru</p>
-              <div className="h-20" />
+              <p className="text-slate-600 mb-1">
+                {qrOptions.locationCity ? `${qrOptions.locationCity}, ` : 'Disahkan di Sekolah, '}
+                {qrOptions.customDate || '......................... 2026'}
+              </p>
+              <p className="font-bold text-slate-900">Guru Mata Pelajaran</p>
+
+              {qrOptions.enabled && (qrOptions.signerMode === 'BOTH' || qrOptions.signerMode === 'GURU') && qrContent ? (
+                <div className="my-2 flex flex-col items-center justify-center">
+                  <div className="p-2.5 bg-white border border-slate-300 rounded-2xl shadow-xs inline-block">
+                    <QRCode
+                      value={qrContent}
+                      renderAs="svg"
+                      level="M"
+                      size={qrOptions.qrSize === 'LARGE' ? 136 : 112}
+                      marginSize={3}
+                      className="rounded-lg"
+                    />
+                  </div>
+                  <span className="text-[10px] text-teal-800 font-bold mt-1.5 tracking-tight">
+                    ✓ Ditandatangani secara Elektronik (TTE)
+                  </span>
+                </div>
+              ) : (
+                <div className="h-20" />
+              )}
+
               <p className="font-bold text-slate-900 underline">{activePlan.identitas.namaGuru || '_________________________'}</p>
               <p className="text-slate-600 text-xs">NIP. {activePlan.identitas.nipGuru || '...........................................'}</p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* QR SIGNATURE CONFIG MODAL */}
+      <QrSignatureConfigModal
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+        options={qrOptions}
+        onChangeOptions={setQrOptions}
+        qrContent={qrContent}
+        previewQrDataUrl={qrDataUrl}
+        verificationUrl={verificationUrl}
+      />
 
       {/* LKPD MODAL */}
       <LKPDModal

@@ -5,6 +5,7 @@ export interface LessonFormData {
   namaKepsek: string;
   nipKepsek: string;
   namaSekolah: string;
+  kotaSekolah?: string;
   fase: string;
   kelas: string;
   faseKelas: string;
@@ -198,6 +199,7 @@ export interface LessonPlanOutput {
     namaKepsek: string;
     nipKepsek: string;
     namaSekolah: string;
+    kotaSekolah?: string;
     mataPelajaran: string;
     fase?: string;
     kelas?: string;

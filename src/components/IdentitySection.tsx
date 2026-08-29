@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserCheck, Building2, User, Award, Calendar, Layers, GraduationCap } from 'lucide-react';
+import { UserCheck, Building2, User, Award, Calendar, Layers, GraduationCap, MapPin } from 'lucide-react';
 import { LessonFormData } from '../types';
 import { FASE_OPTIONS, getKelasOptions } from '../data/presets';
 
@@ -28,10 +28,10 @@ export const IdentitySection: React.FC<IdentitySectionProps> = ({ formData, onCh
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Nama Sekolah */}
-        <div className="md:col-span-2">
+        <div className="md:col-span-1">
           <label htmlFor="input-namaSekolah" className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
             <Building2 className="w-3.5 h-3.5 text-teal-600" />
-            Nama Sekolah / Instansi Pendidikan <span className="text-rose-500">*</span>
+            Nama Sekolah / Instansi <span className="text-rose-500">*</span>
           </label>
           <input
             id="input-namaSekolah"
@@ -39,9 +39,26 @@ export const IdentitySection: React.FC<IdentitySectionProps> = ({ formData, onCh
             name="namaSekolah"
             value={formData.namaSekolah}
             onChange={onChange}
-            placeholder="Isikan nama sekolah / instansi pendidikan..."
+            placeholder="Contoh: SD Negeri 1 Kebakkramat..."
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
             required
+          />
+        </div>
+
+        {/* Kota / Wilayah Pengesahan */}
+        <div className="md:col-span-1">
+          <label htmlFor="input-kotaSekolah" className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-teal-600" />
+            Kota / Kabupaten (Wilayah Pengesahan Dokumen)
+          </label>
+          <input
+            id="input-kotaSekolah"
+            type="text"
+            name="kotaSekolah"
+            value={formData.kotaSekolah || ''}
+            onChange={onChange}
+            placeholder="Contoh: Karanganyar / Surakarta / Jakarta..."
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm text-slate-800 transition-all outline-none"
           />
         </div>
 

@@ -1,7 +1,7 @@
 import React from 'react';
-import { BookOpen, Sparkles, Clock, Target, FileCode, Loader2 } from 'lucide-react';
+import { BookOpen, Sparkles, Clock, Target, FileCode, Loader2, Cpu } from 'lucide-react';
 import { LessonFormData } from '../types';
-import { MATA_PELAJARAN_POPULER, ALOKASI_WAKTU_OPTIONS } from '../data/presets';
+import { getMataPelajaranByFase, ALOKASI_WAKTU_OPTIONS } from '../data/presets';
 
 interface LessonDetailsSectionProps {
   formData: LessonFormData;
@@ -18,6 +18,13 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
   onRequestCpTpAi,
   isAiLoadingCpTp,
 }) => {
+  const isFaseC = 
+    (formData.fase && formData.fase.includes('Fase C')) ||
+    (formData.kelas && (formData.kelas.includes('Kelas 5') || formData.kelas.includes('Kelas 6'))) ||
+    (formData.faseKelas && (formData.faseKelas.includes('Fase C') || formData.faseKelas.includes('Kelas 5') || formData.faseKelas.includes('Kelas 6')));
+
+  const recommendedSubjects = getMataPelajaranByFase(formData.fase, formData.kelas);
+
   return (
     <div id="section-lesson-details" className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
       <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-5 flex-wrap gap-2">
@@ -59,10 +66,18 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
       <div className="space-y-4">
         {/* Mata Pelajaran & Quick Select Chips */}
         <div>
-          <label htmlFor="input-mataPelajaran" className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-            <BookOpen className="w-3.5 h-3.5 text-teal-600" />
-            Mata Pelajaran <span className="text-rose-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+            <label htmlFor="input-mataPelajaran" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5 text-teal-600" />
+              Mata Pelajaran <span className="text-rose-500">*</span>
+            </label>
+            {isFaseC && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                <Cpu className="w-3 h-3 text-emerald-600" />
+                Tersedia KKA (Koding & AI) untuk Fase C (Kelas 5-6)
+              </span>
+            )}
+          </div>
           <input
             id="input-mataPelajaran"
             type="text"
@@ -75,22 +90,30 @@ export const LessonDetailsSection: React.FC<LessonDetailsSectionProps> = ({
           />
 
           {/* Quick Subject Chips */}
-          <div className="flex flex-wrap gap-1.5 mt-1">
+          <div className="flex flex-wrap items-center gap-1.5 mt-1">
             <span className="text-[11px] text-slate-400 font-medium self-center mr-1">Rekomendasi Cepat:</span>
-            {MATA_PELAJARAN_POPULER.slice(0, 11).map((subject) => (
-              <button
-                key={subject}
-                type="button"
-                onClick={() => onSelectSubject(subject)}
-                className={`text-[11px] px-2.5 py-1 rounded-lg transition-all cursor-pointer border ${
-                  formData.mataPelajaran === subject
-                    ? 'bg-teal-600 text-white border-teal-600 font-medium shadow-xs'
-                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
-                }`}
-              >
-                {subject}
-              </button>
-            ))}
+            {recommendedSubjects.map((subject) => {
+              const isKka = subject.includes('Koding dan Kecerdasan Artifisial') || subject.includes('KKA');
+              const isSelected = formData.mataPelajaran === subject;
+
+              return (
+                <button
+                  key={subject}
+                  type="button"
+                  onClick={() => onSelectSubject(subject)}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg transition-all cursor-pointer border flex items-center gap-1 ${
+                    isSelected
+                      ? 'bg-teal-600 text-white border-teal-600 font-semibold shadow-xs'
+                      : isKka
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 font-semibold shadow-xs'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                  }`}
+                >
+                  {isKka && <Cpu className={`w-3 h-3 ${isSelected ? 'text-emerald-200' : 'text-emerald-600'}`} />}
+                  <span>{subject}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

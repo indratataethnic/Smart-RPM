@@ -422,6 +422,7 @@ Gunakan STRING PERSIS DARI DAFTAR BERIKUT:
 - "LMS (Google Classroom / Moodle / Whatsapp Group)"
 - "Video Pembelajaran Interaktif (Edpuzzle / YouTube)"
 - "Asisten AI & Tools Generatif Pembelajaran"
+- "Platform Koding Visual & AI (Scratch / Blockly / Teachable Machine / Code.org)"
 
 5. Lintas Disiplin Ilmu (Pilih 1 s.d 3 string persis):
 - "Bahasa Indonesia"
@@ -432,6 +433,7 @@ Gunakan STRING PERSIS DARI DAFTAR BERIKUT:
 - "Informatika & Literasi Digital"
 - "PJOK & Kesehatan"
 - "Bahasa Inggris & Daerah"
+- "Koding & Kecerdasan Artifisial (KKA)"
 
 6. Lingkungan Pembelajaran (Pilih 1 s.d 3 string persis):
 - "Ruang Kelas Interaktif"
@@ -540,6 +542,7 @@ function createFallbackLessonPlan(formData: any) {
       namaKepsek: data.namaKepsek || "Kepala Sekolah",
       nipKepsek: data.nipKepsek || "-",
       namaSekolah: data.namaSekolah || "Sekolah Dasar Negeri",
+      kotaSekolah: data.kotaSekolah || data.identitas?.kotaSekolah || "",
       mataPelajaran: mp,
       fase: data.fase || "Fase A",
       kelas: data.kelas || "Kelas 1",
@@ -865,6 +868,7 @@ Keluarkan dalam format JSON struktur persis berikut:
     "namaKepsek": "${formData.namaKepsek || ''}",
     "nipKepsek": "${formData.nipKepsek || ''}",
     "namaSekolah": "${formData.namaSekolah || ''}",
+    "kotaSekolah": "${formData.kotaSekolah || ''}",
     "mataPelajaran": "${formData.mataPelajaran}",
     "fase": "${formData.fase || ''}",
     "kelas": "${formData.kelas || ''}",

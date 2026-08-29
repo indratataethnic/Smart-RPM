@@ -63,6 +63,7 @@ export const MATA_PELAJARAN_POPULER = [
   'Matematika',
   'Bahasa Indonesia',
   'Pendidikan Pancasila / PPKn',
+  'Koding dan Kecerdasan Artifisial (KKA)',
   'Bahasa Inggris',
   'Pendidikan Agama dan Budi Pekerti',
   'PJOK (Pendidikan Jasmani Olahraga Kesehatan)',
@@ -79,6 +80,40 @@ export const MATA_PELAJARAN_POPULER = [
   'Ekonomi',
   'Sosiologi',
 ];
+
+export const getMataPelajaranByFase = (fase: string = '', kelas: string = ''): string[] => {
+  const isFaseC = fase.includes('Fase C') || kelas.includes('Kelas 5') || kelas.includes('Kelas 6');
+  if (isFaseC) {
+    return [
+      'Koding dan Kecerdasan Artifisial (KKA)',
+      'IPAS (Ilmu Pengetahuan Alam dan Sosial)',
+      'Matematika',
+      'Bahasa Indonesia',
+      'Pendidikan Pancasila / PPKn',
+      'Bahasa Inggris',
+      'Pendidikan Agama dan Budi Pekerti',
+      'PJOK (Pendidikan Jasmani Olahraga Kesehatan)',
+      'Seni Rupa',
+      'Seni Musik',
+      'Seni Tari',
+      'Seni Teater',
+    ];
+  }
+  if (fase.includes('Fase A') || fase.includes('Fase B') || kelas.includes('Kelas 1') || kelas.includes('Kelas 2') || kelas.includes('Kelas 3') || kelas.includes('Kelas 4')) {
+    return [
+      'IPAS (Ilmu Pengetahuan Alam dan Sosial)',
+      'Matematika',
+      'Bahasa Indonesia',
+      'Pendidikan Pancasila / PPKn',
+      'Pendidikan Agama dan Budi Pekerti',
+      'PJOK (Pendidikan Jasmani Olahraga Kesehatan)',
+      'Seni Rupa',
+      'Seni Musik',
+      'Bahasa Inggris',
+    ];
+  }
+  return MATA_PELAJARAN_POPULER;
+};
 
 export const ALOKASI_WAKTU_OPTIONS = [
   '2 x 35 Menit (2 JP - SD)',
@@ -134,6 +169,7 @@ export const DIGITAL_TOOLS_OPTIONS = [
   { id: 'dt-5', label: 'LMS (Google Classroom / Moodle / Whatsapp Group)', category: 'Manajemen Kelas' },
   { id: 'dt-6', label: 'Video Pembelajaran Interaktif (Edpuzzle / YouTube)', category: 'Media Audiovisual' },
   { id: 'dt-7', label: 'Asisten AI & Tools Generatif Pembelajaran', category: 'Teknologi Masa Depan' },
+  { id: 'dt-8', label: 'Platform Koding Visual & AI (Scratch / Blockly / Teachable Machine / Code.org)', category: 'Koding & AI' },
 ];
 
 export const LINTAS_DISIPLIN_OPTIONS = [
@@ -145,6 +181,7 @@ export const LINTAS_DISIPLIN_OPTIONS = [
   { id: 'ld-6', label: 'Informatika & Literasi Digital', desc: 'Pencarian informasi, pembuatan media digital, dan berpikir komputasional' },
   { id: 'ld-7', label: 'PJOK & Kesehatan', desc: 'Aktivitas fisik, kebugaran, postur belajar, dan kesehatan motorik' },
   { id: 'ld-8', label: 'Bahasa Inggris & Daerah', desc: 'Pengenalan istilah global/lokal dan komunikasi lintas budaya' },
+  { id: 'ld-9', label: 'Koding & Kecerdasan Artifisial (KKA)', desc: 'Logika sekuensial, percabangan kode, berpikir komputasional, dan etika AI' },
 ];
 
 export const LINGKUNGAN_PEMBELAJARAN_OPTIONS = [
@@ -262,6 +299,61 @@ export const DEMO_PRESETS: { title: string; subtitle: string; formData: LessonFo
         'Seni Budaya & Desain (SBdP)',
       ],
       lingkunganPembelajaran: [
+        'Ruang Kelas Interaktif',
+        'Ruang Digital / Maya (Virtual Class & LMS)',
+      ],
+    },
+  },
+  {
+    title: 'KKA SD Kelas 5 - Logika Algoritma & Pemrograman Visual Scratch',
+    subtitle: 'SD / Fase C | Computational Thinking & Project Based Learning',
+    formData: {
+      namaGuru: 'Indartha Meiputra, S.Pd.',
+      nipGuru: '19900515 201801 1 002',
+      namaKepsek: 'Dr. H. Bambang Suherman, M.Pd.',
+      nipKepsek: '19680312 199303 1 005',
+      namaSekolah: 'SD Negeri Harapan Bangsa',
+      fase: 'Fase C',
+      kelas: 'Kelas 5',
+      faseKelas: 'Fase C - Kelas 5',
+      semesterTahun: 'Semester 1 / Tahun Ajaran 2025/2026',
+      mataPelajaran: 'Koding dan Kecerdasan Artifisial (KKA)',
+      capaianPembelajaran: 'Peserta didik mampu memahami konsep berpikir komputasional, merancang instruksi algoritma sekuensial dan percabangan sederhana menggunakan blok visual koding (Scratch/Blockly), serta merefleksikan etika dasar penggunaan kecerdasan artifisial (AI) dalam kehidupan sehari-hari.',
+      lingkupMateri: 'Berpikir Komputasional dan Pemrograman Visual (Scratch/Blockly)',
+      tujuanPembelajaran: '1. Peserta didik dapat memahami konsep logika algoritma, urutan langkah (sekuensial), dan percabangan sederhana dalam pemrograman visual.\n2. Peserta didik dapat merancang dan mengaplikasikan blok kode visual untuk membuat animasi/interaksi sederhana secara kolaboratif.\n3. Peserta didik mampu merefleksikan proses perbaikan kesalahan program (debugging) serta memahami etika dasar pemanfaatan kecerdasan artifisial (AI) secara bijak.',
+      alokasiWaktu: '3 x 35 Menit (3 JP - SD)',
+      karakteristikMurid: 'Murid memiliki ketertarikan tinggi terhadap gawai digital dan permainan visual, menyukai pembelajaran eksploratif melalui uji coba langsung (hands-on) di depan perangkat komputer/tablet.',
+      karakteristikMateri: 'Materi menekankan kemampuan berpikir logis prosedural, dekomposisi masalah, serta kreativitas merangkai blok kode visual dan memahami prinsip dasar cara kerja AI.',
+      dpl: [
+        'Penalaran Kritis',
+        'Kreativitas',
+        'Kolaborasi',
+        'Kemandirian',
+      ],
+      metodeModel: [
+        'Project Based Learning (PjBL)',
+        'Problem Based Learning (PBL)',
+        'Technological Pedagogical Content Knowledge (TPACK)',
+        'Demonstrasi Interaktif & Eksperimen',
+      ],
+      kemitraan: [
+        'Kolaborasi Antar Siswa (Peer Learning)',
+        'Guru Antar Mata Pelajaran (Team Teaching)',
+        'Orang Tua / Wali Murid',
+      ],
+      pemanfaatanDigital: [
+        'Platform Koding Visual & AI (Scratch / Blockly / Teachable Machine / Code.org)',
+        'Asisten AI & Tools Generatif Pembelajaran',
+        'Papan Interaktif Digital (Jamboard / Padlet / Miro)',
+      ],
+      lintasDisiplin: [
+        'Matematika & Numerasi',
+        'Seni Budaya & Desain (SBdP)',
+        'Bahasa Indonesia',
+        'Pendidikan Pancasila & Moral',
+      ],
+      lingkunganPembelajaran: [
+        'Laboratorium & Ruang Sains/Komputer',
         'Ruang Kelas Interaktif',
         'Ruang Digital / Maya (Virtual Class & LMS)',
       ],
