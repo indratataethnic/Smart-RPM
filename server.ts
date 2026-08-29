@@ -2161,6 +2161,62 @@ app.post(["/api/licensing/admin/trial/reset", "/licensing/admin/trial/reset"], (
   }
 });
 
+// Save & Sync Google Sheet Webhook URL
+app.post(["/api/licensing/admin/sheet-url", "/licensing/admin/sheet-url"], (req, res) => {
+  try {
+    const { password, url } = req.body || {};
+    if (password && !checkAdminAuth(password)) {
+      return res.status(401).json({ success: false, error: "Akses ditolak" });
+    }
+    if (url && typeof url === "string") {
+      LicensingDB.setGoogleSheetWebhookUrl(url);
+    }
+    res.json({ success: true, url: LicensingDB.getGoogleSheetWebhookUrl() });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Proxy route for client-side to sync code/payload to Google Sheet via backend Node.js
+app.post(["/api/licensing/sync-sheet", "/licensing/sync-sheet"], (req, res) => {
+  try {
+    const { codeObj, webhookUrl, payload } = req.body || {};
+    if (webhookUrl && typeof webhookUrl === "string" && webhookUrl.startsWith("http")) {
+      LicensingDB.setGoogleSheetWebhookUrl(webhookUrl);
+    }
+    if (codeObj && codeObj.code) {
+      LicensingDB.syncOrRegisterAccessCode(codeObj);
+      LicensingDB.syncCodeToGoogleSheet(codeObj, webhookUrl);
+    } else if (payload) {
+      const activeUrl = webhookUrl || LicensingDB.getGoogleSheetWebhookUrl();
+      if (activeUrl && activeUrl.startsWith("http")) {
+        fetch(activeUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(() => {});
+      }
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// Route for synchronizing and persisting any access code to central server DB
+app.post(["/api/licensing/sync-code", "/licensing/sync-code"], (req, res) => {
+  try {
+    const { codeObj } = req.body || {};
+    if (codeObj && codeObj.code) {
+      const saved = LicensingDB.syncOrRegisterAccessCode(codeObj);
+      return res.json({ success: true, code: saved });
+    }
+    res.json({ success: false, error: "Kode akses tidak valid" });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Serve Vite in dev or static files in production
 async function start() {
   if (process.env.NODE_ENV !== "production") {

@@ -206,17 +206,39 @@ export function getLocalLogs(): any[] {
   ];
 }
 
+export const DEFAULT_GOOGLE_SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzRIrWhUDCCdQD5eT2CtrDFqkBcgEYVoRu6NYpu_g84SC7e49I2IXa0ptw2sbIB_Ot3/exec';
+
+export function getGoogleSheetWebhookUrl(): string {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('rpm_google_sheet_webhook_url');
+      if (saved && saved.trim().startsWith('http')) {
+        return saved.trim();
+      }
+    }
+  } catch (e) {}
+  return DEFAULT_GOOGLE_SHEET_WEBHOOK_URL;
+}
+
 export function syncToGoogleSheet(payload: any) {
   try {
-    const webhookUrl = localStorage.getItem('rpm_google_sheet_webhook_url');
+    const webhookUrl = getGoogleSheetWebhookUrl();
     if (!webhookUrl || !webhookUrl.startsWith('http')) return;
     
+    // 1. Direct browser fetch
     fetch(webhookUrl, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).catch(e => console.warn('Google sheet webhook sync failed:', e));
+
+    // 2. Dual redundancy: Send to backend proxy
+    fetch('/api/licensing/sync-sheet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload, webhookUrl })
+    }).catch(() => {});
   } catch (e) {}
 }
 
@@ -231,30 +253,41 @@ export function syncCodeToGoogleSheet(codeObj: {
   notes?: string;
 }) {
   try {
-    const webhookUrl = localStorage.getItem('rpm_google_sheet_webhook_url');
-    if (!webhookUrl || !webhookUrl.startsWith('http')) return;
+    const webhookUrl = getGoogleSheetWebhookUrl();
 
-    fetch(webhookUrl, {
+    const payload = {
+      timestamp: new Date().toISOString(),
+      activity_type: 'LYNK_ID_PURCHASE',
+      teacher_name: `Pembeli Lynk.id (${codeObj.code})`,
+      fingerprint: typeof localStorage !== 'undefined' ? (localStorage.getItem('rpm_user_fingerprint') || 'CLIENT_LYNK') : 'CLIENT_LYNK',
+      ip: '127.0.0.1',
+      code_used: codeObj.code,
+      code: codeObj.code,
+      type: codeObj.type || 'MONTHLY',
+      status: codeObj.status || 'ACTIVE',
+      valid_from: codeObj.valid_from || new Date().toISOString(),
+      valid_until: codeObj.valid_until || '1 Bulan',
+      notes: codeObj.notes || 'Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)',
+      created_by: codeObj.created_by || 'Lynk.id Checkout Auto-Claim',
+      details: `[LYNK.ID AUTO-CLAIM] Kode Akses Baru Lynk.id: ${codeObj.code} (${codeObj.type || 'MONTHLY'}) - Berlaku s/d: ${codeObj.valid_until ? new Date(codeObj.valid_until).toLocaleDateString('id-ID') : '1 Bulan'} - Catatan: ${codeObj.notes || '-'}`
+    };
+
+    // 1. Direct browser fetch
+    if (webhookUrl && webhookUrl.startsWith('http')) {
+      fetch(webhookUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(e => console.warn('Google Sheet code sync failed:', e));
+    }
+
+    // 2. Dual redundancy: Send to backend proxy
+    fetch('/api/licensing/sync-sheet', {
       method: 'POST',
-      mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        timestamp: new Date().toISOString(),
-        activity_type: 'ACCESS_CODE_RECORD',
-        teacher_name: `Admin / Lynk (${codeObj.created_by || 'System'})`,
-        fingerprint: typeof localStorage !== 'undefined' ? (localStorage.getItem('rpm_user_fingerprint') || 'SERVER') : 'SERVER',
-        ip: '127.0.0.1',
-        code_used: codeObj.code,
-        code: codeObj.code,
-        type: codeObj.type || 'MONTHLY',
-        status: codeObj.status || 'ACTIVE',
-        valid_from: codeObj.valid_from || new Date().toISOString(),
-        valid_until: codeObj.valid_until || 'Selamanya',
-        notes: codeObj.notes || '',
-        created_by: codeObj.created_by || 'Admin',
-        details: `Kode Akses Tersimpan/Tergenerate: ${codeObj.code} (${codeObj.type || 'MONTHLY'}) - Berlaku s/d: ${codeObj.valid_until ? new Date(codeObj.valid_until).toLocaleDateString('id-ID') : 'Permanen'} - Catatan: ${codeObj.notes || '-'}`
-      })
-    }).catch(e => console.warn('Google Sheet code sync failed:', e));
+      body: JSON.stringify({ codeObj, webhookUrl })
+    }).catch(() => {});
   } catch (e) {}
 }
 
@@ -800,7 +833,14 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   const handleSaveSpreadsheetUrl = (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      localStorage.setItem('rpm_google_sheet_webhook_url', spreadsheetUrl.trim());
+      const cleanUrl = spreadsheetUrl.trim();
+      localStorage.setItem('rpm_google_sheet_webhook_url', cleanUrl);
+      fetch('/api/licensing/admin/sheet-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, url: cleanUrl })
+      }).catch(() => {});
+
       setSheetSaveStatus('URL Google Spreadsheet berhasil disimpan!');
       setTimeout(() => setSheetSaveStatus(null), 4000);
     } catch (e) {
@@ -1428,12 +1468,24 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
           </div>
           <div className="flex items-center gap-3">
             {isLoggedIn && (
-              <button
-                onClick={handleLogOut}
-                className="text-xs text-rose-300 hover:text-rose-200 bg-rose-950/40 px-2.5 py-1.5 rounded border border-rose-800/40 font-medium transition-all"
-              >
-                Logout Admin
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fetchDashboardData()}
+                  disabled={isLoadingData}
+                  className="text-xs text-blue-300 hover:text-white bg-blue-900/40 hover:bg-blue-800/60 px-2.5 py-1.5 rounded border border-blue-700/50 font-medium transition-all flex items-center gap-1.5"
+                  title="Sinkronkan & Muat Ulang Data Server Terkini"
+                >
+                  <RefreshCw size={13} className={isLoadingData ? "animate-spin" : ""} />
+                  {isLoadingData ? "Memuat..." : "Refresh Data Server"}
+                </button>
+                <button
+                  onClick={handleLogOut}
+                  className="text-xs text-rose-300 hover:text-rose-200 bg-rose-950/40 px-2.5 py-1.5 rounded border border-rose-800/40 font-medium transition-all"
+                >
+                  Logout Admin
+                </button>
+              </div>
             )}
             <button onClick={onClose} className="text-slate-400 hover:text-white transition-all">
               <X size={20} />
@@ -2503,6 +2555,13 @@ export function claimLocalLynkCode(): { code: string; type: string; valid_until:
 
   addLocalLog('VALIDATE_CODE_SUCCESS', `Pembeli mengeklaim Kode Akses baru via Lynk.id: ${code}`);
   syncCodeToGoogleSheet(newCodeObj);
+
+  // Sync to server database asynchronously so Admin panel on any device can see it
+  fetch('/api/licensing/sync-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ codeObj: newCodeObj })
+  }).catch(() => {});
 
   const claimResult = { code, type: "MONTHLY", valid_until, notes };
   try {

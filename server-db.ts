@@ -48,7 +48,10 @@ interface DatabaseSchema {
   access_codes: AccessCode[];
   trial_users: TrialUser[];
   activity_logs: ActivityLog[];
+  google_sheet_webhook_url?: string;
 }
+
+export const DEFAULT_SERVER_SHEET_WEBHOOK = "https://script.google.com/macros/s/AKfycbzRIrWhUDCCdQD5eT2CtrDFqkBcgEYVoRu6NYpu_g84SC7e49I2IXa0ptw2sbIB_Ot3/exec";
 
 const DB_FILE = path.join(process.cwd(), "licensing_db.json");
 const TMP_DB_FILE = path.join("/tmp", "licensing_db.json");
@@ -137,6 +140,85 @@ function saveDB(db: DatabaseSchema) {
 // -----------------------------------------------------------------
 
 export const LicensingDB = {
+  // --- Google Sheet Sync Configuration ---
+  getGoogleSheetWebhookUrl(): string {
+    const db = loadDB();
+    if (db.google_sheet_webhook_url && db.google_sheet_webhook_url.trim().startsWith("http")) {
+      return db.google_sheet_webhook_url.trim();
+    }
+    return process.env.GOOGLE_SHEET_WEBHOOK_URL || DEFAULT_SERVER_SHEET_WEBHOOK;
+  },
+
+  setGoogleSheetWebhookUrl(url: string): void {
+    const db = loadDB();
+    db.google_sheet_webhook_url = url ? url.trim() : "";
+    saveDB(db);
+  },
+
+  async syncCodeToGoogleSheet(codeObj: {
+    code: string;
+    type?: string;
+    status?: string;
+    valid_from?: string;
+    valid_until?: string | null;
+    created_at?: string;
+    created_by?: string;
+    notes?: string;
+  }, customWebhookUrl?: string) {
+    try {
+      const webhookUrl = customWebhookUrl && customWebhookUrl.startsWith("http")
+        ? customWebhookUrl.trim()
+        : this.getGoogleSheetWebhookUrl();
+
+      if (!webhookUrl || !webhookUrl.startsWith("http")) {
+        console.warn("[GoogleSheetSync] Webhook URL tidak valid.");
+        return;
+      }
+
+      const payload = {
+        timestamp: new Date().toISOString(),
+        activity_type: "LYNK_ID_PURCHASE",
+        teacher_name: `Pembeli Lynk.id (${codeObj.code})`,
+        fingerprint: "SERVER_LYNK_CLAIM",
+        ip: "127.0.0.1",
+        code_used: codeObj.code,
+        code: codeObj.code,
+        type: codeObj.type || "MONTHLY",
+        status: codeObj.status || "ACTIVE",
+        valid_from: codeObj.valid_from || new Date().toISOString(),
+        valid_until: codeObj.valid_until || "1 Bulan",
+        notes: codeObj.notes || "Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)",
+        created_by: codeObj.created_by || "Lynk.id Checkout Auto-Claim",
+        details: `[LYNK.ID AUTO-CLAIM] Kode Akses Baru Lynk.id: ${codeObj.code} (${codeObj.type || "MONTHLY"}) - Berlaku s/d: ${codeObj.valid_until ? new Date(codeObj.valid_until).toLocaleDateString("id-ID") : "1 Bulan"}`
+      };
+
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      .then(() => console.log(`[GoogleSheetSync] Server auto-synced Lynk.id code ${codeObj.code} to Google Sheet.`))
+      .catch(e => console.warn(`[GoogleSheetSync] Server fetch error for ${codeObj.code}:`, e));
+    } catch (err: any) {
+      console.warn("[GoogleSheetSync] Failed to sync code to sheet:", err.message);
+    }
+  },
+
+  syncOrRegisterAccessCode(codeObj: Partial<AccessCode> & { code: string }): AccessCode {
+    const existing = this.getAccessCodeByCode(codeObj.code);
+    if (existing) return existing;
+
+    return this.createAccessCode({
+      code: codeObj.code.toUpperCase().trim(),
+      type: (codeObj.type as any) || "MONTHLY",
+      status: codeObj.status || "ACTIVE",
+      valid_from: codeObj.valid_from || new Date().toISOString(),
+      valid_until: codeObj.valid_until || null,
+      created_by: codeObj.created_by || "Lynk.id Checkout Auto-Claim",
+      notes: codeObj.notes || "Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)"
+    });
+  },
+
   // --- Access Codes ---
   getAccessCodes(): AccessCode[] {
     const db = loadDB();
@@ -174,6 +256,7 @@ export const LicensingDB = {
       ip: "127.0.0.1",
       browser: "Admin Dashboard",
     });
+    this.syncCodeToGoogleSheet(created);
     return created;
   },
 
