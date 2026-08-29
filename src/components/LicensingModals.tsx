@@ -21,7 +21,14 @@ import {
   Power,
   Edit2,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ShoppingBag,
+  Sparkles,
+  Copy,
+  ExternalLink,
+  ShieldCheck,
+  Gift,
+  ArrowRight
 } from 'lucide-react';
 
 // Get or Generate Fingerprint
@@ -415,19 +422,24 @@ export function TrialExhaustedModal({ isOpen, onClose, onOpenCodeModal }: TrialE
             Anda telah menggunakan seluruh kuota gratis (5 kali pembuatan). Silakan masukkan Kode Akses agar dapat melanjutkan menggunakan SMART RPM (Rencana Pembelajaran Mendalam).
           </p>
           
-          <div className="bg-blue-50/80 border border-blue-100 rounded-lg p-3.5 mb-6 text-left">
-            <span className="text-xs font-semibold text-blue-800 block mb-1">💡 Cara Mendapatkan Kode Akses:</span>
-            <p className="text-xs text-blue-700 leading-relaxed">
-              Untuk berlangganan dan mendapatkan Kode Akses penuh, silakan hubungi kami melalui Instagram resmi kami di:{' '}
-              <a 
-                href="https://www.instagram.com/indratataethnic/" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="font-bold underline text-blue-800 hover:text-blue-900 break-all"
-              >
-                https://www.instagram.com/indratataethnic/
-              </a>
+          <div className="bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200/70 rounded-xl p-4 mb-6 text-left shadow-sm">
+            <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5 mb-1">
+              <ShoppingBag size={14} className="text-teal-600" />
+              Beli Kode Akses Otomatis via Lynk.id:
+            </span>
+            <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+              Dapatkan Kode Akses instan dengan pembayaran otomatis (QRIS, GoPay, OVO, ShopeePay, Transfer Bank).
             </p>
+            <a 
+              href="https://lynk.id/indratata/3wo67k5xykd7/checkout" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold rounded-lg shadow-md shadow-teal-600/20 text-xs transition-all active:scale-[0.98]"
+            >
+              <ShoppingBag size={14} />
+              <span>Beli Kode Akses Instan (Lynk.id)</span>
+              <ExternalLink size={12} className="opacity-80" />
+            </a>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -569,19 +581,24 @@ export function EnterAccessCodeModal({ isOpen, onClose, currentCode, onCodeActiv
             Masukkan Kode Akses yang diberikan oleh Admin untuk mengaktifkan generator Rencana Pembelajaran Mendalam (RPM) tanpa batasan kuota.
           </p>
 
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3.5 mb-5">
-            <span className="text-xs font-semibold text-blue-800 block mb-1">🔑 Belum Punya Kode Akses?</span>
-            <p className="text-xs text-blue-700 leading-relaxed">
-              Anda bisa mendapatkan berlangganan kode aksesnya melalui Instagram resmi kami di:{' '}
-              <a 
-                href="https://www.instagram.com/indratataethnic/" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="font-bold underline text-blue-800 hover:text-blue-900 break-all"
-              >
-                https://www.instagram.com/indratataethnic/
-              </a>
+          <div className="bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200/70 rounded-xl p-3.5 mb-5 text-left">
+            <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5 mb-1">
+              <ShoppingBag size={14} className="text-teal-600" />
+              Belum Memiliki Kode Akses?
+            </span>
+            <p className="text-xs text-slate-600 mb-2.5 leading-relaxed">
+              Dapatkan Kode Akses resmi secara instan dengan pembayaran otomatis Lynk.id (QRIS / E-Wallet / Transfer):
             </p>
+            <a 
+              href="https://lynk.id/indratata/3wo67k5xykd7/checkout" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold rounded-lg shadow-sm text-xs transition-all active:scale-[0.98]"
+            >
+              <ShoppingBag size={14} />
+              <span>Beli Kode Akses via Lynk.id</span>
+              <ExternalLink size={12} className="opacity-80" />
+            </a>
           </div>
 
           <div className="mb-4">
@@ -652,7 +669,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   const [trialUsers, setTrialUsers] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'codes' | 'trials' | 'logs' | 'sheets'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'codes' | 'trials' | 'logs' | 'sheets' | 'lynk'>('dashboard');
   const [spreadsheetUrl, setSpreadsheetUrl] = useState(() => {
     const defaultUrl = 'https://script.google.com/macros/s/AKfycbzRIrWhUDCCdQD5eT2CtrDFqkBcgEYVoRu6NYpu_g84SC7e49I2IXa0ptw2sbIB_Ot3/exec';
     if (typeof localStorage !== 'undefined') {
@@ -1076,6 +1093,16 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
     const nextStatus = currentStatus === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
     const pw = sessionStorage.getItem('rpm_admin_pw') || '';
     
+    // Update React state & local storage immediately for instant UI response
+    setCodes(prev => prev.map((c: any) => (c.id === id || c.code === id ? { ...c, status: nextStatus } : c)));
+    const localCodes = getLocalCodes();
+    const item = localCodes.find((c: any) => c.id === id || c.code === id);
+    if (item) {
+      item.status = nextStatus;
+      saveLocalCodes(localCodes);
+      addLocalLog('CODE_EDITED', `Ubah status kode ${item.code} menjadi ${nextStatus}`);
+    }
+
     try {
       const res = await fetch('/api/licensing/admin/code/toggle', {
         method: 'POST',
@@ -1090,18 +1117,22 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
       console.warn('Server toggle code status failed, performing locally:', err);
     }
 
-    const localCodes = getLocalCodes();
-    const item = localCodes.find((c: any) => c.id === id);
-    if (item) {
-      item.status = nextStatus;
-      saveLocalCodes(localCodes);
-      addLocalLog('CODE_EDITED', `Ubah status kode ${item.code} menjadi ${nextStatus}`);
-      fetchDashboardData();
-    }
+    fetchDashboardData();
   };
 
   const handleEditNotes = async (id: string) => {
     const pw = sessionStorage.getItem('rpm_admin_pw') || '';
+
+    // Update React state & local storage immediately
+    setCodes(prev => prev.map((c: any) => (c.id === id || c.code === id ? { ...c, notes: editingNotesText } : c)));
+    const localCodes = getLocalCodes();
+    const item = localCodes.find((c: any) => c.id === id || c.code === id);
+    if (item) {
+      item.notes = editingNotesText;
+      saveLocalCodes(localCodes);
+      addLocalLog('CODE_EDITED', `Ubah catatan kode ${item.code}`);
+    }
+
     try {
       const res = await fetch('/api/licensing/admin/code/edit', {
         method: 'POST',
@@ -1117,20 +1148,21 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
       console.warn('Server edit notes failed, performing locally:', err);
     }
 
-    const localCodes = getLocalCodes();
-    const item = localCodes.find((c: any) => c.id === id);
-    if (item) {
-      item.notes = editingNotesText;
-      saveLocalCodes(localCodes);
-      setEditingCodeId(null);
-      addLocalLog('CODE_EDITED', `Ubah catatan kode ${item.code}`);
-      fetchDashboardData();
-    }
+    setEditingCodeId(null);
+    fetchDashboardData();
   };
 
   const handleDeleteCode = async (id: string) => {
     if (!confirm('Apakah Anda yakin ingin menghapus kode akses ini?')) return;
     const pw = sessionStorage.getItem('rpm_admin_pw') || '';
+
+    // Update React state & local storage immediately for instant UI response
+    setCodes(prev => prev.filter((c: any) => c.id !== id && c.code !== id));
+    const localCodes = getLocalCodes();
+    const filtered = localCodes.filter((c: any) => c.id !== id && c.code !== id);
+    saveLocalCodes(filtered);
+    addLocalLog('CODE_DELETED', `Hapus kode: ${id}`);
+
     try {
       const res = await fetch('/api/licensing/admin/code/delete', {
         method: 'POST',
@@ -1145,10 +1177,6 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
       console.warn('Server delete code failed, performing locally:', err);
     }
 
-    const localCodes = getLocalCodes();
-    const filtered = localCodes.filter((c: any) => c.id !== id);
-    saveLocalCodes(filtered);
-    addLocalLog('CODE_DELETED', `Hapus kode ID: ${id}`);
     fetchDashboardData();
   };
 
@@ -1340,6 +1368,15 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
                 >
                   <FileSpreadsheet size={15} />
                   Google Spreadsheet Sync
+                </button>
+                <button
+                  onClick={() => setActiveTab('lynk')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all ${
+                    activeTab === 'lynk' ? 'bg-emerald-600 text-white shadow font-bold' : 'hover:bg-slate-700 hover:text-white text-emerald-300'
+                  }`}
+                >
+                  <ShoppingBag size={15} />
+                  Lynk.id & Claim Link
                 </button>
               </nav>
 
@@ -2020,6 +2057,103 @@ function doGet(e) {
                       </div>
                     </div>
                   )}
+
+                  {/* TAB 6: LYNK.ID INTEGRATION */}
+                  {activeTab === 'lynk' && (
+                    <div className="space-y-6">
+                      <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-4">
+                        <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
+                          <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
+                            <ShoppingBag size={24} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-800 text-base">Integrasi Penjualan Lynk.id</h4>
+                            <p className="text-xs text-gray-500">Kelola tautan toko checkout dan URL klaim otomatis untuk pembeli dari Lynk.id</p>
+                          </div>
+                        </div>
+
+                        {/* Item 1: Checkout Link */}
+                        <div className="space-y-2 bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl">
+                          <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider">
+                            1. Tautan Checkout Toko Lynk.id Anda
+                          </label>
+                          <p className="text-xs text-emerald-700 leading-relaxed">
+                            Tautan ini ditampilkan kepada pengguna trial pada modal aktivasi & kuota habis agar guru dapat melakukan pembelian instan via QRIS / E-Wallet / Bank:
+                          </p>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value="https://lynk.id/indratata/3wo67k5xykd7/checkout"
+                              className="flex-1 bg-white px-3 py-2 border border-emerald-300 rounded-lg text-xs font-mono text-emerald-900 select-all"
+                            />
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText('https://lynk.id/indratata/3wo67k5xykd7/checkout');
+                                alert('Tautan checkout Lynk.id berhasil disalin!');
+                              }}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5 shrink-0"
+                            >
+                              <Copy size={14} /> Salin
+                            </button>
+                            <a
+                              href="https://lynk.id/indratata/3wo67k5xykd7/checkout"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-2 bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-700 font-semibold text-xs rounded-lg flex items-center gap-1 shrink-0"
+                            >
+                              <ExternalLink size={14} /> Buka Toko
+                            </a>
+                          </div>
+                        </div>
+
+                        {/* Item 2: Redirect Link for Lynk.id */}
+                        <div className="space-y-2 bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
+                          <label className="block text-xs font-bold text-blue-900 uppercase tracking-wider">
+                            2. Tautan Pengalihan (Redirect / Thank You Page Link) untuk Produk Lynk.id
+                          </label>
+                          <p className="text-xs text-blue-700 leading-relaxed">
+                            Tempelkan tautan ini di dashboard Lynk.id Anda pada pengaturan produk digital menu <strong>"Link Terima Kasih Pembayaran / Redirect Link"</strong>. Pembeli yang baru saja membayar di Lynk.id akan otomatis diarahkan ke URL ini untuk menerima Kode Akses resminya:
+                          </p>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={`${typeof window !== 'undefined' ? window.location.origin : 'https://...'}?action=claim`}
+                              className="flex-1 bg-white px-3 py-2 border border-blue-300 rounded-lg text-xs font-mono text-blue-900 select-all"
+                            />
+                            <button
+                              onClick={() => {
+                                const url = `${window.location.origin}/?action=claim`;
+                                navigator.clipboard.writeText(url);
+                                alert('Tautan Pengalihan Klaim Lynk.id berhasil disalin!\n\n' + url);
+                              }}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5 shrink-0"
+                            >
+                              <Copy size={14} /> Salin URL Klaim
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Item 3: Test Claim */}
+                        <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-center justify-between gap-4">
+                          <div>
+                            <span className="text-xs font-bold text-slate-800 block">Uji Coba Tampilan Klaim Kode Akses Pembeli</span>
+                            <p className="text-xs text-slate-500">Buka modal klaim kode akses untuk mensimulasikan alur setelah pembeli menyelesaikan pembayaran.</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const url = `${window.location.origin}/?action=claim`;
+                              window.location.href = url;
+                            }}
+                            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5 shrink-0"
+                          >
+                            <Sparkles size={14} className="text-amber-300" /> Uji Coba Halaman Klaim
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -2115,6 +2249,249 @@ export function TrialConfirmationModal({ isOpen, onClose, onConfirm, onOpenCodeM
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 5. LYNK.ID AUTO-CLAIM CODE MODAL
+// -------------------------------------------------------------
+export function claimLocalLynkCode(): { code: string; type: string; valid_until: string; notes: string } {
+  const existingClaim = localStorage.getItem('rpm_claimed_lynk_code');
+  if (existingClaim) {
+    try {
+      const parsed = JSON.parse(existingClaim);
+      if (parsed && parsed.code) return parsed;
+    } catch (e) {}
+  }
+
+  const suffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const code = `RPM-LYNK-${suffix}`;
+  const valid_from = new Date().toISOString();
+  const valid_until_date = new Date();
+  valid_until_date.setMonth(valid_until_date.getMonth() + 1);
+  const valid_until = valid_until_date.toISOString();
+  const notes = "Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)";
+
+  const newCodeObj = {
+    id: `code-lynk-${Date.now()}`,
+    code,
+    type: "MONTHLY",
+    status: "ACTIVE",
+    valid_from,
+    valid_until,
+    created_at: valid_from,
+    created_by: "Lynk.id Checkout Auto-Claim",
+    notes
+  };
+
+  const localCodes = getLocalCodes();
+  localCodes.unshift(newCodeObj);
+  saveLocalCodes(localCodes);
+
+  addLocalLog('VALIDATE_CODE_SUCCESS', `Pembeli mengeklaim Kode Akses baru via Lynk.id: ${code}`);
+
+  const claimResult = { code, type: "MONTHLY", valid_until, notes };
+  try {
+    localStorage.setItem('rpm_claimed_lynk_code', JSON.stringify(claimResult));
+  } catch (e) {}
+
+  return claimResult;
+}
+
+interface ClaimAccessCodeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCodeActivated: (code: string) => void;
+}
+
+export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: ClaimAccessCodeModalProps) {
+  const [claimedCode, setClaimedCode] = useState<string>('');
+  const [validUntil, setValidUntil] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [copied, setCopied] = useState<boolean>(false);
+  const [isActivating, setIsActivating] = useState<boolean>(false);
+  const [activatedSuccess, setActivatedSuccess] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setIsLoading(true);
+    setCopied(false);
+    setActivatedSuccess(false);
+
+    const processClaim = async () => {
+      try {
+        const fp = getOrGenerateFingerprint();
+        let serverRes: any = null;
+
+        try {
+          const res = await fetch('/api/licensing/claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fingerprint: fp })
+          });
+          if (res.ok) {
+            serverRes = await res.json();
+          }
+        } catch (err) {
+          console.warn('Server claim route unreachable, using client claim engine:', err);
+        }
+
+        if (serverRes && serverRes.success && serverRes.code) {
+          setClaimedCode(serverRes.code);
+          setValidUntil(serverRes.valid_until);
+        } else {
+          const localClaim = claimLocalLynkCode();
+          setClaimedCode(localClaim.code);
+          setValidUntil(localClaim.valid_until);
+        }
+      } catch (e) {
+        const localClaim = claimLocalLynkCode();
+        setClaimedCode(localClaim.code);
+        setValidUntil(localClaim.valid_until);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    processClaim();
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleCopy = () => {
+    if (!claimedCode) return;
+    navigator.clipboard.writeText(claimedCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleActivateNow = () => {
+    if (!claimedCode) return;
+    setIsActivating(true);
+    localStorage.setItem('rpm_access_code', claimedCode);
+    addLocalLog('CODE_ACTIVATED', `Kode ${claimedCode} diaktifkan otomatis dari Klaim Lynk.id.`);
+    
+    setTimeout(() => {
+      setIsActivating(false);
+      setActivatedSuccess(true);
+      onCodeActivated(claimedCode);
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+    }, 600);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-teal-100 max-w-lg w-full overflow-hidden transform transition-all animate-scale-in">
+        
+        {/* Banner Header */}
+        <div className="bg-gradient-to-r from-teal-600 via-emerald-600 to-emerald-700 p-6 text-white text-center relative overflow-hidden">
+          <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+          <div className="absolute -left-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+
+          <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner ring-4 ring-white/15">
+            <Gift className="w-8 h-8 text-amber-300 animate-bounce" />
+          </div>
+
+          <span className="inline-block px-3 py-1 bg-amber-400 text-amber-950 font-extrabold text-[10px] rounded-full uppercase tracking-wider mb-2 shadow-sm">
+            🎉 Pembelian Pembayaran Lynk.id Terverifikasi
+          </span>
+          <h3 className="text-xl font-black text-white tracking-tight">Klaim Kode Akses Smart RPM</h3>
+          <p className="text-xs text-teal-100 mt-1 max-w-sm mx-auto">
+            Terima kasih atas pembelian Anda di Lynk.id! Kode akses resmi Anda telah siap dan dapat langsung digunakan.
+          </p>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {isLoading ? (
+            <div className="py-10 text-center space-y-3">
+              <RefreshCw className="w-10 h-10 text-teal-600 animate-spin mx-auto" />
+              <p className="text-sm font-semibold text-slate-700">Menyiapkan & Menggenerasi Kode Akses Resmi Anda...</p>
+            </div>
+          ) : (
+            <>
+              {/* Code Box */}
+              <div className="bg-slate-50 border-2 border-teal-500/30 rounded-xl p-4 text-center shadow-inner relative group">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                  🔑 KODE AKSES RESMI ANDA
+                </span>
+                <div className="font-mono text-2xl font-black tracking-widest text-teal-800 my-1 selection:bg-teal-200">
+                  {claimedCode}
+                </div>
+                {validUntil && (
+                  <span className="inline-block text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 mt-1">
+                    ✓ Masa Aktif: {new Date(validUntil).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} (1 Bulan)
+                  </span>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-all border border-slate-300 shadow-sm"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-600" />
+                      <span className="text-emerald-700">Tersalin ke Clipboard!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 text-slate-600" />
+                      <span>Salin Kode Akses</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleActivateNow}
+                  disabled={isActivating || activatedSuccess}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold rounded-xl text-xs transition-all shadow-md shadow-teal-600/20 active:scale-[0.98]"
+                >
+                  {isActivating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Mengaktifkan...</span>
+                    </>
+                  ) : activatedSuccess ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-emerald-200" />
+                      <span>Berhasil Diaktifkan!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>Aktifkan Sekarang</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Notice */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-left flex items-start gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-[11px] text-amber-900 leading-relaxed">
+                  <strong>Petunjuk Penyimpanan:</strong> Simpan atau salin kode akses di atas. Jika Anda berpindah browser atau HP, Anda cukup memasukkan kembali kode ini pada menu <strong>Aktivasi Kode Akses</strong>.
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <span>Smart RPM - Modul Pembelajaran Mendalam</span>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 font-semibold">
+            Tutup
+          </button>
         </div>
       </div>
     </div>

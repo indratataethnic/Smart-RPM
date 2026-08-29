@@ -12,7 +12,7 @@ import { GeneratingProgressModal } from './components/GeneratingProgressModal';
 import { LessonFormData, LessonPlanOutput, SavedLessonPlan } from './types';
 import { DEMO_PRESETS, getKelasOptions, DPL_OPTIONS, METODE_MODEL_OPTIONS, KEMITRAAN_OPTIONS, DIGITAL_TOOLS_OPTIONS, LINTAS_DISIPLIN_OPTIONS, LINGKUNGAN_PEMBELAJARAN_OPTIONS } from './data/presets';
 import { Sparkles, Loader2, ArrowRight, RotateCcw, AlertCircle, Trash2, Cpu } from 'lucide-react';
-import { TrialExhaustedModal, EnterAccessCodeModal, AdminPanelModal, getOrGenerateFingerprint, TrialConfirmationModal, getLocalCodes, getOrRegisterLocalTrialUser, decrementLocalTrial, addLocalLog } from './components/LicensingModals';
+import { TrialExhaustedModal, EnterAccessCodeModal, AdminPanelModal, getOrGenerateFingerprint, TrialConfirmationModal, getLocalCodes, getOrRegisterLocalTrialUser, decrementLocalTrial, addLocalLog, ClaimAccessCodeModal } from './components/LicensingModals';
 import { VerificationPage } from './components/VerificationPage';
 
 const matchOptionLabels = (recommended: string[] | undefined, options: { label: string }[], fallbackCount = 2, maxCount = 3): string[] => {
@@ -280,8 +280,8 @@ const createFallbackLessonPlanClient = (data: any): LessonPlanOutput => {
       bahanAjar: "Bahan Ajar Ringkas: Rangkuman materi " + mp + " topik " + lm + " dilengkapi contoh gambar/diagram.",
       rubrikPenilaian: "Rubrik Penilaian Kinerja & Produk (Skor 1-4: Perlu Bimbingan, Cukup, Layak, Mahir).",
       kktp: {
-        pendekatan: "Rubrik Kriteria Ketuntasan Tujuan Pembelajaran (Interval Nilai)",
-        deskripsi: "Pedoman penetapan kriteria ketuntasan belajar murid.",
+        pendekatan: "Rubrik Kriteria Ketercapaian Tujuan Pembelajaran (Interval Nilai)",
+        deskripsi: "Pedoman penetapan kriteria ketercapaian tujuan pembelajaran murid.",
         kriteria: [
           {
             aspekPenilaian: "Pemahaman Konsep " + lm,
@@ -384,6 +384,24 @@ export default function App() {
   const [isEnterCodeModalOpen, setIsEnterCodeModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isTrialConfirmModalOpen, setIsTrialConfirmModalOpen] = useState(false);
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('action') === 'claim' || params.get('claim') === 'true' || params.has('claim_code');
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handlePopStateClaim = () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('action') === 'claim' || params.get('claim') === 'true' || params.has('claim_code')) {
+        setIsClaimModalOpen(true);
+      }
+    };
+    window.addEventListener('popstate', handlePopStateClaim);
+    return () => window.removeEventListener('popstate', handlePopStateClaim);
+  }, []);
 
   // Sync / Fetch licensing status helper
   const fetchLicensingStatus = async () => {
@@ -1236,6 +1254,24 @@ export default function App() {
         isOpen={isAdminPanelOpen}
         onClose={() => setIsAdminPanelOpen(false)}
         onLogOut={() => setAccessCode('')}
+      />
+
+      <ClaimAccessCodeModal
+        isOpen={isClaimModalOpen}
+        onClose={() => {
+          setIsClaimModalOpen(false);
+          if (typeof window !== 'undefined' && window.history.replaceState) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('action');
+            url.searchParams.delete('claim');
+            url.searchParams.delete('claim_code');
+            window.history.replaceState({}, '', url.pathname + url.search);
+          }
+        }}
+        onCodeActivated={(code) => {
+          setAccessCode(code);
+          fetchLicensingStatus();
+        }}
       />
     </div>
   );

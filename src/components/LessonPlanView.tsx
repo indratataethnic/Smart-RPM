@@ -348,7 +348,7 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
           {
             no: 2,
             pertanyaan: `Lakukan refleksi diri: bagian manakah dari materi ${lm} ini yang menurutmu paling menarik untuk dieksplorasi lebih jauh? Berikan alasan pendukungmu!`,
-            kunciJawaban: "Kunci Jawaban terbuka (open-ended). Kriteria ketuntasan dinilai dari kedalaman refleksi metakognitif dan kemandirian berpikir siswa.",
+            kunciJawaban: "Kunci Jawaban terbuka (open-ended). Kriteria ketercapaian dinilai dari kedalaman refleksi metakognitif dan kemandirian berpikir siswa.",
             pembahasan: "Mengukur aspek metakognisi, self-assessment, dan minat belajar siswa terhadap topik yang diajarkan."
           }
         ]
@@ -1325,12 +1325,12 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
         lampiran.kktp
           ? typeof lampiran.kktp === 'string'
             ? `<table class="grid-table">
-                <tr><td class="bg-label">D. Kriteria Ketuntasan Tujuan Pembelajaran (KKTP)</td></tr>
+                <tr><td class="bg-label">D. Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)</td></tr>
                 <tr><td style="background-color: #f8fafc;">${lampiran.kktp.replace(/\n/g, '<br/>')}</td></tr>
                </table>`
             : `
               <div style="margin-top: 14px; font-weight: bold; font-size: 11pt; color: #0f766e;">
-                D. KRITERIA KETUNTASAN TUJUAN PEMBELAJARAN (KKTP)
+                D. KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN (KKTP)
               </div>
               <p style="font-size: 9pt; color: #475569; margin: 4px 0 8px 0;">
                 <strong>Pendekatan:</strong> ${lampiran.kktp.pendekatan || 'Rubrik Interval Nilai'}<br/>
@@ -2878,12 +2878,12 @@ ${formatActivityText(k.aktivitasMurid)}
               )}
             </div>
 
-            {/* D. KKTP (Kriteria Ketuntasan Tujuan Pembelajaran) */}
+            {/* D. KKTP (Kriteria Ketercapaian Tujuan Pembelajaran) */}
             <div className="border border-teal-200 p-4 rounded-xl bg-teal-50/20">
               <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                 <span className="font-bold text-slate-900 text-xs uppercase text-teal-800 flex items-center gap-1.5">
                   <CheckSquare className="w-4 h-4 text-teal-600" />
-                  D. Kriteria Ketuntasan Tujuan Pembelajaran (KKTP)
+                  D. Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)
                 </span>
                 {typeof activePlan.lampiran.kktp === 'object' && activePlan.lampiran.kktp?.pendekatan && !isEditing && (
                   <span className="text-[11px] font-semibold bg-teal-100 text-teal-800 px-2.5 py-0.5 rounded-full">

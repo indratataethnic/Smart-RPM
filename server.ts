@@ -1878,6 +1878,49 @@ app.post(["/api/licensing/validate", "/licensing/validate"], (req, res) => {
   }
 });
 
+// Lynk.id Auto-Claim Code endpoint
+app.post(["/api/licensing/claim", "/licensing/claim"], (req, res) => {
+  try {
+    const { fingerprint } = req.body || {};
+    const ip = req.ip || req.headers["x-forwarded-for"] || "127.0.0.1";
+    const userAgent = req.headers["user-agent"] || "Unknown";
+    const clientIp = Array.isArray(ip) ? ip[0] : String(ip);
+
+    const suffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const codeStr = `RPM-LYNK-${suffix}`;
+    const valid_from = new Date().toISOString();
+    const valid_until_date = new Date();
+    valid_until_date.setMonth(valid_until_date.getMonth() + 1);
+    const valid_until = valid_until_date.toISOString();
+
+    const created = LicensingDB.createAccessCode({
+      code: codeStr,
+      type: "MONTHLY",
+      status: "ACTIVE",
+      valid_from,
+      valid_until,
+      created_by: "Lynk.id Checkout Auto-Claim",
+      notes: "Pembelian Otomatis Lynk.id (Akses 1 Bulan Resmi)"
+    });
+
+    LicensingDB.addLog(
+      "VALIDATE_CODE_SUCCESS",
+      `Pembeli mengeklaim Kode Akses baru via Lynk.id: ${codeStr} (Berlaku s/d ${new Date(valid_until).toLocaleDateString('id-ID')})`,
+      { ip: clientIp, browser: userAgent, codeUsed: codeStr }
+    );
+
+    res.json({
+      success: true,
+      code: created.code,
+      type: created.type,
+      valid_until: created.valid_until,
+      notes: created.notes
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Check trial and current license status
 app.post(["/api/licensing/status", "/licensing/status"], (req, res) => {
   try {

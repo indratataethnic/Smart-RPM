@@ -179,7 +179,7 @@ export const LicensingDB = {
 
   updateAccessCode(id: string, updates: Partial<Omit<AccessCode, "id" | "code" | "type" | "created_at">>): AccessCode | null {
     const db = loadDB();
-    const idx = db.access_codes.findIndex((c) => c.id === id);
+    const idx = db.access_codes.findIndex((c) => c.id === id || c.code.toUpperCase() === id.toUpperCase());
     if (idx === -1) return null;
 
     db.access_codes[idx] = {
@@ -197,7 +197,7 @@ export const LicensingDB = {
 
   deleteAccessCode(id: string): boolean {
     const db = loadDB();
-    const idx = db.access_codes.findIndex((c) => c.id === id);
+    const idx = db.access_codes.findIndex((c) => c.id === id || c.code.toUpperCase() === id.toUpperCase());
     if (idx === -1) return false;
 
     const codeStr = db.access_codes[idx].code;
