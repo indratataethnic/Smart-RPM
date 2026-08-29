@@ -2647,11 +2647,26 @@ export function ClaimAccessCodeModal({ isOpen, onClose, onCodeActivated }: Claim
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleActivateNow = () => {
+  const handleActivateNow = async () => {
     if (!claimedCode) return;
     setIsActivating(true);
     localStorage.setItem('rpm_access_code', claimedCode);
     addLocalLog('CODE_ACTIVATED', `Kode ${claimedCode} diaktifkan otomatis dari Klaim Lynk.id.`);
+
+    try {
+      await fetch('/api/licensing/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: claimedCode,
+          fingerprint: localStorage.getItem('rpm_user_fingerprint') || getOrGenerateFingerprint(),
+          teacher_name: 'Pembeli Lynk.id'
+        })
+      });
+    } catch (e) {
+      console.warn('Server activation sync warning:', e);
+    }
+
     syncToGoogleSheet({
       timestamp: new Date().toISOString(),
       activity_type: 'CODE_ACTIVATED',
