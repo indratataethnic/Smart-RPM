@@ -51,7 +51,7 @@ interface DatabaseSchema {
   google_sheet_webhook_url?: string;
 }
 
-export const DEFAULT_SERVER_SHEET_WEBHOOK = "https://script.google.com/macros/s/AKfycbzRIrWhUDCCdQD5eT2CtrDFqkBcgEYVoRu6NYpu_g84SC7e49I2IXa0ptw2sbIB_Ot3/exec";
+export const DEFAULT_SERVER_SHEET_WEBHOOK = "https://script.google.com/macros/s/AKfycbxhT2wRBg9goG_FjWGjed7_pmYC56NqkxyMm2WOPYL7m_HFDidwQcoQM7DkQ0S_N2pAKg/exec";
 
 const DB_FILE = path.join(process.cwd(), "licensing_db.json");
 const TMP_DB_FILE = path.join("/tmp", "licensing_db.json");
@@ -144,6 +144,13 @@ export const LicensingDB = {
   getGoogleSheetWebhookUrl(): string {
     const db = loadDB();
     if (db.google_sheet_webhook_url && db.google_sheet_webhook_url.trim().startsWith("http")) {
+      // Auto migrate if it contains the old webhook code
+      if (db.google_sheet_webhook_url.includes("AKfycbzRIrWhUDCCdQD5eT2CtrDFqkBcgEYVoRu6NYpu_g84SC7e49I2IXa0ptw2sbIB_Ot3")) {
+        const newUrl = "https://script.google.com/macros/s/AKfycbxhT2wRBg9goG_FjWGjed7_pmYC56NqkxyMm2WOPYL7m_HFDidwQcoQM7DkQ0S_N2pAKg/exec";
+        db.google_sheet_webhook_url = newUrl;
+        saveDB(db);
+        return newUrl;
+      }
       return db.google_sheet_webhook_url.trim();
     }
     return process.env.GOOGLE_SHEET_WEBHOOK_URL || DEFAULT_SERVER_SHEET_WEBHOOK;

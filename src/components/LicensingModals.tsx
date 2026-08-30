@@ -206,13 +206,18 @@ export function getLocalLogs(): any[] {
   ];
 }
 
-export const DEFAULT_GOOGLE_SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzRIrWhUDCCdQD5eT2CtrDFqkBcgEYVoRu6NYpu_g84SC7e49I2IXa0ptw2sbIB_Ot3/exec';
+export const DEFAULT_GOOGLE_SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxhT2wRBg9goG_FjWGjed7_pmYC56NqkxyMm2WOPYL7m_HFDidwQcoQM7DkQ0S_N2pAKg/exec';
 
 export function getGoogleSheetWebhookUrl(): string {
   try {
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem('rpm_google_sheet_webhook_url');
       if (saved && saved.trim().startsWith('http')) {
+        // Auto-migrate from the old webhook URL if it matches
+        if (saved.includes('AKfycbzRIrWhUDCCdQD5eT2CtrDFqkBcgEYVoRu6NYpu_g84SC7e49I2IXa0ptw2sbIB_Ot3')) {
+          localStorage.setItem('rpm_google_sheet_webhook_url', DEFAULT_GOOGLE_SHEET_WEBHOOK_URL);
+          return DEFAULT_GOOGLE_SHEET_WEBHOOK_URL;
+        }
         return saved.trim();
       }
     }
@@ -868,10 +873,15 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'codes' | 'trials' | 'logs' | 'sheets' | 'lynk'>('dashboard');
   const [spreadsheetUrl, setSpreadsheetUrl] = useState(() => {
-    const defaultUrl = 'https://script.google.com/macros/s/AKfycbzRIrWhUDCCdQD5eT2CtrDFqkBcgEYVoRu6NYpu_g84SC7e49I2IXa0ptw2sbIB_Ot3/exec';
+    const defaultUrl = DEFAULT_GOOGLE_SHEET_WEBHOOK_URL;
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem('rpm_google_sheet_webhook_url');
       if (!saved) {
+        localStorage.setItem('rpm_google_sheet_webhook_url', defaultUrl);
+        return defaultUrl;
+      }
+      // Auto migrate if it contains the old webhook code
+      if (saved.includes('AKfycbzRIrWhUDCCdQD5eT2CtrDFqkBcgEYVoRu6NYpu_g84SC7e49I2IXa0ptw2sbIB_Ot3')) {
         localStorage.setItem('rpm_google_sheet_webhook_url', defaultUrl);
         return defaultUrl;
       }
