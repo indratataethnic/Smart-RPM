@@ -228,14 +228,36 @@ export const LicensingDB = {
           items.forEach((item: any) => {
             const codeStr = item.code || item.code_used || item.codeUsed;
             if (codeStr && typeof codeStr === 'string' && codeStr.toUpperCase().startsWith('RPM')) {
+              const clean = codeStr.toUpperCase().trim();
+              const isPerm = item.type === 'PERMANENT' || clean.includes('PERM');
               this.syncOrRegisterAccessCode({
-                code: codeStr,
-                type: item.type === 'PERMANENT' ? 'PERMANENT' : 'MONTHLY',
+                code: clean,
+                type: isPerm ? 'PERMANENT' : 'MONTHLY',
                 status: item.status || 'ACTIVE',
                 valid_from: item.valid_from || new Date().toISOString(),
                 valid_until: item.valid_until || null,
                 created_by: item.created_by || 'Google Sheet Auto-Sync',
                 notes: item.notes || 'Diimpor dari Google Spreadsheet'
+              });
+            }
+          });
+        }
+
+        // Regex scan raw response text for any RPM-xxx codes as fallback
+        const matches = text.match(/RPM-[A-Z0-9]+(?:-[A-Z0-9]+)+/gi);
+        if (matches) {
+          matches.forEach((matchedCode: string) => {
+            const clean = matchedCode.toUpperCase().trim();
+            if (clean.length >= 6) {
+              const isPerm = clean.includes('-PERM-');
+              this.syncOrRegisterAccessCode({
+                code: clean,
+                type: isPerm ? 'PERMANENT' : 'MONTHLY',
+                status: 'ACTIVE',
+                valid_from: new Date().toISOString(),
+                valid_until: null,
+                created_by: 'Google Sheet Text Scan',
+                notes: 'Diimpor dari Log / Sheet'
               });
             }
           });

@@ -32,8 +32,22 @@ function checkAndApplyLicense(fingerprint: string | undefined, codeStr: string |
   // Step 1: Check if an access code is provided
   if (codeStr && codeStr.trim().length > 0) {
     const cleanCode = codeStr.trim().toUpperCase();
-    const codeObj = LicensingDB.getAccessCodeByCode(cleanCode);
+    let codeObj = LicensingDB.getAccessCodeByCode(cleanCode);
     
+    // Auto-register any valid RPM prefixed code if not in memory yet (multi-device support)
+    if (!codeObj && cleanCode.startsWith("RPM")) {
+      const isPerm = cleanCode.includes("-PERM-");
+      codeObj = LicensingDB.syncOrRegisterAccessCode({
+        code: cleanCode,
+        type: isPerm ? "PERMANENT" : "MONTHLY",
+        status: "ACTIVE",
+        valid_from: new Date().toISOString(),
+        valid_until: isPerm ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        created_by: "Multi-Laptop Auto-Validate",
+        notes: "Akses Otomatis Multi-Device / Laptop"
+      });
+    }
+
     if (!codeObj) {
       LicensingDB.addLog("VALIDATE_CODE_FAILED", `Validasi kode gagal (tidak ditemukan): ${cleanCode}`, { ip, browser: userAgent, codeUsed: cleanCode });
       return { success: false, status: "INVALID", message: "Kode tidak ditemukan. Silakan periksa kembali." };

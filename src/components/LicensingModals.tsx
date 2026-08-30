@@ -655,6 +655,24 @@ export function EnterAccessCodeModal({ isOpen, onClose, currentCode, onCodeActiv
       if (isServerSuccess && serverData) {
         setSuccess(`Kode Akses Berhasil Diaktifkan! Jenis Akses: ${serverData.type === 'PERMANENT' ? 'PERMANEN (SDN Karanganyar)' : 'BULANAN (Sekolah Lain)'}`);
         localStorage.setItem('rpm_access_code', cleanCode);
+        
+        // Ensure local DB has it stored
+        const localCodes = getLocalCodes();
+        if (!localCodes.some((c: any) => c.code.trim().toUpperCase() === cleanCode)) {
+          localCodes.push({
+            id: `code-${Date.now()}`,
+            code: cleanCode,
+            type: serverData.type || 'MONTHLY',
+            status: 'ACTIVE',
+            valid_from: new Date().toISOString(),
+            valid_until: serverData.valid_until || null,
+            created_at: new Date().toISOString(),
+            created_by: 'Server Validation',
+            notes: 'Diaktifkan via Server Validation'
+          });
+          saveLocalCodes(localCodes);
+        }
+
         syncToGoogleSheet({
           timestamp: new Date().toISOString(),
           activity_type: 'CODE_ACTIVATED',
@@ -671,7 +689,26 @@ export function EnterAccessCodeModal({ isOpen, onClose, currentCode, onCodeActiv
       } else {
         // Fallback Local Validation
         const localCodes = getLocalCodes();
-        const found = localCodes.find((c: any) => c.code.trim().toUpperCase() === cleanCode);
+        let found = localCodes.find((c: any) => c.code.trim().toUpperCase() === cleanCode);
+        
+        // Multi-device fallback: Auto-register valid RPM codes if valid prefix
+        if (!found && cleanCode.startsWith('RPM')) {
+          const isPerm = cleanCode.includes('PERM');
+          found = {
+            id: `code-${Date.now()}`,
+            code: cleanCode,
+            type: isPerm ? 'PERMANENT' : 'MONTHLY',
+            status: 'ACTIVE',
+            valid_from: new Date().toISOString(),
+            valid_until: isPerm ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            created_at: new Date().toISOString(),
+            created_by: 'Multi-Laptop Auto-Validate',
+            notes: 'Akses Otomatis Multi-Device / Laptop'
+          };
+          localCodes.push(found);
+          saveLocalCodes(localCodes);
+        }
+
         if (found) {
           if (found.status !== 'ACTIVE') {
             setError('Kode akses ini telah dinonaktifkan oleh Admin.');
@@ -2271,6 +2308,35 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
   try {
     var data = JSON.parse(e.postData.contents);
     
+    // Simpan Kode Akses ke Sheet "Daftar Kode Akses" jika ada data kode
+    var codeVal = data.code || data.code_used;
+    if (codeVal && typeof codeVal === 'string' && codeVal.toUpperCase().indexOf('RPM') === 0) {
+      var sheetCodes = ss.getSheetByName("Daftar Kode Akses");
+      if (!sheetCodes) {
+        sheetCodes = ss.insertSheet("Daftar Kode Akses");
+        sheetCodes.appendRow(["Tanggal Dibuat", "Kode Akses", "Tipe", "Status", "Berlaku Sampai", "Dibuat Oleh", "Catatan"]);
+      }
+      var cRows = sheetCodes.getDataRange().getValues();
+      var foundCodeIdx = -1;
+      for (var k = 1; k < cRows.length; k++) {
+        if (cRows[k][1] && String(cRows[k][1]).toUpperCase() === codeVal.toUpperCase()) {
+          foundCodeIdx = k + 1;
+          break;
+        }
+      }
+      if (foundCodeIdx < 0) {
+        sheetCodes.appendRow([
+          new Date(),
+          codeVal.toUpperCase(),
+          data.type || 'MONTHLY',
+          data.status || 'ACTIVE',
+          data.valid_until || '1 Bulan',
+          data.created_by || 'Admin / Lynk.id',
+          data.notes || 'Pembelian / Registrasi'
+        ]);
+      }
+    }
+
     // 1. Data Trial (Khusus Guru yang melakukan Generate RPM)
     if (data.activity_type === 'TRIAL_USER_RECORD' || data.activity_type === 'NEW_TRIAL_USER') {
       var sheet2 = ss.getSheetByName("Data Trial");
@@ -2293,7 +2359,6 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
       }
       
       if (foundRowIndex > 0) {
-        // Update baris pengguna trial yang sudah ada
         sheet2.getRange(foundRowIndex, 1).setValue(new Date());
         if (data.ip && data.ip !== '-') {
           sheet2.getRange(foundRowIndex, 3).setValue(data.ip);
@@ -2308,7 +2373,6 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
           sheet2.getRange(foundRowIndex, 7).setValue(data.last_active);
         }
       } else {
-        // Baris baru untuk guru yang pertama kali melakukan Generate RPM
         sheet2.appendRow([
           new Date(),
           targetId,
@@ -2320,7 +2384,7 @@ export function AdminPanelModal({ isOpen, onClose }: AdminPanelModalProps) {
         ]);
       }
     } else {
-      // 2. Log Aktivitas Guru (Kunjungan, Penggunaan Kode Lisensi, Ping Test, dsb.)
+      // 2. Log Aktivitas Guru
       var sheet1 = ss.getSheetByName("Log Aktivitas Guru");
       if (!sheet1) {
         sheet1 = ss.getSheetByName("Sheet1") || ss.getSheetByName("Laporan Utama");
@@ -2373,7 +2437,27 @@ function doGet(e) {
       }
     }
   }
-  return ContentService.createTextOutput(JSON.stringify({status: 'active', app: 'Smart RPM', trialUsers: trialUsers}))
+
+  var codes = [];
+  var sheetCodes = ss.getSheetByName("Daftar Kode Akses");
+  if (sheetCodes) {
+    var cRows = sheetCodes.getDataRange().getValues();
+    for (var j = 1; j < cRows.length; j++) {
+      if (cRows[j][1]) {
+        codes.push({
+          created_at: cRows[j][0],
+          code: String(cRows[j][1]).toUpperCase(),
+          type: cRows[j][2] || 'MONTHLY',
+          status: cRows[j][3] || 'ACTIVE',
+          valid_until: cRows[j][4] || null,
+          created_by: cRows[j][5] || 'Admin',
+          notes: cRows[j][6] || ''
+        });
+      }
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({status: 'active', app: 'Smart RPM', trialUsers: trialUsers, codes: codes}))
     .setMimeType(ContentService.MimeType.JSON);
 }`}
                           </pre>
