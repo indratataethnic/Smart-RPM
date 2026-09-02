@@ -704,7 +704,12 @@ function createFallbackLessonPlan(formData: any) {
     },
     lampiran: {
       lkpd: "Ringkasan LKPD: Diskusikan bersama kelompokmu konsep " + lm + " dan jawablah pertanyaan analisis dalam lembar kerja.",
-      bahanAjar: "Bahan Ajar Ringkas: Rangkuman materi " + mp + " topik " + lm + " dilengkapi contoh gambar/diagram.",
+      bahanAjar: "RANGKUMAN BAHAN BACAAN GURU & MURID (Pengganti Buku Paket / Bahan Catatan Papan Tulis):\n" +
+        "1. Pengertian: " + lm + " adalah konsep dasar dalam " + mp + " yang mempelajari karakteristik dan penerapannya dalam kehidupan sehari-hari.\n" +
+        "2. Jenis-jenis / Klasifikasi: Mengelompokkan bentuk dan variasi materi " + lm + " secara kontekstual.\n" +
+        "3. Ciri-ciri / Karakteristik: Mengidentifikasi sifat dan ciri khas utama dari " + lm + ".\n" +
+        "4. Contoh Konkret: Berbagai penerapan nyata " + lm + " di lingkungan sekolah dan rumah.\n" +
+        "5. Catatan Papan Tulis (Siap Salin Murid): Rangkuman poin kunci terstruktur untuk disalin murid ke buku catatan.",
       rubrikPenilaian: "Rubrik Penilaian Kinerja & Produk (Skor 1-4: Perlu Bimbingan, Cukup, Layak, Mahir).",
       kktp: {
         pendekatan: "Rubrik Kriteria Ketuntasan Tujuan Pembelajaran (Interval Nilai)",
@@ -836,7 +841,7 @@ PERSYARATAN WAJIB DOKUMEN RENCANA PEMBELAJARAN MENDALAM:
    - Assessment for Learning (Asesmen selama proses - observasi, umpan balik & penugasan)
    - Assessment of Learning (Asesmen akhir - tes tertulis, produk/proyek sumatif)
    Untuk setiap kategori di atas, wajib sertakan atribut: "bentukPenilaian", "teknikPenilaian", dan "instrumenPenilaian".
-7. Berikan Lampiran LKPD ringkas, Bahan Ajar ringkas (dengan referensi Buku BSKAP Kemendikdasmen https://buku.kemendikdasmen.go.id/), dan Rubrik Penilaian.
+7. Berikan Lampiran LKPD ringkas, Bahan Ajar (Pengertian, Jenis-jenis, Ciri-ciri, dan Format Catatan Papan Tulis Siap Salin Murid karena guru diasumsikan tidak memiliki buku paket cetak untuk murid di kelas, dengan referensi Buku BSKAP Kemendikdasmen https://buku.kemendikdasmen.go.id/), dan Rubrik Penilaian.
 
 8. ATURAN KHUSUS WAJIB MODEL RPM (PEMBELAJARAN MENDALAM):
    a) PENESUAIAN MATERI & TP: Seluruh aktivitas, asesmen, dan soal-soal latihan HARUS 100% SESUAI DENGAN Tujuan Pembelajaran (TP): "${formData.tujuanPembelajaran}" dan Lingkup Materi: "${formData.lingkupMateri}".
@@ -1032,7 +1037,7 @@ Keluarkan dalam format JSON struktur persis berikut:
   },
   "lampiran": {
     "lkpd": "Ringkasan Lembar Kerja Peserta Didik (soal/instruksi tugas)...",
-    "bahanAjar": "Rangkuman materi singkat atau bahan bacaan guru & siswa...",
+    "bahanAjar": "Rangkuman materi komprehensif siap salin di papan tulis (1. Pengertian, 2. Jenis-jenis, 3. Ciri-ciri, 4. Contoh konkret, 5. Catatan Ringkas Papan Tulis Siap Salin Murid ke buku tulis)...",
     "rubrikPenilaian": "Tabel/kriteria penilaian (Sangat Baik, Baik, Cukup, Perlu Bimbingan)...",
     "kktp": {
       "pendekatan": "Rubrik Kriteria Ketuntasan Tujuan Pembelajaran (Interval Nilai)",
@@ -1215,68 +1220,93 @@ app.post("/api/generate-lkpd", async (req, res) => {
     const { planData, customInstruction } = req.body;
     const ai = getGeminiClient();
 
-    const mataPelajaran = planData?.identitas?.mataPelajaran || "Mata Pelajaran";
-    const faseKelas = planData?.identitas?.faseKelas || "Fase / Kelas";
-    const topik = planData?.tujuanDanDpl?.lingkupMateri || "Materi Pembelajaran";
-    const tp = planData?.tujuanDanDpl?.tujuanPembelajaran || "";
-    const cp = planData?.tujuanDanDpl?.capaianPembelajaran || "";
+    const mataPelajaran = planData?.identitas?.mataPelajaran || planData?.mataPelajaran || "Mata Pelajaran";
+    const faseKelas = planData?.identitas?.faseKelas || planData?.faseKelas || "Fase / Kelas";
+    const topik = planData?.tujuanDanDpl?.lingkupMateri || planData?.identitas?.lingkupMateri || planData?.lingkupMateri || "Materi Pembelajaran";
+    const tp = planData?.tujuanDanDpl?.tujuanPembelajaran || planData?.tujuanPembelajaran || "";
+    const cp = planData?.tujuanDanDpl?.capaianPembelajaran || planData?.capaianPembelajaran || "";
+    const sarana = planData?.desainPembelajaran?.saranaPrasarana || "";
+
+    const kegiatanInti = planData?.kegiatanPembelajaran?.kegiatanInti;
+    let kegiatanDetail = "";
+    if (Array.isArray(kegiatanInti)) {
+      kegiatanDetail = kegiatanInti.map((t: any) => {
+        const label = t.tahapLabel || t.subJudul || "";
+        const guru = Array.isArray(t.aktivitasGuru) ? t.aktivitasGuru.join("; ") : "";
+        const murid = Array.isArray(t.aktivitasMurid) ? t.aktivitasMurid.join("; ") : "";
+        return `- Tahap ${label}: [Aktivitas Guru: ${guru}] [Aktivitas Murid: ${murid}]`;
+      }).join("\n");
+    }
 
     const prompt = `Kamu adalah pakar penyusun Lembar Kerja Peserta Didik (LKPD) Kurikulum Merdeka berorientasi Pembelajaran Mendalam (Deep Learning).
-Buatkan dokumen LKPD LENGKAP, OTENTIK, dan INTERAKTIF berdasarkan Rencana Pembelajaran Mendalam (RPM) berikut:
+Tugas utama kamu adalah menyusun dokumen LKPD LENGKAP, OTENTIK, DAN SANGAT SPESIFIK yang WAJIB 100% SESUAI DENGAN LINGKUP MATERI DAN TUJUAN PEMBELAJARAN GURU BERIKUT:
+
+INFORMASI DOKUMEN MODUL AJAR (RPM):
 - Mata Pelajaran: ${mataPelajaran}
 - Fase / Kelas: ${faseKelas}
-- Topik / Lingkup Materi: ${topik}
-- Tujuan Pembelajaran: ${tp}
-- Capaian Pembelajaran: ${cp}
-${customInstruction ? `- Catatan Khusus Guru: ${customInstruction}` : ''}
+- LINGKUP MATERI UTAMA: ${topik}
+- TUJUAN PEMBELAJARAN (TP): ${tp}
+- Capaian Pembelajaran (CP): ${cp}
+${sarana ? `- Sarana & Prasarana: ${sarana}` : ''}
+${kegiatanDetail ? `- Rincian Alur Aktivitas RPM:\n${kegiatanDetail}` : ''}
+${customInstruction ? `- Instruksi / Catatan Khusus Guru: ${customInstruction}` : ''}
 
-DOKUMEN LKPD HARUS SANGAT RINCI DENGAN 4 KOMPONEN UTAMA BERIKUT:
-1. Lembar Penugasan / Instruksi Kerja Kelompok (Judul, Tujuan Aktivitas, Alat & Bahan, Petunjuk/Langkah Kerja Operasional)
-2. Panduan Aktivitas Praktikum / Eksplorasi Siswa (Judul Eksplorasi, Tujuan Praktikum, Langkah Kerja Praktikum, Tabel Lembar Pengamatan/Data Hasil Praktikum dengan header dan contoh baris isian, serta Pertanyaan Analisis)
-3. Latihan Soal & Evaluasi (Minimal 5 Soal Pilihan Ganda HOTS dan Minimal 3 Soal Uraian/HOTS, LENGKAP dengan Kunci Jawaban & Pembahasan Detail untuk Guru)
-4. Lembar Refleksi & Penilaian Diri Siswa (Pertanyaan Refleksi Metakognitif & Checklist Diri)
+PETUNJUK MUTLAK PENYUSUNAN LKPD DEEP LEARNING BERKUALITAS:
+1. RELEVANSI MATERI 100%: SELURUH komponen LKPD (Lembar Penugasan, Praktikum/Eksplorasi, Tabel Pengamatan, Pertanyaan Analisis, Latihan Soal Pilihan Ganda, Soal Uraian, Kunci Jawaban, Pembahasan, dan Refleksi) HARUS KONTEN NYATA yang membahas materi "${topik}" dan TP "${tp}".
+2. DILARANG MENGGUNAKAN TEKS DUMMY/PLACEHOLDER: DILARANG KERAS menggunakan teks generik seperti "Soal 1...", "Pilihan A", "Deskripsi...", "Teks pertanyaan...", "Pilihan B", "Percobaan 1", "Hasil pengamatan".
+3. LATIHAN SOAL PILIHAN GANDA (MINIMAL 5 SOAL HOTS):
+   - Wajib buat MINIMAL 5 Soal Pilihan Ganda HOTS yang BENAR-BENAR MENGUJI PEMAHAMAN MATERI "${topik}".
+   - Setiap soal HARUS memiliki 4 opsi jawaban nyata (A, B, C, D) berupa kalimat ilmiah/konseptual spesifik tentang "${topik}".
+   - Kunci Jawaban harus menyebutkan opsi dan teks jawaban yang benar (contoh: "A. [Kalimat Opsi A]").
+   - Pembahasan harus menguraikan penjelasan ilmiah/konseptual secara rinci mengapa opsi tersebut benar.
+4. LATIHAN SOAL URAIAN (MINIMAL 3 SOAL HOTS):
+   - Wajib buat MINIMAL 3 Soal Uraian berbasis studi kasus / analisis kontekstual materi "${topik}".
+   - Dilengkapi Kunci Jawaban / Pedoman Penskoran lengkap dan Pembahasan mendalam.
+5. PANDUAN PRAKTIKUM & EKSPLORASI:
+   - Judul eksplorasi, tujuan praktikum, langkah kerja, header & baris contoh tabel pengamatan, serta pertanyaan analisis HARUS mencerminkan aktivitas praktikum/observasi nyata materi "${topik}".
+6. BAHASA RAMAH ANAK: Bahasa disesuaikan dengan jenjang ${faseKelas}, komunikatif, dan memotivasikan murid.
 
 Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
 {
   "judulLKPD": "LEMBAR KERJA PESERTA DIDIK (LKPD) - ${topik.toUpperCase()}",
-  "subJudul": "Aktivitas Pembelajaran Mendalam (Deep Learning)",
+  "subJudul": "Aktivitas Pembelajaran Mendalam (Deep Learning) - ${mataPelajaran} (${faseKelas})",
   "petunjukUmum": [
-    "Tuliskan nama anggota kelompok / nama siswa pada kolom identitas yang disediakan.",
-    "Bacalah setiap petunjuk kerja dengan cermat sebelum melakukan aktivitas.",
-    "Gunakan nalar kritis dan kolaborasi yang baik dalam menyelesaikan setiap tahapan."
+    "Berdoalah sebelum memulai mengerjakan lembar kerja ini.",
+    "Baca dan pahami setiap instruksi aktivitas dengan saksama bersama kelompokmu.",
+    "Gunakan nalar kritis, kolaborasi, dan kejujuran dalam menyelesaikan setiap tahapan."
   ],
   "lembarPenugasan": {
-    "judulTugas": "Lembar Penugasan & Diskusi Kelompok",
-    "tujuanAktivitas": "Peserta didik dapat memahami konsep ${topik} melalui diskusi dan pemecahan masalah kontekstual.",
-    "alatDanBahan": ["Buku Siswa / Modul Ajar", "Alat Tulis Lengkap", "Lembar Kerja Siswa", "Media / Alat Peraga"],
+    "judulTugas": "Diskusi Kelompok & Analisis Masalah ${topik}",
+    "tujuanAktivitas": "Peserta didik dapat menganalisis dan merumuskan pemahaman bermakna mengenai ${topik} sesuai TP: ${tp}",
+    "alatDanBahan": ["Modul Ajar / Buku Siswa ${mataPelajaran}", "Alat Tulis & Kertas Karton", "Media Digital / Peraga Praktikum"],
     "instruksiKerja": [
-      "Bentuklah kelompok diskusi yang terdiri dari 4-5 siswa.",
-      "Cermati studi kasus atau wacana masalah yang diberikan oleh guru.",
+      "Bentuklah kelompok diskusi yang terdiri dari 4-5 murid.",
+      "Cermati studi kasus/masalah nyata mengenai ${topik} yang diberikan guru.",
       "Diskusikan pertanyaan dengan anggota kelompok dan catat hasil kesepakatan kelompok."
     ]
   },
   "panduanPraktikum": {
-    "judulEksplorasi": "Panduan Aktivitas Praktikum & Eksplorasi Siswa",
-    "tujuanPraktikum": "Peserta didik dapat membuktikan dan menganalisis fenomena ${topik} melalui eksperimen/praktikum langsung.",
+    "judulEksplorasi": "Panduan Aktivitas Praktikum & Eksplorasi Siswa: ${topik}",
+    "tujuanPraktikum": "Peserta didik dapat membuktikan dan menganalisis fenomena ${topik} melalui eksperimen/observasi langsung.",
     "langkahKerja": [
       "Siapkan alat dan bahan praktikum secara rapi di atas meja kerja.",
-      "Lakukan percobaan sesuai dengan tahapan kerja yang diinstruksikan.",
+      "Lakukan percobaan/observasi tentang ${topik} sesuai tahapan kerja yang diinstruksikan.",
       "Catat setiap data hasil pengamatan ke dalam tabel pengamatan di bawah ini secara cermat."
     ],
     "tabelPengamatan": {
-      "judulTabel": "Tabel Lembar Pengamatan & Data Hasil Praktikum",
-      "headers": ["No", "Variabel / Objek Pengamatan", "Hasil Pengamatan (Siswa)", "Analisis Singkat"],
+      "judulTabel": "Tabel Lembar Pengamatan & Data Hasil Praktikum ${topik}",
+      "headers": ["No", "Objek / Perlakuan Pengamatan", "Hasil Pengamatan (Data Siswa)", "Analisis Hubungan Konsep ${topik}"],
       "rows": [
-        ["1", "Pengamatan Kondisi Awal", "", ""],
-        ["2", "Pengamatan Setelah Perlakuan / Percobaan", "", ""],
-        ["3", "Pengamatan Akhir & Hasil Percobaan", "", ""]
+        ["1", "Pengamatan Kondisi Awal / Tanpa Perlakuan", "", ""],
+        ["2", "Pengamatan Setelah Diberikan Perlakuan / Percobaan", "", ""],
+        ["3", "Pengamatan Akhir & Kesimpulan Percobaan", "", ""]
       ],
-      "petunjukPengisian": "Isilah tabel di atas berdasarkan hasil pengamatan langsung atau percobaan kelompok kalian."
+      "petunjukPengisian": "Isilah tabel di atas berdasarkan hasil pengamatan langsung atau percobaan kelompok kalian tentang ${topik}."
     },
     "pertanyaanAnalisis": [
-      "Berdasarkan data tabel pengamatan, pola atau perubahan apa yang dapat kalian amati?",
+      "Berdasarkan data tabel pengamatan, pola atau perubahan apa yang dapat kalian amati terkait fenomena ${topik}?",
       "Mengapa hal tersebut dapat terjadi? Jelaskan keterkaitannya dengan konsep materi ${topik}!",
-      "Apa kesimpulan utama yang dapat diambil dari kegiatan praktikum ini?"
+      "Apa kesimpulan utama yang dapat diambil dari kegiatan praktikum ini dikaitkan dengan tujuan pembelajaran ${tp}?"
     ]
   },
   "latihanSoal": {
@@ -1284,71 +1314,96 @@ Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
     "pilihanGanda": [
       {
         "no": 1,
-        "pertanyaan": "Soal pilihan ganda 1 (HOTS)...",
-        "pilihan": ["A. Pilihan A", "B. Pilihan B", "C. Pilihan C", "D. Pilihan D"],
-        "kunciJawaban": "A. Pilihan A",
-        "pembahasan": "Pembahasan rinci alasan jawaban A benar..."
+        "pertanyaan": "Tuliskan pertanyaan HOTS 1 yang spesifik tentang materi ${topik}",
+        "pilihan": [
+          "A. Kalimat opsi A tentang materi ${topik}",
+          "B. Kalimat opsi B tentang materi ${topik}",
+          "C. Kalimat opsi C tentang materi ${topik}",
+          "D. Kalimat opsi D tentang materi ${topik}"
+        ],
+        "kunciJawaban": "A. Kalimat opsi A",
+        "pembahasan": "Penjelasan dan pembahasan ilmiah mendalam mengapa opsi A benar"
       },
       {
         "no": 2,
-        "pertanyaan": "Soal pilihan ganda 2 (HOTS)...",
-        "pilihan": ["A. Pilihan A", "B. Pilihan B", "C. Pilihan C", "D. Pilihan D"],
-        "kunciJawaban": "B. Pilihan B",
-        "pembahasan": "Pembahasan..."
+        "pertanyaan": "Tuliskan pertanyaan HOTS 2 tentang materi ${topik}",
+        "pilihan": [
+          "A. Kalimat opsi A",
+          "B. Kalimat opsi B",
+          "C. Kalimat opsi C",
+          "D. Kalimat opsi D"
+        ],
+        "kunciJawaban": "B. Kalimat opsi B",
+        "pembahasan": "Penjelasan rinci..."
       },
       {
         "no": 3,
-        "pertanyaan": "Soal pilihan ganda 3 (HOTS)...",
-        "pilihan": ["A. Pilihan A", "B. Pilihan B", "C. Pilihan C", "D. Pilihan D"],
-        "kunciJawaban": "C. Pilihan C",
-        "pembahasan": "Pembahasan..."
+        "pertanyaan": "Tuliskan pertanyaan HOTS 3 tentang materi ${topik}",
+        "pilihan": [
+          "A. Kalimat opsi A",
+          "B. Kalimat opsi B",
+          "C. Kalimat opsi C",
+          "D. Kalimat opsi D"
+        ],
+        "kunciJawaban": "C. Kalimat opsi C",
+        "pembahasan": "Penjelasan rinci..."
       },
       {
         "no": 4,
-        "pertanyaan": "Soal pilihan ganda 4 (HOTS)...",
-        "pilihan": ["A. Pilihan A", "B. Pilihan B", "C. Pilihan C", "D. Pilihan D"],
-        "kunciJawaban": "D. Pilihan D",
-        "pembahasan": "Pembahasan..."
+        "pertanyaan": "Tuliskan pertanyaan HOTS 4 tentang materi ${topik}",
+        "pilihan": [
+          "A. Kalimat opsi A",
+          "B. Kalimat opsi B",
+          "C. Kalimat opsi C",
+          "D. Kalimat opsi D"
+        ],
+        "kunciJawaban": "D. Kalimat opsi D",
+        "pembahasan": "Penjelasan rinci..."
       },
       {
         "no": 5,
-        "pertanyaan": "Soal pilihan ganda 5 (HOTS)...",
-        "pilihan": ["A. Pilihan A", "B. Pilihan B", "C. Pilihan C", "D. Pilihan D"],
-        "kunciJawaban": "A. Pilihan A",
-        "pembahasan": "Pembahasan..."
+        "pertanyaan": "Tuliskan pertanyaan HOTS 5 tentang materi ${topik}",
+        "pilihan": [
+          "A. Kalimat opsi A",
+          "B. Kalimat opsi B",
+          "C. Kalimat opsi C",
+          "D. Kalimat opsi D"
+        ],
+        "kunciJawaban": "A. Kalimat opsi A",
+        "pembahasan": "Penjelasan rinci..."
       }
     ],
     "soalUraian": [
       {
         "no": 1,
-        "pertanyaan": "Soal uraian 1 berorientasi studi kasus nyata...",
-        "kunciJawaban": "Kunci jawaban dan panduan penskoran...",
-        "pembahasan": "Pembahasan rinci..."
+        "pertanyaan": "Tuliskan Soal Uraian Studi Kasus 1 yang mendalam tentang materi ${topik}",
+        "kunciJawaban": "Kunci Jawaban dan Rubrik Penskoran Lengkap...",
+        "pembahasan": "Pembahasan Rinci..."
       },
       {
         "no": 2,
-        "pertanyaan": "Soal uraian 2...",
-        "kunciJawaban": "Kunci jawaban...",
-        "pembahasan": "Pembahasan..."
+        "pertanyaan": "Tuliskan Soal Uraian 2 tentang materi ${topik}",
+        "kunciJawaban": "Kunci Jawaban Lengkap...",
+        "pembahasan": "Pembahasan Rinci..."
       },
       {
         "no": 3,
-        "pertanyaan": "Soal uraian 3...",
-        "kunciJawaban": "Kunci jawaban...",
-        "pembahasan": "Pembahasan..."
+        "pertanyaan": "Tuliskan Soal Uraian 3 tentang materi ${topik}",
+        "kunciJawaban": "Kunci Jawaban Lengkap...",
+        "pembahasan": "Pembahasan Rinci..."
       }
     ]
   },
   "refleksiSiswa": {
     "pertanyaanRefleksi": [
-      "Apa hal paling menarik yang aku pelajari hari ini?",
-      "Hambatan apa yang aku temui saat praktikum/diskusi dan bagaimana cara mengatasinya?",
-      "Bagaimana aku dapat menerapkan pengetahuan ini dalam kehidupan sehari-hari?"
+      "Apa hal paling menarik yang baru kamu pahami tentang materi ${topik} hari ini?",
+      "Hambatan apa yang kamu temui saat praktikum/diskusi ${topik} dan bagaimana kamu mengatasinya?",
+      "Bagaimana kamu dapat menerapkan pemahaman tentang ${topik} ini dalam kehidupan sehari-hari?"
     ],
     "checkListDiri": [
-      "Saya memahami konsep dasar materi pembelajaran hari ini",
-      "Saya aktif berdiskusi dan bekerjasama dalam kelompok",
-      "Saya dapat menyelesaikan praktikum dan latihan soal dengan jujur"
+      "Saya telah memahami konsep dasar materi ${topik} dengan baik.",
+      "Saya aktif berdiskusi dan bekerja sama dalam menyelesaikan praktikum/tugas ${topik}.",
+      "Saya dapat menyelesaikan soal-soal evaluasi ${topik} secara mandiri dan jujur."
     ]
   }
 }`;
@@ -1368,119 +1423,147 @@ Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
   } catch (error: any) {
     console.error("Error in /api/generate-lkpd:", error);
     const planData = req.body?.planData || {};
-    const topik = planData?.tujuanDanDpl?.lingkupMateri || planData?.identitas?.mataPelajaran || "Materi Pembelajaran";
+    const topik = planData?.tujuanDanDpl?.lingkupMateri || planData?.identitas?.lingkupMateri || planData?.lingkupMateri || planData?.identitas?.mataPelajaran || "Materi Pembelajaran";
+    const tp = planData?.tujuanDanDpl?.tujuanPembelajaran || planData?.tujuanPembelajaran || "Tujuan Pembelajaran";
+    const mp = planData?.identitas?.mataPelajaran || "Mata Pelajaran";
+
     const fallbackLKPD = {
       judulLKPD: `LEMBAR KERJA PESERTA DIDIK (LKPD) - ${topik.toUpperCase()}`,
-      subJudul: "Aktivitas Pembelajaran Mendalam (Deep Learning)",
+      subJudul: `Aktivitas Pembelajaran Mendalam (Deep Learning) - ${mp}`,
       petunjukUmum: [
-        "Tuliskan nama anggota kelompok / nama siswa pada kolom identitas yang disediakan.",
-        "Bacalah setiap petunjuk kerja dengan cermat sebelum melakukan aktivitas.",
-        "Gunakan nalar kritis dan kolaborasi yang baik dalam menyelesaikan setiap tahapan."
+        "Berdoalah sebelum memulai mengerjakan lembar kerja ini.",
+        "Bacalah setiap petunjuk kerja dengan cermat sebelum melakukan aktivitas bersama kelompokmu.",
+        "Gunakan nalar kritis, kolaborasi, dan kejujuran dalam menyelesaikan setiap tahapan."
       ],
       lembarPenugasan: {
-        judulTugas: "Lembar Penugasan & Diskusi Kelompok",
-        tujuanAktivitas: `Peserta didik dapat memahami konsep ${topik} melalui diskusi dan pemecahan masalah kontekstual.`,
-        alatDanBahan: ["Buku Siswa / Modul Ajar", "Alat Tulis Lengkap", "Lembar Kerja Siswa", "Media / Alat Peraga"],
+        judulTugas: `Lembar Penugasan & Diskusi Kelompok: ${topik}`,
+        tujuanAktivitas: `Peserta didik dapat memahami dan menganalisis konsep ${topik} sesuai TP: ${tp}`,
+        alatDanBahan: [`Buku Siswa / Modul Ajar ${mp}`, "Alat Tulis & Kertas Karton", "Media Digital / Peraga Praktikum"],
         instruksiKerja: [
-          "Bentuklah kelompok diskusi yang terdiri dari 4-5 siswa.",
-          "Cermati studi kasus atau wacana masalah yang diberikan oleh guru.",
-          "Diskusikan pertanyaan dengan anggota kelompok dan catat hasil kesepakatan kelompok."
+          "Bentuklah kelompok diskusi yang terdiri dari 4-5 murid secara heterogen.",
+          `Cermati studi kasus atau wacana fenomena ${topik} yang dipaparkan oleh guru.`,
+          `Diskusikan pertanyaan analisis kelompok mengenai penerapan ${topik} dan catat hasil kesepakatan kelompok.`
         ]
       },
       panduanPraktikum: {
-        judulEksplorasi: "Panduan Aktivitas Praktikum & Eksplorasi Siswa",
-        tujuanPraktikum: `Peserta didik dapat membuktikan dan menganalisis fenomena ${topik} melalui eksperimen/praktikum langsung.`,
+        judulEksplorasi: `Panduan Aktivitas Praktikum & Eksplorasi Siswa: ${topik}`,
+        tujuanPraktikum: `Peserta didik dapat membuktikan dan menganalisis fenomena ${topik} melalui eksperimen/observasi langsung.`,
         langkahKerja: [
-          "Siapkan alat dan bahan praktikum secara rapi di atas meja kerja.",
-          "Lakukan percobaan sesuai dengan tahapan kerja yang diinstruksikan.",
+          `Siapkan alat dan bahan praktikum materi ${topik} secara rapi di atas meja kerja.`,
+          `Lakukan percobaan/observasi tentang ${topik} sesuai dengan tahapan kerja yang diinstruksikan.`,
           "Catat setiap data hasil pengamatan ke dalam tabel pengamatan di bawah ini secara cermat."
         ],
         tabelPengamatan: {
-          judulTabel: "Tabel Lembar Pengamatan & Data Hasil Praktikum",
-          headers: ["No", "Variabel / Objek Pengamatan", "Hasil Pengamatan (Siswa)", "Analisis Singkat"],
+          judulTabel: `Tabel Lembar Pengamatan & Data Hasil Praktikum ${topik}`,
+          headers: ["No", "Objek Pengamatan / Variabel", "Hasil Pengamatan (Siswa)", "Analisis Keterkaitan Konsep ${topik}"],
           rows: [
-            ["1", "Pengamatan Kondisi Awal", "", ""],
-            ["2", "Pengamatan Setelah Perlakuan / Percobaan", "", ""],
-            ["3", "Pengamatan Akhir & Hasil Percobaan", "", ""]
+            ["1", "Pengamatan Kondisi Awal", "...........................................", `Sesuai teori dasar ${topik}`],
+            ["2", "Pengamatan Setelah Perlakuan / Percobaan", "...........................................", "Terjadi perubahan signifikan"],
+            ["3", "Pengamatan Akhir & Hasil Percobaan", "...........................................", "Memerlukan analisis lanjutan"]
           ],
-          petunjukPengisian: "Isilah tabel di atas berdasarkan hasil pengamatan langsung atau percobaan kelompok kalian."
+          petunjukPengisian: `Isilah tabel pengamatan variabel ${topik} berdasarkan hasil eksplorasi langsung kelompok kalian.`
         },
         pertanyaanAnalisis: [
-          `Berdasarkan data tabel pengamatan, pola atau perubahan apa yang dapat kalian amati?`,
+          `Berdasarkan data tabel pengamatan, pola atau perubahan apa yang dapat kalian amati pada fenomena ${topik}?`,
           `Mengapa hal tersebut dapat terjadi? Jelaskan keterkaitannya dengan konsep materi ${topik}!`,
-          `Apa kesimpulan utama yang dapat diambil dari kegiatan praktikum ini?`
+          `Apa kesimpulan utama yang dapat diambil dari kegiatan praktikum ini dikaitkan dengan TP: ${tp}?`
         ]
       },
       latihanSoal: {
-        petunjukPengerjaan: "Jawablah pertanyaan-pertanyaan berikut dengan teliti, kritis, dan jujur!",
+        petunjukPengerjaan: `Jawablah soal-soal latihan di bawah ini secara mandiri dan jujur untuk menguji pemahaman mendalammu mengenai ${topik}.`,
         pilihanGanda: [
           {
             no: 1,
-            pertanyaan: `Manakah pernyataan yang paling tepat terkait konsep utama ${topik}?`,
-            pilihan: [`A. ${topik} merupakan proses ilmiah penting dalam pembelajaran.`, "B. Tidak mempengaruhi hasil pembelajaran.", "C. Hanya digunakan saat ujian akhir.", "D. Tidak relevan dengan kehidupan sehari-hari."],
-            kunciJawaban: `A. ${topik} merupakan proses ilmiah penting dalam pembelajaran.`,
-            pembahasan: `Pernyataan A menjelaskan hakikat penting dari ${topik} secara tepat.`
+            pertanyaan: `Pernyataan manakah yang paling akurat dalam menggambarkan esensi utama dari materi ${topik}?`,
+            pilihan: [
+              `A. ${topik} merupakan prinsip penting dalam ${mp} yang relevan untuk menyelesaikan masalah nyata sehari-hari.`,
+              `B. ${topik} terjadi secara acak dan tidak berhubungan dengan konsep dasar ${mp}.`,
+              `C. ${topik} hanya merupakan teori hafalan yang diujikan pada akhir semester sekolah.`,
+              `D. Penerapan ${topik} tidak memiliki manfaat praktis dalam kehidupan sehari-hari.`
+            ],
+            kunciJawaban: `A. ${topik} merupakan prinsip penting dalam ${mp} yang relevan untuk menyelesaikan masalah nyata sehari-hari.`,
+            pembahasan: `Prinsip utama dari ${topik} adalah memberikan pemahaman bermakna yang dapat diaplikasikan murid dalam kehidupan sehari-hari.`
           },
           {
             no: 2,
-            pertanyaan: `Langkah awal yang paling baik dalam menganalisis ${topik} adalah...`,
-            pilihan: ["A. Melakukan observasi dan pengumpulan data.", "B. Menyimpulkan tanpa bukti.", "C. Menghindari diskusi kelompok.", "D. Mengabaikan petunjuk kerja."],
-            kunciJawaban: "A. Melakukan observasi dan pengumpulan data.",
-            pembahasan: "Metode ilmiah diawali dengan observasi dan pengumpulan data."
+            pertanyaan: `Saat melakukan eksperimen dan analisis terhadap ${topik}, tahapan pertama yang paling penting dilakukan adalah...`,
+            pilihan: [
+              `A. Memahami konsep dasar dan mengidentifikasi fenomena nyata terkait ${topik}.`,
+              `B. Melakukan penarikan kesimpulan akhir tanpa didukung data observasi.`,
+              `C. Menghafal seluruh definisi istilah tanpa melakukan diskusi kelompok.`,
+              `D. Mengabaikan petunjuk kerja dan membiarkan anggota kelompok lain bekerja sendiri.`
+            ],
+            kunciJawaban: `A. Memahami konsep dasar dan mengidentifikasi fenomena nyata terkait ${topik}.`,
+            pembahasan: "Tahap Memahami (Understanding) adalah landasan utama dalam Pembelajaran Mendalam (Deep Learning)."
           },
           {
             no: 3,
-            pertanyaan: `Sikap bernalar kritis murid ditunjukkan dengan...`,
-            pilihan: ["A. Mengajukan pertanyaan reflektif dan menguji kebenaran informasi.", "B. Menerima jawaban tanpa bertanya.", "C. Mengabaikan umpan balik.", "D. Bekerja sendiri tanpa berkolaborasi."],
-            kunciJawaban: "A. Mengajukan pertanyaan reflektif dan menguji kebenaran informasi.",
-            pembahasan: "Bernalar kritis melibatkan pertanyaan metakognitif dan pengujian informasi."
+            pertanyaan: `Seorang murid ingin mengaplikasikan pengetahuan tentang ${topik} untuk memecahkan masalah di lingkungan sekitarnya. Tindakan berorientasi HOTS yang paling tepat adalah...`,
+            pilihan: [
+              `A. Menganalisis faktor penyebab masalah, merancang solusi berbasis materi ${topik}, dan menguji hasilnya.`,
+              `B. Menunggu jawaban dari guru tanpa mencoba berpikir kritis terlebih dahulu.`,
+              `C. Menyalin hasil pekerjaan kelompok lain tanpa memahami prosesnya.`,
+              `D. Menghentikan aktivitas pembelajaran dan tidak menyelesaikan LKPD.`
+            ],
+            kunciJawaban: `A. Menganalisis faktor penyebab masalah, merancang solusi berbasis materi ${topik}, dan menguji hasilnya.`,
+            pembahasan: "Menganalisis, merancang solusi, dan menguji efektivitas merupakan indikator berpikir tingkat tinggi (HOTS) pada tahap Mengaplikasi."
           },
           {
             no: 4,
-            pertanyaan: `Tujuan dari kegiatan refleksi pada akhir pembelajaran adalah...`,
-            pilihan: ["A. Memahami sejauh mana ketercapaian tujuan belajar dan area perbaikan.", "B. Menambah beban tugas siswa.", "C. Menggantikan nilai ujian.", "D. Memperlama waktu jam pelajaran."],
-            kunciJawaban: "A. Memahami sejauh mana ketercapaian tujuan belajar dan area perbaikan.",
-            pembahasan: "Refleksi berfungsi mengevaluasi proses dan pemahaman belajar siswa."
+            pertanyaan: `Apa dampak positif utama jika murid mampu menguasai konsep ${topik} secara mendalam?`,
+            pilihan: [
+              `A. Murid memiliki daya nalar kritis, kemampuan pemecahan masalah, dan kesadaran metakognitif yang baik.`,
+              `B. Murid hanya bisa menghafal definisi tanpa mengerti cara penerapannya.`,
+              `C. Murid menjadi pasif dalam diskusi dan praktikum kelompok.`,
+              `D. Murid tidak dapat mengaitkan materi ${topik} dengan disiplin ilmu lainnya.`
+            ],
+            kunciJawaban: `A. Murid memiliki daya nalar kritis, kemampuan pemecahan masalah, dan kesadaran metakognitif yang baik.`,
+            pembahasan: "Penguasaan materi secara mendalam melatih kemampuan kognitif dan metakognitif murid secara holistik."
           },
           {
             no: 5,
-            pertanyaan: `Manfaat utama penerapan Pembelajaran Mendalam (Deep Learning) adalah...`,
-            pilihan: ["A. Siswa tidak hanya menghafal, tetapi memahami dan mengaplikasikan konsep.", "B. Siswa hanya menghafal rumus.", "C. Mengurangi aktivitas interaktif.", "D. Membatasi kreativitas siswa."],
-            kunciJawaban: "A. Siswa tidak hanya menghafal, tetapi memahami dan mengaplikasikan konsep.",
-            pembahasan: "Pembelajaran mendalam berfokus pada pemahaman bermakna dan aplikasi kontekstual."
+            pertanyaan: `Dalam kegiatan refleksi setelah mempelajari ${topik}, pertanyaan metakognitif yang paling tepat diajukan adalah...`,
+            pilihan: [
+              `A. Pemahaman baru apa yang saya peroleh tentang ${topik} dan bagaimana saya mengatasi kesulitan selama belajar?`,
+              `B. Berapa jumlah soal yang ada dalam lembar kerja ini?`,
+              `C. Siapa yang paling cepat mengumpulkan tugas di kelas?`,
+              `D. Berapa lama waktu yang dibutuhkan untuk menuliskan nama kelompok?`
+            ],
+            kunciJawaban: `A. Pemahaman baru apa yang saya peroleh tentang ${topik} dan bagaimana saya mengatasi kesulitan selama belajar?`,
+            pembahasan: "Pertanyaan metakognitif membantu murid mengevaluasi strategi belajar mandiri dan ketercapaian tujuan pembelajaran."
           }
         ],
         soalUraian: [
           {
             no: 1,
-            pertanyaan: `Jelaskan bagaimana konsep ${topik} dapat diterapkan dalam menyelesaikan masalah di kehidupan sehari-hari!`,
-            kunciJawaban: `Siswa menjelaskan minimal 2 contoh aplikasi konkret ${topik} dalam kehidupan nyata.`,
-            pembahasan: `Penilaian berfokus pada kemampuan menghubungkan teori dengan realitas kontekstual.`
+            pertanyaan: `Jelaskan secara runtut bagaimana konsep ${topik} dapat diaplikasikan untuk menyelesaikan masalah konkret yang kamu temui di lingkungan sehari-hari!`,
+            kunciJawaban: `Rubrik Penskoran: Nilai 4 jika menjelaskan konsep dasar ${topik}, mengidentifikasi masalah nyata, serta menguraikan tahapan solusi logis.`,
+            pembahasan: `Soal ini menguji kemampuan berpikir kognitif tingkat tinggi (HOTS) murid dalam menghubungkan teori ${topik} dengan realitas kontekstual.`
           },
           {
             no: 2,
-            pertanyaan: `Sebutkan dan jelaskan 3 langkah utama yang kalian lakukan saat praktikum/diskusi kelompok hari ini!`,
-            kunciJawaban: "1. Persiapan alat & bahan. 2. Pelaksanaan eksperimen/diskusi. 3. Pengolahan data & penyimpulan.",
-            pembahasan: "Mengukur pemahaman alur kerja dan metodologi siswa."
+            pertanyaan: `Berdasarkan pengamatan atau praktikum ${topik} yang telah kamu lakukan, uraikan 2 temuan menarik yang kelompokmu peroleh beserta bukti pendukungnya!`,
+            kunciJawaban: `Jawaban bervariasi sesuai data kelompok. Penilaian ditekankan pada ketepatan argumen ilmiah dan kesesuaian dengan data hasil pengamatan ${topik}.`,
+            pembahasan: `Mengukur kemampuan murid dalam menganalisis data pengamatan dan mengemukakan pendapat berbasis bukti (evidence-based reasoning).`
           },
           {
             no: 3,
-            pertanyaan: `Mengapa kolaborasi dan gotong royong sangat penting dalam menyelesaikan Lembar Kerja ini?`,
-            kunciJawaban: "Siswa menjelaskan bahwa kolaborasi mempermudah pembagian tugas, saling melengkapi gagasan, dan melatih komunikasi.",
-            pembahasan: "Menilai pemaknaan Dimensi Profil Lulusan Gotong Royong."
+            pertanyaan: `Tuliskan refleksi pribadi mengenai sejauh mana kamu telah mencapai tujuan pembelajaran: "${tp}". Hambatan apa yang kamu temui dan bagaimana rencanamu untuk memperbaikinya?`,
+            kunciJawaban: `Rubrik penilaian metakognitif mandiri. Kriteria tuntas apabila murid mengidentifikasi tingkat pemahaman diri dan merumuskan rencana perbaikan secara jujur.`,
+            pembahasan: "Tahap Merefleksi mendukung kemandirian belajar (self-regulated learning) dan evaluasi diri murid."
           }
         ]
       },
       refleksiSiswa: {
         pertanyaanRefleksi: [
-          "Apa hal paling menarik yang aku pelajari hari ini?",
-          "Hambatan apa yang aku temui saat praktikum/diskusi dan bagaimana cara mengatasinya?",
-          "Bagaimana aku dapat menerapkan pengetahuan ini dalam kehidupan sehari-hari?"
+          `Apa hal paling menarik yang baru kamu pahami tentang materi ${topik} hari ini?`,
+          `Hambatan apa yang kamu temui saat praktikum/diskusi ${topik} dan bagaimana kamu mengatasinya?`,
+          `Bagaimana kamu dapat menerapkan pemahaman tentang ${topik} ini dalam kehidupan sehari-hari?`
         ],
         checkListDiri: [
-          "Saya memahami konsep dasar materi pembelajaran hari ini",
-          "Saya aktif berdiskusi dan bekerjasama dalam kelompok",
-          "Saya dapat menyelesaikan praktikum dan latihan soal dengan jujur"
+          `Saya telah memahami konsep dasar materi ${topik} dengan baik.`,
+          `Saya aktif berdiskusi dan bekerja sama dalam menyelesaikan praktikum/tugas ${topik}.`,
+          `Saya dapat menyelesaikan soal-soal evaluasi ${topik} secara mandiri dan jujur.`
         ]
       }
     };
@@ -1737,44 +1820,86 @@ app.post("/api/generate-bahan-ajar", async (req, res) => {
     const cp = planData?.tujuanDanDpl?.capaianPembelajaran || "";
 
     const prompt = `Kamu adalah pakar pengembang Bahan Ajar Kurikulum Merdeka Kementerian Pendidikan Dasar dan Menengah (Kemendikdasmen) Indonesia.
-Buatkan DOKUMEN RANGKUMAN BAHAN BACAAN GURU & PESERTA DIDIK yang sangat komprehensif, menarik, kontekstual, ramah anak, dan mudah dipahami.
+Buatkan DOKUMEN RANGKUMAN MATERI / BAHAN BACAAN GURU & MURID yang sangat komprehensif, terstruktur, mendalam, dan siap pakai.
 
-DATAPEMBELAJARAN:
+KONTEKS DAN SITUASI KELAS (SANGAT PENTING):
+- Guru berada pada posisi TIDAK MEMILIKI BUKU PAKET/BUKU TEKS CETAK untuk bahan bacaan murid di kelas.
+- Oleh karena itu, Rangkuman Materi ini berfungsi sebagai BAHAN BACAAN LENGKAP MANDIRI dan PANDUAN PAPAN TULIS (Blackboard/Whiteboard Board Notes) yang terstruktur rapi.
+- Guru dapat langsung menjelaskan poin-poin ini di papan tulis, dan MURID DAPAT MENYALINNYA KE BUKU TULIS sebagai catatan esensial yang utuh.
+
+DATA PEMBELAJARAN:
 - Mata Pelajaran: ${mataPelajaran}
 - Fase / Kelas: ${faseKelas}
 - Topik / Lingkup Materi: ${topik}
-- Tujuan Pembelajaran: ${tp}
-- Capaian Pembelajaran: ${cp}
+- Tujuan Pembelajaran (TP): ${tp}
+- Capaian Pembelajaran (CP): ${cp}
 ${customInstruction ? `- Catatan Khusus Guru: ${customInstruction}` : ''}
 
-PRINSIP WAJIB:
-1. PENESUAIAN MATERI & TP: Seluruh rangkuman dan poin pembahasan HARUS 100% fokus pada '${topik}' dan '${tp}'.
-2. TINGKAT BAHASA RAMAH ANAK: Bahasa yang digunakan HARUS komunikatif, ramah anak, mudah dipahami siswa, dan sesuai jenjang usia (${faseKelas}). JANGAN menggunakan bahasa yang terlalu sulit atau abstrak.
-3. REFERENSI RESMI KEMENDIKDASMEN: Rujuklah referensi utama dari Buku Teks Utama BSKAP Kemendikdasmen Kurikulum Merdeka (https://buku.kemendikdasmen.go.id/) serta sumber-sumber resmi terpercaya.
+STRUKTUR WAJIB BAHAN AJAR (DISESUAIKAN DENGAN MATERI '${topik}'):
+1. PENGERTIAN & HAKIKAT KONSEP:
+   Definisi dan pengertian yang padat, jelas, bernalar logis, dan ramah anak mengenai '${topik}'.
+2. JENIS-JENIS / KLASIFIKASI / BENTUK MATERI:
+   Jabarkan 2-5 jenis, macam, klasifikasi, atau bentuk yang relevan dengan topik '${topik}'. Berikan nama jenis, penjelasan singkat, serta contoh konkret untuk setiap jenis.
+3. CIRI-CIRI / KARAKTERISTIK / SIFAT MATERI:
+   Tuliskan 3-6 butir ciri-ciri, sifat, atau karakteristik khas dari '${topik}'.
+4. CONTOH KONTEKSTUAL SEHARI-HARI:
+   3-5 contoh penerapan nyata dalam kehidupan sehari-hari (di rumah, sekolah, lingkungan sekitar).
+5. CATATAN PAPAN TULIS (BOARD NOTES - SIAP SALIN MURID KE BUKU TULIS):
+   Susun 5-8 baris rangkuman esensial berbutir/bernomor yang ringkas, runtut, dan padat. Format ini yang akan ditulis guru di papan tulis untuk disalin langsung oleh murid ke buku catatan mereka sebagai pengganti buku teks.
+6. PANDUAN PEDAGOGIS GURU & TIPS PAPAN TULIS:
+   Catatan cara mengajarkan, miskonsepsi umum yang sering terjadi pada murid beserta cara meluruskannya, serta tips visual menyajikan materi di papan tulis.
+7. GLOSARIUM & DAFTAR PUSTAKA:
+   Istilah-istilah penting dan rujukan Buku Teks Utama BSKAP Kemendikdasmen (https://buku.kemendikdasmen.go.id/).
 
 Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
 {
-  "judulBahanAjar": "RANGKUMAN BAHAN BACAAN GURU & PESERTA DIDIK - ${topik.toUpperCase()}",
-  "subJudul": "Bahan Ajar & Referensi Pembelajaran Kurikulum Merdeka",
+  "judulBahanAjar": "RANGKUMAN MATERI & BAHAN BACAAN - ${topik.toUpperCase()}",
+  "subJudul": "Bahan Ajar & Panduan Catatan Papan Tulis Kurikulum Merdeka",
   "referensiUtama": "Buku Teks Utama Kurikulum Merdeka BSKAP Kemendikdasmen (https://buku.kemendikdasmen.go.id/)",
   "rangkumanMateriSiswa": {
     "judulMateri": "${topik}",
-    "konsepKunci": [
-      "Konsep Kunci 1...",
-      "Konsep Kunci 2...",
-      "Konsep Kunci 3..."
+    "pengertian": "Pengertian dan definisi mendalam mengenai ${topik} yang mudah dipahami murid ${faseKelas}...",
+    "jenisJenis": [
+      {
+        "nama": "Nama Jenis/Klasifikasi 1",
+        "deskripsi": "Penjelasan karakteristik jenis 1...",
+        "contoh": "Contoh konkret jenis 1..."
+      },
+      {
+        "nama": "Nama Jenis/Klasifikasi 2",
+        "deskripsi": "Penjelasan karakteristik jenis 2...",
+        "contoh": "Contoh konkret jenis 2..."
+      }
     ],
-    "penjelasanRingkas": "Uraian materi yang komunikatif, menarik, dan mudah dipahami siswa kelas ${faseKelas}...",
+    "ciriCiri": [
+      "Ciri-ciri/karakteristik 1 dari ${topik}...",
+      "Ciri-ciri/karakteristik 2 dari ${topik}...",
+      "Ciri-ciri/karakteristik 3 dari ${topik}..."
+    ],
     "contohKontekstual": [
-      "Contoh penerapan sehari-hari 1...",
-      "Contoh penerapan sehari-hari 2..."
-    ]
+      "Contoh penerapan di kehidupan sehari-hari 1...",
+      "Contoh penerapan 2..."
+    ],
+    "catatanPapanTulis": [
+      "1. Pengertian: ...",
+      "2. Jenis/Macam: (a) ... (b) ...",
+      "3. Ciri Utama: (a) ... (b) ...",
+      "4. Contoh: ...",
+      "5. Kesimpulan Inti: ..."
+    ],
+    "konsepKunci": [
+      "Konsep Kunci 1",
+      "Konsep Kunci 2",
+      "Konsep Kunci 3"
+    ],
+    "penjelasanRingkas": "Uraian naratif materi yang utuh dan komunikatif..."
   },
   "panduanGuru": {
-    "catatanPedagogis": "Catatan esensial untuk guru saat menyampaikan materi kepada siswa...",
+    "catatanPedagogis": "Catatan esensial guru dalam membimbing eksplorasi konsep murid...",
+    "tipsPapanTulis": "Tips penyajian di papan tulis (misal: buat skema bagan cabang di sisi kiri, tuliskan kata kunci dengan warna berbeda agar murid mudah menyalin)...",
     "miskonsepsiUmum": [
-      "Miskonsepsi siswa dan pelurusannya 1...",
-      "Miskonsepsi 2..."
+      "Miskonsepsi 1 dan cara pelurusannya...",
+      "Miskonsepsi 2 dan cara pelurusannya..."
     ]
   },
   "glosarium": [
@@ -1800,27 +1925,38 @@ Keluarkan HANYA dalam format JSON valid dengan struktur persis berikut:
     const text = response.text || "{}";
     const bahanAjarData = cleanAndParseJson(text);
 
-    const textSummary = `RANGKUMAN BAHAN BACAAN GURU & PESERTA DIDIK
-Topik: ${topik} | Kelas/Fase: ${faseKelas}
+    const textSummary = `RANGKUMAN MATERI & BAHAN BACAAN GURU & MURID
+Topik: ${topik} | Kelas/Fase: ${faseKelas} | Mata Pelajaran: ${mataPelajaran}
 Referensi Resmi: Buku Teks Utama Kemendikdasmen (https://buku.kemendikdasmen.go.id/)
+*(Catatan: Dirancang sebagai bahan belajar mandiri & panduan catatan papan tulis bagi kelas tanpa buku paket cetak)*
 
-1. KONSEP KUNCI MATERI:
-${(bahanAjarData?.rangkumanMateriSiswa?.konsepKunci || []).map((k: string) => `   - ${k}`).join('\n')}
+1. PENGERTIAN & DEFINISI KONSEP:
+${bahanAjarData?.rangkumanMateriSiswa?.pengertian || bahanAjarData?.rangkumanMateriSiswa?.penjelasanRingkas || ''}
 
-2. PENJELASAN RINGKAS MATERI:
-${bahanAjarData?.rangkumanMateriSiswa?.penjelasanRingkas || ''}
+2. JENIS-JENIS / KLASIFIKASI MATERI:
+${(bahanAjarData?.rangkumanMateriSiswa?.jenisJenis || []).map((j: any, idx: number) => {
+  if (typeof j === 'string') return `   ${idx + 1}. ${j}`;
+  return `   ${idx + 1}. ${j.nama}: ${j.deskripsi}${j.contoh ? ` (Contoh: ${j.contoh})` : ''}`;
+}).join('\n')}
 
-3. CONTOH KONTEKSTUAL SEHARI-HARI:
-${(bahanAjarData?.rangkumanMateriSiswa?.contohKontekstual || []).map((c: string) => `   - ${c}`).join('\n')}
+3. CIRI-CIRI & KARAKTERISTIK UTAMA:
+${(bahanAjarData?.rangkumanMateriSiswa?.ciriCiri || []).map((c: string, idx: number) => `   ${idx + 1}. ${c}`).join('\n')}
 
-4. CATATAN PEDAGOGIS GURU & MISKONSEPSI:
-   - Catatan Guru: ${bahanAjarData?.panduanGuru?.catatanPedagogis || ''}
+4. CONTOH PENERAPAN KONTEKSTUAL SEHARI-HARI:
+${(bahanAjarData?.rangkumanMateriSiswa?.contohKontekstual || []).map((c: string, idx: number) => `   - ${c}`).join('\n')}
+
+5. FORMAT CATATAN PAPAN TULIS (BAHAN SALIN MURID KE BUKU TULIS):
+${(bahanAjarData?.rangkumanMateriSiswa?.catatanPapanTulis || []).map((p: string) => `   ${p}`).join('\n')}
+
+6. PANDUAN PEDAGOGIS GURU & TIPS PAPAN TULIS:
+   - Tips Papan Tulis: ${bahanAjarData?.panduanGuru?.tipsPapanTulis || 'Gunakan bagan skematis dan warna spidol kontras untuk memudahkan murid menyalin.'}
+   - Catatan Pedagogis: ${bahanAjarData?.panduanGuru?.catatanPedagogis || ''}
    - Miskonsepsi & Pelurusan: ${(bahanAjarData?.panduanGuru?.miskonsepsiUmum || []).join('; ')}
 
-5. GLOSARIUM SINGKAT:
+7. GLOSARIUM:
 ${(bahanAjarData?.glosarium || []).map((g: any) => `   - ${g.istilah}: ${g.arti}`).join('\n')}
 
-6. DAFTAR PUSTAKA:
+8. DAFTAR PUSTAKA:
 ${(bahanAjarData?.daftarPustaka || []).map((d: string) => `   - ${d}`).join('\n')}`;
 
     bahanAjarData.ringkasanTeks = textSummary;
@@ -1835,33 +1971,60 @@ ${(bahanAjarData?.daftarPustaka || []).map((d: string) => `   - ${d}`).join('\n'
     const tp = planData?.tujuanDanDpl?.tujuanPembelajaran || "";
 
     const fallbackBahanAjar = {
-      judulBahanAjar: `RANGKUMAN BAHAN BACAAN GURU & PESERTA DIDIK - ${topik.toUpperCase()}`,
-      subJudul: `Bahan Ajar & Referensi Pembelajaran Kurikulum Merdeka (${mp} - ${fk})`,
+      judulBahanAjar: `RANGKUMAN MATERI & BAHAN BACAAN - ${topik.toUpperCase()}`,
+      subJudul: `Bahan Ajar & Panduan Catatan Papan Tulis Kurikulum Merdeka (${mp} - ${fk})`,
       referensiUtama: "Buku Teks Utama Kurikulum Merdeka BSKAP Kemendikdasmen (https://buku.kemendikdasmen.go.id/)",
       rangkumanMateriSiswa: {
         judulMateri: topik,
-        konsepKunci: [
-          `Pengertian dan hakikat utama dari ${topik}`,
-          `Keterkaitan ${topik} dengan kehidupan sehari-hari peserta didik`,
-          `Penerapan dan manfaat mempelajari ${topik}`
+        pengertian: `${topik} adalah konsep esensial dalam mata pelajaran ${mp} pada jenjang ${fk} yang mempelajari prinsip dasar, pola keteraturan, dan manfaat praktisnya dalam memecahkan masalah kontekstual di kehidupan sehari-hari.`,
+        jenisJenis: [
+          {
+            nama: `Jenis/Bentuk Dasar ${topik}`,
+            deskripsi: `Kategori pertama yang merepresentasikan bentuk fundamental dan paling sering dijumpai pada ${topik}.`,
+            contoh: `Penerapan sederhana pada lingkungan sekitar sekolah.`
+          },
+          {
+            nama: `Jenis/Bentuk Terapan ${topik}`,
+            deskripsi: `Kategori kedua yang merupakan bentuk pengembangan atau penerapan lebih lanjut dari ${topik}.`,
+            contoh: `Penggunaan praktis dalam aktivitas sehari-hari di rumah.`
+          }
         ],
-        penjelasanRingkas: `Materi ${topik} merupakan bagian penting dalam pembelajaran ${mp} di ${fk}. Melalui materi ini, peserta didik diajak untuk memahami konsep dasar secara mendalam, mengenali berbagai contoh di lingkungan sekitar, serta mampu mengaplikasikan pemahaman tersebut untuk memecahkan masalah kontekstual secara kritis dan kolaboratif. ${tp ? `Tujuan utamanya adalah agar ${tp.toLowerCase()}` : ''}`,
+        ciriCiri: [
+          `Memiliki karakteristik khas yang dapat diamati secara langsung pada materi ${topik}.`,
+          `Mengikuti pola dan prinsip hukum dasar dalam mata pelajaran ${mp}.`,
+          `Dapat diterapkan untuk menganalisis dan memecahkan persoalan nyata di sekitar murid.`
+        ],
         contohKontekstual: [
           `Penerapan konsep ${topik} dalam kehidupan sehari-hari di rumah dan sekolah.`,
           `Pengamatan fenomena lingkungan sekitar yang berkaitan langsung dengan ${topik}.`
-        ]
+        ],
+        catatanPapanTulis: [
+          `1. JUDUL: ${topik.toUpperCase()}`,
+          `2. PENGERTIAN: Konsep dasar ${mp} untuk memahami dan memecahkan fenomena kontekstual.`,
+          `3. JENIS-JENIS: (a) Bentuk Dasar, (b) Bentuk Terapan.`,
+          `4. CIRI KHAS: Memiliki pola teratur, terukur, dan bermanfaat nyata dalam kehidupan.`,
+          `5. CONTOH: Kejadian nyata di sekitar rumah dan sekolah yang berkaitan dengan ${topik}.`
+        ],
+        konsepKunci: [
+          `Pengertian utama dari ${topik}`,
+          `Klasifikasi & ciri khas ${topik}`,
+          `Penerapan praktis ${topik}`
+        ],
+        penjelasanRingkas: `Materi ${topik} merupakan bagian penting dalam pembelajaran ${mp} di ${fk}. Melalui materi ini, murid diajak untuk memahami konsep dasar secara mendalam, mengenali berbagai jenis dan ciri-cirinya, serta mampu mengaplikasikan pemahaman tersebut untuk memecahkan masalah kontekstual secara kritis dan kolaboratif. ${tp ? `Tujuan utamanya adalah agar ${tp.toLowerCase()}` : ''}`
       },
       panduanGuru: {
-        catatanPedagogis: `Guru hendaknya mengawali pembelajaran ${topik} dengan menghadirkan media konkrit, pertanyaan pemantik, serta contoh nyata yang dekat dengan dunia anak. Berikan bimbingan dan penguatan positif.`,
+        catatanPedagogis: `Guru hendaknya mengawali pembelajaran ${topik} dengan menuliskan bagan skematik di papan tulis, menghadirkan pertanyaan pemantik, serta membimbing murid menyalin poin esensial ke buku catatan masing-masing.`,
+        tipsPapanTulis: `Gunakan pembagian papan tulis 3 kolom: Kolom 1 (Pengertian & Kata Kunci), Kolom 2 (Bagan Jenis & Ciri-Ciri), Kolom 3 (Contoh Soal & Tugas Latihan). Beri waktu 5-7 menit bagi murid untuk menyalin secara rapi.`,
         miskonsepsiUmum: [
-          `Siswa menganggap ${topik} hanya sebatas hafalan teori. Pelurusan: Hubungkan langsung dengan pengalaman kontekstual siswa.`,
-          `Siswa ragu mengemukakan pendapat. Pelurusan: Ciptakan suasana kelas yang ramah dan inklusif.`
+          `Murid menganggap ${topik} hanya sebatas hafalan definisi. Pelurusan: Hubungkan langsung dengan contoh fenomena nyata di sekitar kelas.`,
+          `Murid kesulitan mengklasifikasikan jenis. Pelurusan: Berikan tabel perbandingan visual sederhana di papan tulis.`
         ]
       },
       glosarium: [
-        { istilah: topik, arti: `Gagasan atau topik utama yang dipelajari pada modul ini.` },
-        { istilah: "Kontekstual", arti: "Dapat dihubungkan langsung dengan situasi kehidupan nyata peserta didik sehari-hari." },
-        { istilah: "Refleksi", arti: "Proses merenungkan dan menyimpulkan apa yang telah dipelajari serta manfaatnya." }
+        { istilah: topik, arti: `Gagasan atau topik utama yang dipelajari pada modul ajar ini.` },
+        { istilah: "Klasifikasi", arti: "Pengelompokan objek atau konsep berdasarkan kesamaan ciri atau sifat tertentu." },
+        { istilah: "Karakteristik", arti: "Ciri khas atau tanda khusus yang membedakan suatu hal dari yang lain." },
+        { istilah: "Kontekstual", arti: "Dapat dihubungkan langsung dengan situasi kehidupan nyata murid sehari-hari." }
       ],
       daftarPustaka: [
         `Buku Teks Utama ${mp} ${fk}, Kementerian Pendidikan Dasar dan Menengah (https://buku.kemendikdasmen.go.id/)`,

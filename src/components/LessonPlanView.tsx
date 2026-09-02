@@ -259,7 +259,8 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
 
   const createLocalLkpdFallback = (p: LessonPlanOutput): LKPDData => {
     const mp = p.identitas?.mataPelajaran || 'Mata Pelajaran';
-    const lm = p.tujuanDanDpl?.lingkupMateri || 'Materi Utama';
+    const lm = p.tujuanDanDpl?.lingkupMateri || (p.identitas as any)?.lingkupMateri || 'Materi Pembelajaran';
+    const tp = p.tujuanDanDpl?.tujuanPembelajaran || 'Tujuan Pembelajaran';
 
     return {
       judulLKPD: `LEMBAR KERJA PESERTA DIDIK (LKPD) - ${lm.toUpperCase()}`,
@@ -267,103 +268,145 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
       petunjukUmum: [
         "Berdoalah sebelum memulai mengerjakan lembar kerja ini.",
         "Baca dan pahami setiap instruksi aktivitas dengan saksama bersama kelompokmu.",
-        "Gunakan alat/bahan dan media digital yang direkomendasikan dengan bijak.",
+        "Gunakan nalar kritis, kolaborasi, dan kejujuran dalam menyelesaikan setiap tahapan.",
         "Tanyakan kepada guru apabila terdapat langkah kerja yang kurang dimengerti."
       ],
       lembarPenugasan: {
-        judulTugas: `Aktivitas Kolaboratif: Eksplorasi Konseptual ${lm}`,
-        tujuanAktivitas: `Menganalisis dan merumuskan pemahaman bermakna mengenai konsep dasar ${lm} secara berkelompok.`,
+        judulTugas: `Aktivitas Kolaboratif: Analisis Masalah Konseptual ${lm}`,
+        tujuanAktivitas: `Menganalisis dan merumuskan pemahaman bermakna mengenai ${lm} sesuai TP: ${tp}`,
         alatDanBahan: [
-          "Buku Catatan / Kertas Karton",
-          "Alat Tulis & Spidol Warna",
-          "Perangkat Digital (Smartphone/Chromebook) untuk akses literasi digital/simulator"
+          `Modul Ajar / Buku Siswa ${mp}`,
+          "Buku Catatan / Kertas Karton & Alat Tulis",
+          "Media Peraga & Perangkat Digital (Chromebook/Smartphone)"
         ],
         instruksiKerja: [
-          "Berkumpullah bersama anggota kelompok yang telah ditentukan oleh guru.",
-          `Diskusikan bersama kelompok mengenai konsep ${lm} berdasarkan stimulus yang ditayangkan guru.`,
-          "Petakan ide-ide pokok hasil diskusi kelompok ke dalam bentuk mind-mapping/diagram kreatif pada karton atau aplikasi digital.",
-          "Persiapkan perwakilan kelompok untuk mempresentasikan hasil mind-mapping di depan kelas secara bergantian."
+          "Bentuklah kelompok yang terdiri atas 4-5 murid secara heterogen.",
+          `Cermati studi kasus/fenomena nyata tentang ${lm} yang disampaikan oleh guru.`,
+          `Diskusikan pertanyaan analisis berikut bersama anggota kelompokmu: Bagaimana penerapan konsep ${lm} dapat memecahkan masalah kontekstual tersebut?`,
+          "Tuangkan hasil pemikiran kelompok dalam bentuk rangkuman ide atau mind-map pada lembar yang disediakan."
         ]
       },
       panduanPraktikum: {
-        judulEksplorasi: `Eksplorasi Konteks Nyata & Eksperimen Mandiri: Penerapan ${lm}`,
-        tujuanPraktikum: `Membuktikan dan mengamati secara langsung prinsip kerja serta implikasi ${lm} dalam kehidupan sehari-hari.`,
+        judulEksplorasi: `Eksplorasi Konteks Nyata & Praktikum Mandiri: Fenomena ${lm}`,
+        tujuanPraktikum: `Membuktikan dan menganalisis secara langsung prinsip kerja serta implikasi ${lm} dalam kehidupan nyata.`,
         langkahKerja: [
-          "Siapkan alat dan bahan praktikum sesuai dengan petunjuk guru.",
-          "Lakukan eksperimen / observasi secara bertahap sesuai petunjuk kerja kelompok.",
-          "Catat setiap fenomena, data kuantitatif, atau data kualitatif yang teramati ke dalam tabel pengamatan.",
-          "Diskusikan hasil temuan kelompok dan rumuskan kesimpulan awal secara bernalar kritis."
+          `Siapkan alat, bahan, atau media observasi terkait materi ${lm} sesuai arahan guru.`,
+          "Lakukan eksperimen / observasi bertahap dan catat setiap perubahan indikator yang teramati.",
+          "Isikan data pengamatan kelompokmu secara jujur dan cermat ke dalam tabel pengamatan di bawah ini.",
+          "Diskusikan hasil temuan kelompok dan rumuskan kesimpulan akhir berdasarkan bukti-bukti pengamatan."
         ],
         tabelPengamatan: {
-          judulTabel: `Tabel Hasil Pengamatan & Eksperimen ${lm}`,
-          headers: ["No", "Aktivitas / Perlakuan", "Hasil Pengamatan", "Keterangan / Analisis"],
+          judulTabel: `Tabel Hasil Pengamatan & Data Eksperimen ${lm}`,
+          headers: ["No", "Perlakuan / Tahap Pengamatan", "Hasil Pengamatan Data", `Analisis Keterkaitan Konsep ${lm}`],
           rows: [
-            ["1", "Percobaan / Pengamatan 1", "...........................................", "Sesuai teori dasar"],
-            ["2", "Percobaan / Pengamatan 2", "...........................................", "Terjadi perubahan signifikan"],
-            ["3", "Percobaan / Pengamatan 3", "...........................................", "Memerlukan analisis lanjut"]
+            ["1", `Pengamatan Kondisi Awal ${lm}`, "...........................................", "Identifikasi awal indikator"],
+            ["2", "Pengamatan Setelah Uji Perlakuan", "...........................................", "Terjadi interaksi / perubahan signifikan"],
+            ["3", "Pengamatan Akhir & Hasil Percobaan", "...........................................", `Sesuai dengan teori dasar ${lm}`]
           ],
-          petunjukPengisian: "Isikan data hasil pengukuran/pengamatan secara teliti."
+          petunjukPengisian: `Isikan data hasil pengukuran/pengamatan variabel ${lm} secara objektif dan cermat.`
         },
         pertanyaanAnalisis: [
-          `Berdasarkan data hasil eksperimen, jelaskan hubungan sebab-akibat yang terjadi pada fenomena ${lm}!`,
-          "Apa kendala terbesar yang kelompokmu temukan saat melakukan praktikum, dan bagaimana kalian menyelesaikannya?",
-          `Tuliskan kesimpulan akhir kelompok mengenai cara kerja serta manfaat ${lm} dalam konteks kehidupan nyata sehari-hari!`
+          `Berdasarkan data tabel hasil eksperimen, jelaskan hubungan sebab-akibat yang terjadi pada fenomena ${lm}!`,
+          `Bagaimana keterkaitan antara hasil praktikum yang telah kalian lakukan dengan tujuan pembelajaran: "${tp}"?`,
+          `Tuliskan kesimpulan utama kelompokmu mengenai keunggulan atau manfaat materi ${lm} dalam kehidupan sehari-hari!`
         ]
       },
       latihanSoal: {
-        petunjukPengerjaan: "Jawablah soal-soal latihan di bawah ini secara mandiri dan jujur untuk menguji pemahaman mendalammu.",
+        petunjukPengerjaan: `Jawablah soal-soal latihan di bawah ini secara mandiri dan jujur untuk menguji pemahaman mendalammu mengenai ${lm}.`,
         pilihanGanda: [
           {
             no: 1,
-            pertanyaan: `Manakah di antara pernyataan berikut yang paling tepat menggambarkan esensi utama dari konsep ${lm}?`,
+            pertanyaan: `Pernyataan manakah yang paling akurat dalam menggambarkan esensi dan prinsip utama dari materi ${lm}?`,
             pilihan: [
-              `A. Sebuah fenomena statis yang tidak berhubungan dengan mata pelajaran ${mp}.`,
-              `B. Konsep dinamis tentang ${lm} yang berperan penting dalam memecahkan masalah praktis sehari-hari.`,
-              `C. Teori hafalan semata yang hanya diujikan pada akhir semester sekolah.`,
-              `D. Aktivitas praktikum tanpa landasan teori atau rancangan instruksional.`
+              `A. ${lm} merupakan prinsip dasar dalam ${mp} yang relevan untuk menyelesaikan permasalahan nyata sehari-hari.`,
+              `B. Fenomena ${lm} terjadi secara acak dan tidak dapat dijelaskan dengan hukum ilmiah ${mp}.`,
+              `C. Materi ${lm} hanya merupakan teori hafalan yang tidak memiliki aplikasi praktis di lapangan.`,
+              `D. Penerapan ${lm} hanya dapat diamati di laboratorium tanpa hubungan dengan kehidupan sehari-hari.`
             ],
-            kunciJawaban: "B",
-            pembahasan: `Esensi utama dari ${lm} adalah penerapan konsep secara kontekstual dan dinamis untuk menyelesaikan masalah nyata dalam kehidupan sehari-hari.`
+            kunciJawaban: `A. ${lm} merupakan prinsip dasar dalam ${mp} yang relevan untuk menyelesaikan permasalahan nyata sehari-hari.`,
+            pembahasan: `Prinsip utama dari ${lm} adalah memberikan pemahaman bermakna yang dapat diaplikasikan murid dalam memecahkan masalah kontekstual.`
           },
           {
             no: 2,
-            pertanyaan: `Dalam pembelajaran mendalam, setelah kita "Memahami" suatu materi ${lm}, langkah selanjutnya yang paling krusial untuk melatih nalar kritis adalah...`,
+            pertanyaan: `Saat melakukan eksplorasi dan analisis terhadap ${lm}, langkah awal yang paling tepat dalam alur Pembelajaran Mendalam (Deep Learning) adalah...`,
             pilihan: [
-              "A. Menghafal seluruh definisi istilah yang ada di buku teks secara berulang.",
-              "B. Mengaplikasikannya dalam konteks nyata / pemecahan masalah (Application).",
-              "C. Mengabaikan umpan balik dari guru dan langsung berpindah ke bab materi berikutnya.",
-              "D. Mencribel atau menulis ulang materi tanpa melakukan refleksi atau diskusi kelompok."
+              `A. Memahami konsep dasar dan mengidentifikasi masalah nyata terkait ${lm} (Tahap Memahami).`,
+              "B. Langsung menarik kesimpulan akhir tanpa mengumpulkan bukti data pengamatan.",
+              "C. Menghafal rumus atau istilah tanpa memahami makna di balik fenomena tersebut.",
+              "D. Menolak berdiskusi dengan kelompok lain dan bekerja tanpa petunjuk LKPD."
             ],
-            kunciJawaban: "B",
-            pembahasan: 'Tahap Mengaplikasi (Application) adalah jembatan penting untuk menguji apakah pemahaman konsep murid sudah mendalam dan fungsional.'
+            kunciJawaban: `A. Memahami konsep dasar dan mengidentifikasi masalah nyata terkait ${lm} (Tahap Memahami).`,
+            pembahasan: "Tahap Memahami (Understanding) adalah fondasi dalam Deep Learning agar murid memiliki mental model yang kokoh sebelum tahap Mengaplikasi."
+          },
+          {
+            no: 3,
+            pertanyaan: `Seorang murid ingin mengaplikasikan konsep ${lm} untuk memecahkan sebuah masalah di lingkungan sekolah. Tindakan berorientasi HOTS yang sebaiknya dilakukan adalah...`,
+            pilihan: [
+              `A. Menganalisis faktor penyebab masalah, merancang solusi berbasis konsep ${lm}, dan menguji efektivitasnya.`,
+              "B. Menunggu guru memberikan seluruh jawaban lengkap tanpa mencoba berpikir kritis terlebih dahulu.",
+              "C. Mengabaikan data pengamatan dan hanya menyalin hasil pekerjaan kelompok lain.",
+              "D. Mengganti topik pembelajaran menjadi materi lain yang tidak sesuai dengan instruksi guru."
+            ],
+            kunciJawaban: `A. Menganalisis faktor penyebab masalah, merancang solusi berbasis konsep ${lm}, dan menguji efektivitasnya.`,
+            pembahasan: "Menganalisis, merancang solusi, dan menguji efektivitas merupakan indikator berpikir tingkat tinggi (HOTS) pada tahap Mengaplikasi."
+          },
+          {
+            no: 4,
+            pertanyaan: `Apa dampak positif yang diperoleh murid ketika berhasil menguasai materi ${lm} secara mendalam?`,
+            pilihan: [
+              "A. Murid memiliki daya nalar kritis, kecakapan pemecahan masalah, dan kesadaran reflektif yang tinggi.",
+              "B. Murid hanya mampu menjawab soal pilihan ganda tanpa bisa menjelaskan alasannya.",
+              "C. Murid menjadi pasif dalam kegiatan diskusi kelompok dan praktikum.",
+              `D. Murid tidak dapat mengaitkan materi ${lm} dengan mata pelajaran lainnya.`
+            ],
+            kunciJawaban: "A. Murid memiliki daya nalar kritis, kecakapan pemecahan masalah, dan kesadaran reflektif yang tinggi.",
+            pembahasan: "Penguasaan materi secara mendalam membentuk profil lulusan yang bernalar kritis, komunikatif, dan responsif terhadap masalah nyata."
+          },
+          {
+            no: 5,
+            pertanyaan: `Dalam kegiatan refleksi (Merefleksi) setelah menyelesaikan tugas tentang ${lm}, pertanyaan metakognitif yang paling tepat diajukan adalah...`,
+            pilihan: [
+              `A. Pemahaman baru apa yang saya peroleh tentang ${lm} dan bagaimana saya mengatasi kesulitan selama belajar?`,
+              "B. Berapa halaman buku yang telah saya baca hari ini?",
+              "C. Siapa nama teman kelompok yang berbicara paling keras?",
+              "D. Berapa menit waktu istirahat sekolah yang tersisa?"
+            ],
+            kunciJawaban: `A. Pemahaman baru apa yang saya peroleh tentang ${lm} dan bagaimana saya mengatasi kesulitan selama belajar?`,
+            pembahasan: "Pertanyaan metakognitif pada tahap Merefleksi mendorong murid mengevaluasi proses berpikir dan strategi belajar mandirinya."
           }
         ],
         soalUraian: [
           {
             no: 1,
-            pertanyaan: `Uraikanlah bagaimana pemahaman tentang ${lm} dapat membantumu menjelaskan salah satu kejadian nyata yang sering kamu jumpai di lingkungan sekitarmu!`,
-            kunciJawaban: "Kunci Jawaban bervariasi tergantung argumentasi siswa. Jawaban dinilai mahir apabila siswa mampu menghubungkan minimal 2 elemen konsep dasar dengan contoh nyata secara logis.",
-            pembahasan: "Mengukur kemampuan kognitif tingkat tinggi (HOTS) siswa dalam mensintesis teori dengan aplikasi kontekstual sehari-hari."
+            pertanyaan: `Jelaskan secara runtut dan jelas bagaimana konsep ${lm} dapat diterapkan untuk memecahkan satu permasalahan konkret yang sering terjadi di kehidupan sehari-hari!`,
+            kunciJawaban: `Pedoman Penskoran: Nilai 4 (Sangat Baik) jika menjelaskan konsep dasar ${lm}, mengidentifikasi masalah nyata, serta menguraikan tahapan solusi logis. Nilai 3 jika penjelasan tepat namun solusi kurang rinci. Nilai 2 jika penjelasan singkat.`,
+            pembahasan: `Soal ini menguji kemampuan analisis dan sintesis (HOTS) murid dalam menghubungkan teori ${lm} dengan aplikasi dunia nyata.`
           },
           {
             no: 2,
-            pertanyaan: `Lakukan refleksi diri: bagian manakah dari materi ${lm} ini yang menurutmu paling menarik untuk dieksplorasi lebih jauh? Berikan alasan pendukungmu!`,
-            kunciJawaban: "Kunci Jawaban terbuka (open-ended). Kriteria ketercapaian dinilai dari kedalaman refleksi metakognitif dan kemandirian berpikir siswa.",
-            pembahasan: "Mengukur aspek metakognisi, self-assessment, dan minat belajar siswa terhadap topik yang diajarkan."
+            pertanyaan: `Berdasarkan aktivitas praktikum/diskusi yang telah dilakukan, uraikan 2 temuan penting mengenai ${lm} yang menurut kelompokmu paling menarik beserta alasannya!`,
+            kunciJawaban: `Jawaban bervariasi sesuai hasil eksplorasi kelompok. Kunci jawaban menekankan pada ketepatan argumen ilmiah dan kesesuaian dengan data hasil pengamatan ${lm}.`,
+            pembahasan: "Mengukur kemampuan murid dalam menginterpretasi data dan mengemukakan pendapat berbasis bukti (evidence-based reasoning)."
+          },
+          {
+            no: 3,
+            pertanyaan: `Tuliskan refleksi pribadi mengenai sejauh mana kamu telah mencapai tujuan pembelajaran: "${tp}". Hambatan apa yang kamu temui dan apa strategimu ke depan?`,
+            kunciJawaban: "Rubrik evaluasi metakognisi mandiri. Kriteria tuntas apabila murid secara jujur mengidentifikasi tingkat pemahaman diri dan merumuskan rencana perbaikan belajar.",
+            pembahasan: "Tahap Merefleksi mendukung kemandirian belajar (self-regulated learning) dan pengembangan karakter Profil Lulusan."
           }
         ]
       },
       refleksiSiswa: {
         pertanyaanRefleksi: [
-          "Apa hal terpenting yang baru saja kamu pahami setelah menyelesaikan seluruh aktivitas lembar kerja ini?",
-          "Apakah kamu merasa kerja sama kelompokmu berjalan dengan baik dan saling mendukung? Jelaskan bagian mana yang perlu ditingkatkan!",
-          "Bagaimana perasaanmu selama mengikuti pembelajaran mendalam hari ini? Lingkari/pilih emoji yang menggambarkan perasaanmu!"
+          `Apa hal paling menarik dan bermakna yang kamu pelajari tentang ${lm} hari ini?`,
+          `Hambatan atau kesulitan apa yang kamu rasakan saat berdiskusi/praktikum ${lm}, dan bagaimana cara kamu mengatasinya?`,
+          `Bagaimana kamu dapat menerapkan pemahaman tentang ${lm} ini dalam kehidupan sehari-hari atau lingkungan sekitarmu?`
         ],
         checkListDiri: [
-          `Saya telah memahami konsep dasar mengenai ${lm} dengan baik.`,
-          "Saya dapat bekerja sama secara kolaboratif dalam kelompok diskusi.",
-          "Saya mampu menganalisis hasil eksperimen dan mengisi tabel pengamatan.",
-          "Saya dapat merefleksikan proses belajar saya secara jujur dan mandiri."
+          `Saya telah memahami konsep dasar materi ${lm} dengan baik.`,
+          "Saya dapat bekerja sama secara aktif dan kolaboratif dalam kelompok diskusi.",
+          `Saya mampu menganalisis data pengamatan dan menjawab soal-soal evaluasi ${lm} dengan jujur.`,
+          "Saya dapat melakukan refleksi diri terhadap proses belajar yang telah saya jalani."
         ]
       }
     };
@@ -447,33 +490,60 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
     const tp = planData.tujuanDanDpl?.tujuanPembelajaran || '';
 
     return {
-      judulBahanAjar: `RANGKUMAN BAHAN BACAAN GURU & PESERTA DIDIK - ${lm.toUpperCase()}`,
-      subJudul: `Bahan Ajar & Referensi Pembelajaran Kurikulum Merdeka (${mp} - ${fk})`,
+      judulBahanAjar: `RANGKUMAN MATERI & BAHAN BACAAN - ${lm.toUpperCase()}`,
+      subJudul: `Bahan Ajar & Panduan Catatan Papan Tulis Kurikulum Merdeka (${mp} - ${fk})`,
       referensiUtama: 'Buku Teks Utama Kurikulum Merdeka BSKAP Kemendikdasmen (https://buku.kemendikdasmen.go.id/)',
       rangkumanMateriSiswa: {
         judulMateri: lm,
-        konsepKunci: [
-          `Pengertian dan hakikat utama dari ${lm}`,
-          `Keterkaitan ${lm} dengan kehidupan sehari-hari peserta didik`,
-          `Penerapan dan manfaat mempelajari ${lm}`
+        pengertian: `${lm} adalah konsep dasar dalam mata pelajaran ${mp} jenjang ${fk} yang mempelajari prinsip esensial, struktur, dan hubungan logisnya untuk menyelesaikan masalah kontekstual dalam kehidupan sehari-hari murid.`,
+        jenisJenis: [
+          {
+            nama: `Bentuk / Jenis Dasar ${lm}`,
+            deskripsi: `Kategori konsep utama yang mendasari pemahaman ${lm} dan sering dijumpai di lingkungan sekolah.`,
+            contoh: `Contoh sederhana dalam kegiatan belajar mengajar.`
+          },
+          {
+            nama: `Bentuk / Jenis Terapan ${lm}`,
+            deskripsi: `Pengembangan konsep ${lm} yang diimplementasikan dalam pemecahan masalah praktis.`,
+            contoh: `Contoh penerapan dalam kehidupan sehari-hari di rumah.`
+          }
         ],
-        penjelasanRingkas: `Materi ${lm} merupakan bagian penting dalam pembelajaran ${mp} di ${fk}. Melalui materi ini, peserta didik diajak untuk memahami konsep dasar secara mendalam, mengenali berbagai contoh di lingkungan sekitar, serta mampu mengaplikasikan pemahaman tersebut untuk memecahkan masalah kontekstual secara kritis dan kolaboratif. ${tp ? `Tujuan utamanya adalah agar ${tp.toLowerCase()}` : ''}`,
+        ciriCiri: [
+          `Memiliki karakteristik spesifik yang membedakannya dalam konsep ${mp}.`,
+          `Mempunyai pola keteraturan yang dapat diidentifikasi dan dianalisis murid.`,
+          `Dapat diaplikasikan secara nyata dalam konteks lingkungan sekitar.`
+        ],
         contohKontekstual: [
           `Penerapan konsep ${lm} dalam kehidupan sehari-hari di rumah dan sekolah.`,
           `Pengamatan fenomena lingkungan sekitar yang berkaitan langsung dengan ${lm}.`
-        ]
+        ],
+        catatanPapanTulis: [
+          `1. TOPIK: ${lm.toUpperCase()}`,
+          `2. PENGERTIAN: Konsep esensial ${mp} untuk memahami fenomena dan memecahkan persoalan kontekstual.`,
+          `3. JENIS-JENIS: (a) Bentuk Dasar, (b) Bentuk Terapan.`,
+          `4. CIRI KHAS: Memiliki pola teratur, terukur, dan bermanfaat nyata dalam kehidupan.`,
+          `5. CONTOH: Kejadian nyata di sekitar rumah dan sekolah yang berkaitan langsung dengan ${lm}.`
+        ],
+        konsepKunci: [
+          `Pengertian hakiki dari ${lm}`,
+          `Klasifikasi jenis & ciri-ciri ${lm}`,
+          `Penerapan praktis ${lm}`
+        ],
+        penjelasanRingkas: `Materi ${lm} merupakan bagian penting dalam pembelajaran ${mp} di ${fk}. Melalui materi ini, murid diajak untuk memahami konsep dasar secara mendalam, mengenali berbagai jenis dan ciri-cirinya, serta mampu mengaplikasikan pemahaman tersebut untuk memecahkan masalah kontekstual secara kritis dan kolaboratif. ${tp ? `Tujuan utamanya adalah agar ${tp.toLowerCase()}` : ''}`
       },
       panduanGuru: {
-        catatanPedagogis: `Guru hendaknya mengawali pembelajaran ${lm} dengan menghadirkan media konkrit, pertanyaan pemantik, serta contoh nyata yang dekat dengan dunia anak. Berikan bimbingan dan penguatan positif.`,
+        catatanPedagogis: `Guru hendaknya mengawali pembelajaran ${lm} dengan menuliskan skema bagan di papan tulis, memberikan pertanyaan pemantik, serta membimbing murid menyalin poin esensial ke buku catatan masing-masing.`,
+        tipsPapanTulis: `Gunakan pembagian papan tulis 3 kolom: Kolom 1 (Pengertian & Kata Kunci), Kolom 2 (Bagan Jenis & Ciri-Ciri), Kolom 3 (Contoh Soal & Tugas Latihan). Beri waktu 5-7 menit bagi murid untuk menyalin secara rapi.`,
         miskonsepsiUmum: [
-          `Siswa menganggap ${lm} hanya sebatas hafalan teori. Pelurusan: Hubungkan langsung dengan pengalaman kontekstual siswa.`,
-          `Siswa ragu mengemukakan pendapat. Pelurusan: Ciptakan suasana kelas yang ramah dan inklusif.`
+          `Murid menganggap ${lm} hanya sebatas hafalan teori. Pelurusan: Hubungkan langsung dengan pengalaman kontekstual murid.`,
+          `Murid kesulitan mengklasifikasikan jenis. Pelurusan: Berikan perbandingan visual sederhana di papan tulis.`
         ]
       },
       glosarium: [
-        { istilah: lm, arti: `Gagasan atau topik utama yang dipelajari pada modul ini.` },
-        { istilah: 'Kontekstual', arti: 'Dapat dihubungkan langsung dengan situasi kehidupan nyata peserta didik sehari-hari.' },
-        { istilah: 'Refleksi', arti: 'Proses merenungkan dan menyimpulkan apa yang telah dipelajari serta manfaatnya.' }
+        { istilah: lm, arti: `Gagasan atau topik utama yang dipelajari pada modul ajar ini.` },
+        { istilah: 'Klasifikasi', arti: 'Pengelompokan objek atau konsep berdasarkan kesamaan ciri atau sifat tertentu.' },
+        { istilah: 'Karakteristik', arti: 'Ciri khas atau tanda khusus yang membedakan suatu hal dari yang lain.' },
+        { istilah: 'Kontekstual', arti: 'Dapat dihubungkan langsung dengan situasi kehidupan nyata murid sehari-hari.' }
       ],
       daftarPustaka: [
         `Buku Teks Utama ${mp} ${fk}, Kementerian Pendidikan Dasar dan Menengah (https://buku.kemendikdasmen.go.id/)`,

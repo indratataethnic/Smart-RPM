@@ -156,19 +156,30 @@ export interface LembarPenilaianSiswaData {
   catatanUmumKelas?: string;
 }
 
+export interface JenisMateriItem {
+  nama: string;
+  deskripsi: string;
+  contoh?: string;
+}
+
 export interface BahanAjarData {
   judulBahanAjar: string;
   subJudul?: string;
   referensiUtama: string;
   rangkumanMateriSiswa: {
     judulMateri: string;
+    pengertian?: string; // Pengertian / Definisi Konseptual Materi (untuk dijelaskan di papan tulis & dipahami murid)
+    jenisJenis?: (JenisMateriItem | string)[]; // Jenis-jenis / Macam-macam / Klasifikasi materi
+    ciriCiri?: string[]; // Ciri-ciri / Karakteristik / Sifat-sifat utama materi
+    contohKontekstual: string[]; // Contoh Nyata Penerapan Sehari-hari
+    catatanPapanTulis?: string[]; // Format Ringkasan Papan Tulis Siap Salin Murid ke Buku Catatan
     konsepKunci: string[];
     penjelasanRingkas: string;
-    contohKontekstual: string[];
   };
   panduanGuru: {
     catatanPedagogis: string;
     miskonsepsiUmum: string[];
+    tipsPapanTulis?: string; // Tips penyajian papan tulis saat tidak ada buku paket cetak
   };
   glosarium: { istilah: string; arti: string }[];
   daftarPustaka: string[];

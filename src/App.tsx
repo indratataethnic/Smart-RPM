@@ -277,7 +277,12 @@ const createFallbackLessonPlanClient = (data: any): LessonPlanOutput => {
     },
     lampiran: {
       lkpd: "Ringkasan LKPD: Diskusikan bersama kelompokmu konsep " + lm + " dan jawablah pertanyaan analisis dalam lembar kerja.",
-      bahanAjar: "Bahan Ajar Ringkas: Rangkuman materi " + mp + " topik " + lm + " dilengkapi contoh gambar/diagram.",
+      bahanAjar: "RANGKUMAN BAHAN BACAAN GURU & MURID (Pengganti Buku Paket / Bahan Catatan Papan Tulis):\n" +
+        "1. Pengertian: " + lm + " adalah konsep dasar dalam " + mp + " yang mempelajari karakteristik dan penerapannya dalam kehidupan sehari-hari.\n" +
+        "2. Jenis-jenis / Klasifikasi: Mengelompokkan bentuk dan variasi materi " + lm + " secara kontekstual.\n" +
+        "3. Ciri-ciri / Karakteristik: Mengidentifikasi sifat dan ciri khas utama dari " + lm + ".\n" +
+        "4. Contoh Konkret: Berbagai penerapan nyata " + lm + " di lingkungan sekolah dan rumah.\n" +
+        "5. Catatan Papan Tulis (Siap Salin Murid): Rangkuman poin kunci terstruktur untuk disalin murid ke buku catatan.",
       rubrikPenilaian: "Rubrik Penilaian Kinerja & Produk (Skor 1-4: Perlu Bimbingan, Cukup, Layak, Mahir).",
       kktp: {
         pendekatan: "Rubrik Kriteria Ketercapaian Tujuan Pembelajaran (Interval Nilai)",
